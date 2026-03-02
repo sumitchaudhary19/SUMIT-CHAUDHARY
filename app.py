@@ -7,7 +7,7 @@ from groq import Groq
 # ==========================================
 # 1. PAGE CONFIG & SECRETS VALIDATION
 # ==========================================
-st.set_page_config(page_title="HEXALOY AI", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="CHATMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -47,7 +47,7 @@ def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
-# 3. SIDEBAR WITH CUSTOM HEXALOY LOGO
+# 3. SIDEBAR WITH CUSTOM CHATMNIT LOGO
 # ==========================================
 if "sessions" not in st.session_state:
     st.session_state.sessions = {"New Session": []}
@@ -62,13 +62,13 @@ with st.sidebar:
         logo_html = f"""
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px; padding-top: 10px;">
             <img src="data:image/png;base64,{logo_base64}" style="width: 50px; margin-right: 12px;">
-            <span style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: #2B5B9E; letter-spacing: 1.5px;">HEXALOY</span>
+            <span style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: #2B5B9E; letter-spacing: 1.5px;">CHATMNIT</span>
         </div>
         """
         st.markdown(logo_html, unsafe_allow_html=True)
     except FileNotFoundError:
         st.warning("⚠️ logo.png not found. Upload it to GitHub!")
-        st.markdown("<h3 style='color: #1A56A8; font-weight: 800; text-align: center;'>logo.png HEXALOY</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #1A56A8; font-weight: 800; text-align: center;'>logo.png CHATMNIT</h3>", unsafe_allow_html=True)
 
     st.markdown("<div class='new-chat-btn'>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
@@ -90,7 +90,7 @@ with st.sidebar:
     st.markdown("""
         <div class="signature-box">
             <p>Architected by</p>
-            <h3>VINIT MAAN</h3>
+            <h3>SUMIT CHAUDHARY</h3>
             <p style="font-size: 0.6rem; margin-top: 5px;">Enterprise AI v6.0</p>
         </div>
     """, unsafe_allow_html=True)
@@ -98,7 +98,7 @@ with st.sidebar:
 # ==========================================
 # 4. MAIN CHAT & STREAMING LOGIC
 # ==========================================
-st.markdown("<h1 style='color: #0F172A; font-weight: 800; text-align: center; font-size: 2.5rem;'>HEXALOY INTELLIGENCE</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='color: #0F172A; font-weight: 800; text-align: center; font-size: 2.5rem;'>CHATMNIT INTELLIGENCE</h1>", unsafe_allow_html=True)
 st.markdown("<div style='text-align: center; color: #64748B; font-weight: 500; margin-bottom: 30px; margin-top: -10px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
@@ -106,7 +106,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask Hexaloy anything..."):
+if prompt := st.chat_input("Ask Chatmnit anything..."):
     
     curr_chat = st.session_state.current_chat
     if curr_chat.startswith("New Session") and len(st.session_state.sessions[curr_chat]) == 0:
@@ -129,11 +129,11 @@ if prompt := st.chat_input("Ask Hexaloy anything..."):
                 st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
         else:
             instructions = """
-            You are 'HEXALOY', an exceptionally intelligent and professional AI assistant.
+            You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
             1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
             2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
             3. YOU ARE AN AI. Do not claim to be human.
-            4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by VINIT MAAN."
+            4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
             """
             
             try:
@@ -172,8 +172,3 @@ if prompt := st.chat_input("Ask Hexaloy anything..."):
                 
             except Exception as e:
                 st.error(f"System Fault: {str(e)}")
-
-
-
-
-

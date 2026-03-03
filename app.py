@@ -62,6 +62,13 @@ st.markdown(f"""
     /* =========================================
        CHAT MESSAGES ALIGNMENT & (3/4)th WIDTH
        ========================================= */
+       
+    /* Streamlit adds padding to the chat container itself, we need to remove it for the bot to touch the edge */
+    [data-testid="stChatMessageContainer"] {{
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }}
+    
     div[data-testid="stChatMessage"] {{ 
         border-radius: 12px; 
         padding: 15px 20px; 
@@ -78,12 +85,12 @@ st.markdown(f"""
         margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT */
+    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT (Touching Boundary) */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
         margin-right: auto !important; 
-        margin-left: 0 !important; 
+        margin-left: 0 !important; /* Strictly touching left */
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -133,7 +140,7 @@ st.markdown(f"""
         min-height: 65px !important; 
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
-        border: none !important; /* Hiding the border */
+        border: 1px solid #444 !important; /* Subtle clean border */
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
@@ -205,10 +212,6 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Helper Function
-def encode_image(uploaded_file):
-    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-
 # ==========================================
 # 4. SIDEBAR & BRANDING
 # ==========================================
@@ -258,10 +261,15 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 5vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
+# Start of the main chat container
+st.markdown('<div data-testid="stChatMessageContainer">', unsafe_allow_html=True)
+
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 6. CHAT INPUT & AI GENERATION

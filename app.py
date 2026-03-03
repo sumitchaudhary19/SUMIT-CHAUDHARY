@@ -30,22 +30,18 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    # Empty Chat -> Search Bar in Middle
     chat_pos_css = "top: 50% !important; transform: translateY(-50%) !important;"
-    tool_pos_css = "top: calc(50% - 65px);"
 else:
-    # Chat Started -> Search Bar shifts to Bottom
     chat_pos_css = "bottom: 20px !important;"
-    tool_pos_css = "bottom: 75px;"
 
 # ==========================================
-# 3. DARK MODE & DYNAMIC POSITIONING CSS
+# 3. ADVANCED CSS (DARK MODE, BLACK BOTTOM, DRAGGABLE MENU)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* Global Dark Grey Background */
+    /* Global Dark Grey Background for Chat Area */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{ 
         font-family: 'Inter', sans-serif; 
         background-color: #212121 !important; 
@@ -53,6 +49,14 @@ st.markdown(f"""
     }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ background-color: transparent !important; }}
+    
+    /* 🔴 PITCH BLACK BOTTOM SECTION */
+    [data-testid="stBottom"] {{
+        background-color: #000000 !important;
+        border-top: 1px solid #222 !important;
+        padding-top: 20px !important;
+    }}
+    [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* Chat Message Styling */
     div[data-testid="stChatMessage"] {{ border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; }}
@@ -72,7 +76,7 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       DYNAMIC LIGHT GREY SEARCH BAR & TOOLBAR
+       SEARCH BAR & DRAGGABLE FLOATING MENU
        ========================================= */
        
     /* 1. Chat Input Bar (Light Grey) */
@@ -83,32 +87,33 @@ st.markdown(f"""
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
         {chat_pos_css} 
     }}
-    
-    /* Text inside Light Grey Bar */
     div[data-testid="stChatInputContainer"] textarea {{ color: #000000 !important; font-weight: 500; }}
     div[data-testid="stChatInputContainer"] p {{ color: #555555 !important; }}
     div[data-testid="stChatInputContainer"] svg {{ fill: #333333 !important; }}
     
-    /* 2. Position the Toolbar exactly above the Chat Bar Border */
+    /* 2. Draggable Toolbar Container */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed;
-        {tool_pos_css} 
+        bottom: 90px;
         left: 50%;
         transform: translateX(-50%);
-        width: 100%;
-        max-width: 800px;
-        z-index: 9999;
-        pointer-events: none; 
-        padding: 0 20px;
+        width: max-content !important; /* Wrap tightly around buttons */
+        z-index: 99999;
+        padding: 8px 15px;
+        background: rgba(30, 30, 30, 0.85); /* Dark translucent pill */
+        backdrop-filter: blur(10px);
+        border: 1px solid #555;
+        border-radius: 30px;
         display: flex;
         gap: 10px;
+        cursor: grab; /* Drag cursor */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }}
-
-    div[data-testid="stHorizontalBlock"]:last-of-type > div {{
-        pointer-events: auto;
+    div[data-testid="stHorizontalBlock"]:last-of-type:active {{
+        cursor: grabbing;
     }}
     
-    /* 3. Button Styling */
+    /* 3. Button Styling inside Draggable Toolbar */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
         border-radius: 20px !important;
         padding: 6px 15px !important;
@@ -116,13 +121,10 @@ st.markdown(f"""
         background-color: #D3D3D3 !important;
         color: #000000 !important;
         font-weight: 600 !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important;
         transition: 0.2s;
     }}
-
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
         background-color: #BDBDBD !important; 
-        border-color: #777 !important;
     }}
     
     /* Popover Body */
@@ -186,7 +188,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT & STREAMING LOGIC
+# 5. MAIN CHAT LOGIC
 # ==========================================
 st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 2.5rem;'>CHATMNIT INTELLIGENCE</h1>", unsafe_allow_html=True)
 st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; margin-top: -10px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
@@ -197,9 +199,9 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. TOOLBAR (OVERLAY ABOVE CHAT INPUT BORDER)
+# 6. DRAGGABLE TOOLBAR & EMOJI INJECTION SCRIPT
 # ==========================================
-tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
+tool_col1, tool_col2, _ = st.columns([1, 1, 10])
 chat_img_bottom = None
 
 with tool_col1:
@@ -213,6 +215,7 @@ with tool_col1:
         
         emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
         
+        # Super JS: Combines Emoji Insertion AND Toolbar Draggability!
         html_code = f"""
         <!DOCTYPE html>
         <html>
@@ -233,14 +236,13 @@ with tool_col1:
             {emoji_divs}
         </div>
         <script>
+            // 1. Emoji Click-to-Insert Logic
             document.getElementById('grid').addEventListener('click', function(e) {{
                 if(e.target.classList.contains('emoji-btn')) {{
                     const emoji = e.target.innerText;
                     const parentDoc = window.parent.document;
                     const chatInput = parentDoc.querySelector('[data-testid="stChatInputTextArea"]') || 
-                                      parentDoc.querySelector('[data-testid="stChatInputContainer"] textarea') || 
-                                      parentDoc.querySelector('textarea');
-                    
+                                      parentDoc.querySelector('[data-testid="stChatInputContainer"] textarea');
                     if(chatInput) {{
                         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
                         nativeInputValueSetter.call(chatInput, chatInput.value + emoji);
@@ -249,6 +251,41 @@ with tool_col1:
                     }}
                 }}
             }});
+
+            // 2. Make the entire Toolbar Menu Draggable across the screen
+            const parentDoc = window.parent.document;
+            const toolbar = parentDoc.querySelector('div[data-testid="stHorizontalBlock"]:last-of-type');
+            
+            if (toolbar && !toolbar.dataset.dragEnabled) {{
+                toolbar.dataset.dragEnabled = "true";
+                let isDragging = false;
+                let initialX, initialY, currentX = 0, currentY = 0;
+                
+                toolbar.addEventListener('mousedown', (e) => {{
+                    // Only start drag if clicking on the background, not the buttons
+                    if (e.target.closest('button')) return;
+                    
+                    isDragging = true;
+                    // Extract current translation state
+                    const style = window.parent.getComputedStyle(toolbar);
+                    const matrix = new DOMMatrixReadOnly(style.transform);
+                    initialX = e.clientX - matrix.m41;
+                    initialY = e.clientY - matrix.m42;
+                    toolbar.style.transition = 'none'; // Disable smooth css transitions while dragging
+                }});
+
+                parentDoc.addEventListener('mousemove', (e) => {{
+                    if (!isDragging) return;
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                    toolbar.style.transform = `translate(${{currentX}}px, ${{currentY}}px)`;
+                }});
+
+                parentDoc.addEventListener('mouseup', () => {{
+                    isDragging = false;
+                }});
+            }}
         </script>
         </body>
         </html>
@@ -282,7 +319,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
     st.session_state.pending_generation = True
     st.rerun()
 
-# 7B. Processing AI generation exactly after shifting the UI
+# 7B. Processing AI generation
 if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     
@@ -340,5 +377,4 @@ if st.session_state.pending_generation:
             except Exception as e:
                 st.error(f"System Fault: {str(e)}")
                 
-    # Turn off the flag once response is complete
     st.session_state.pending_generation = False

@@ -69,11 +69,39 @@ st.markdown(f"""
 
     /* Sidebar Dark Styling */
     section[data-testid="stSidebar"] {{ background-color: #1A1A1A !important; border-right: 1px solid #333 !important; }}
-    .stButton>button {{ width: 100%; text-align: left; background-color: transparent; border: 1px solid transparent; padding: 10px 15px; border-radius: 8px; font-weight: 500; color: #E0E0E0; transition: 0.2s; }}
-    .stButton>button:hover {{ background-color: #333333 !important; color: #FFFFFF !important; border: 1px solid #555 !important; }}
     
-    .new-chat-btn>div>button {{ background-color: #60A5FA !important; color: #121212 !important; justify-content: center; font-weight: 600; margin-bottom: 20px; border-radius: 8px; }}
-    .new-chat-btn>div>button:hover {{ background-color: #3B82F6 !important; color: #FFFFFF !important; }}
+    /* MODIFIED: Chat History Buttons styling */
+    .stButton>button {{ 
+        width: 100%; 
+        text-align: left; 
+        background-color: transparent; 
+        border: 1px solid transparent; 
+        padding: 10px 15px; 
+        border-radius: 8px; 
+        font-weight: 500; 
+        color: #BBBBBB !important; /* Lighter grey text */
+        transition: 0.2s; 
+    }}
+    .stButton>button:hover {{ 
+        background-color: #2A2A2A !important; /* Dark grey hover */
+        color: #FFFFFF !important; 
+        border: 1px solid #555 !important; 
+    }}
+    
+    /* MODIFIED: Top "New Session" button styling */
+    .new-chat-btn>div>button {{ 
+        background-color: #2A2A2A !important; /* Dark Grey background */
+        color: #E0E0E0 !important; /* Light text */
+        justify-content: center; 
+        font-weight: 600; 
+        margin-bottom: 20px; 
+        border-radius: 8px; 
+        border: 1px solid #444 !important;
+    }}
+    .new-chat-btn>div>button:hover {{ 
+        background-color: #333333 !important; /* Slightly lighter on hover */
+        color: #FFFFFF !important; 
+    }}
 
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
@@ -190,7 +218,7 @@ with st.sidebar:
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: #888888; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
     for chat_name in reversed(list(st.session_state.sessions.keys())):
         if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}"):
             st.session_state.current_chat = chat_name

@@ -223,8 +223,7 @@ with st.sidebar:
             st.session_state.pending_generation = False
             st.rerun()
             
-    st.markdown("---")
-    uploaded_image_sidebar = st.file_uploader("📸 Image Analysis (Optional)", type=['png', 'jpg', 'jpeg'], key="sidebar_img")
+    # HATA DIYA: Sidebar Wala Image Uploader 
 
     st.markdown("""
         <div class="signature-box">
@@ -248,11 +247,11 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 6. RIGHT ALIGNED TOOLBAR & EMOJI SCRIPT
 # ==========================================
-tool_col1, tool_col2 = st.columns([1, 1]) # Only using space needed for 2 icons
+tool_col1, tool_col2 = st.columns([1, 1]) 
 chat_img_bottom = None
 
 with tool_col1:
-    with st.popover("😀"): # Removed text to keep it perfectly circular
+    with st.popover("😀"): 
         emoji_list = [
             "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗",
             "😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁",
@@ -303,13 +302,14 @@ with tool_col1:
         components.html(html_code, height=210)
         
 with tool_col2:
-    with st.popover("📎"): # Removed text for a perfect circle icon
+    with st.popover("📎"): 
         st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#000000; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
         chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
             st.success("✅ Attached!")
 
-final_vision_image = chat_img_bottom or uploaded_image_sidebar
+# Ab sirf bottom wala attach button use hoga image input ke liye
+final_vision_image = chat_img_bottom
 
 # ==========================================
 # 7. CHAT INPUT & AI GENERATION

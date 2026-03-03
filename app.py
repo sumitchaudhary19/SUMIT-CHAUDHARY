@@ -42,45 +42,66 @@ st.markdown("""
     .signature-box h3 { margin: 5px 0 0 0; font-size: 1.1rem; color: #0F172A; font-weight: 700; }
 
     /* =========================================
-       NEW: CHAT BAR & TOOLBAR POSITIONING CSS
+       NEW: INSIDE SEARCH BAR + CIRCULAR BUTTONS CSS
        ========================================= */
-    .stChatInputContainer { 
-        border-radius: 12px !important; 
+       
+    /* 1. Chat Input Bar Modification */
+    div[data-testid="stChatInputContainer"] { 
+        border-radius: 30px !important; /* Make the bar fully rounded */
         border: 1px solid #CBD5E1 !important; 
         background-color: #FFFFFF !important; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        bottom: 60px !important; /* Lift chat bar up */
-        padding-bottom: 0px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        padding-left: 95px !important; /* Create empty space inside the bar on the left */
     }
     
-    /* Pin the toolbar to the bottom */
+    /* 2. Overlay the Toolbar in that empty space */
     div[data-testid="stHorizontalBlock"]:last-of-type {
         position: fixed;
-        bottom: 15px;
+        bottom: 28px; /* Perfectly centers the buttons vertically inside the bar */
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
         max-width: 800px;
-        z-index: 999;
-        padding: 0 20px;
-        background: transparent;
+        z-index: 9999;
+        pointer-events: none; /* Let clicks pass through empty spaces */
+        padding-left: 10px; /* Shift icons slightly right from the edge */
+        display: flex;
+        gap: 0px;
+    }
+
+    /* 3. Make only the buttons clickable */
+    div[data-testid="stHorizontalBlock"]:last-of-type > div {
+        pointer-events: auto;
+        width: auto !important;
+        flex: 0 0 auto !important;
     }
     
-    /* Toolbar Button Styling */
-    [data-testid="stPopover"] > button {
-        border-radius: 20px !important;
-        padding: 6px 16px !important;
-        border: 1px solid #CBD5E1 !important;
-        background-color: #FFFFFF !important;
-        color: #475569 !important;
-        font-weight: 600 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-        transition: all 0.2s;
+    /* 4. CIRCULAR Button Styling */
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important; /* PERFECT CIRCLE */
+        padding: 0 !important;
+        border: none !important;
+        background-color: transparent !important;
+        color: #64748B !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none !important;
+        transition: background-color 0.2s;
     }
-    [data-testid="stPopover"] > button:hover {
-        background-color: #F1F5F9 !important;
-        border-color: #94A3B8 !important;
-        color: #0F172A !important;
+    
+    /* Center and resize the Emojis/Icons inside the circle */
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {
+        font-size: 1.3rem !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+    }
+
+    /* Hover effect for circular buttons */
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {
+        background-color: #E2E8F0 !important; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -149,18 +170,18 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 5. BOTTOM TOOLBAR (EMOJI & ATTACH)
+# 5. BOTTOM TOOLBAR (CIRCULAR, INSIDE BAR)
 # ==========================================
-tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
+tool_col1, tool_col2, _ = st.columns([1, 1, 10])
 chat_img_bottom = None
 
 with tool_col1:
-    with st.popover("😀 Emojis"):
+    with st.popover("😀"):
         st.write("Click, Copy & Paste in chat:")
         st.markdown("😂 ❤️ 👍 🙏 🔥 ✨ 🚀 💡 💻 🤖 🇮🇳")
         
 with tool_col2:
-    with st.popover("📎 Attach"):
+    with st.popover("📎"):
         chat_img_bottom = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
             st.success("Image attached! Type your prompt.")

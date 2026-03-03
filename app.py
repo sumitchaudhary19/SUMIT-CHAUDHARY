@@ -36,7 +36,24 @@ else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, Chat Alignment & Clean Gemini Bar)
+# 3. ATTACHMENT ICON LOGIC
+# ==========================================
+# Try to load custom attachment icon, otherwise fallback to "+"
+try:
+    with open("attach_icon.png", "rb") as f:
+        attach_b64 = base64.b64encode(f.read()).decode()
+    attach_bg_css = f"background-image: url('data:image/png;base64,{attach_b64}') !important; background-size: 22px 22px !important; background-position: center !important; background-repeat: no-repeat !important; opacity: 0.7;"
+    attach_p_css = "display: none !important;"
+    attach_hover_btn_css = "opacity: 1 !important; background-color: rgba(255,255,255,0.1) !important;"
+    attach_hover_p_css = "display: none !important;"
+except FileNotFoundError:
+    attach_bg_css = "background: transparent !important;"
+    attach_p_css = "font-size: 2.2rem !important; color: #555555 !important; line-height: 0.9 !important; margin: 0 !important; font-weight: 300 !important;"
+    attach_hover_btn_css = "background: transparent !important;"
+    attach_hover_p_css = "color: #AAAAAA !important;"
+
+# ==========================================
+# 4. ADVANCED CSS
 # ==========================================
 st.markdown(f"""
     <style>
@@ -54,16 +71,15 @@ st.markdown(f"""
     /* 🔴 PITCH BLACK BOTTOM SECTION */
     [data-testid="stBottom"] {{
         background-color: #000000 !important;
-        border-top: none !important; /* Removed top border from bottom section */
+        border-top: none !important; 
         padding-top: 20px !important;
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT & (3/4)th WIDTH
+       CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
        
-    /* Streamlit adds padding to the chat container itself, we need to remove it for the bot to touch the edge */
     [data-testid="stChatMessageContainer"] {{
         padding-left: 0 !important;
         padding-right: 0 !important;
@@ -73,26 +89,26 @@ st.markdown(f"""
         border-radius: 12px; 
         padding: 15px 20px; 
         margin-bottom: 20px;
-        width: fit-content !important; 
-        max-width: 75% !important; 
     }}
     
-    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
         border: 1px solid #444 !important; 
+        width: fit-content !important; 
+        max-width: 75% !important; 
         margin-left: auto !important; 
         margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT (Touching Boundary) */
+    /* 🟢 CHATBOT (Even) -> FULL WIDTH (100%), Touching Boundary */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
-        width: 100% !important; /* Made equal to chat section length */
+        width: 100% !important; 
         max-width: 100% !important; 
         margin-right: auto !important; 
-        margin-left: 0 !important; /* Strictly touching left */
+        margin-left: 0 !important; 
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -139,7 +155,7 @@ st.markdown(f"""
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 90px !important; /* HEIGHT INCREASED FOR BETTER SPACING */
+        min-height: 90px !important; 
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
         border: 1px solid #444 !important; 
@@ -168,7 +184,7 @@ st.markdown(f"""
         padding-top: 15px !important;
         padding-right: 60px !important; 
         background-color: transparent !important;
-        min-height: 50px !important; /* Ensuring space above the plus button */
+        min-height: 50px !important; 
     }}
     .stChatInput textarea::placeholder {{
         color: #888888 !important;
@@ -184,7 +200,7 @@ st.markdown(f"""
         position: absolute !important;
         width: 42px !important; height: 42px !important;
         right: 15px !important; 
-        bottom: 25px !important; /* Adjusted slightly */
+        bottom: 25px !important; 
         transition: all 0.3s ease !important;
         display: flex !important;
         align-items: center !important;
@@ -213,22 +229,21 @@ st.markdown(f"""
     }}
     
     /* =========================================
-       ATTACHMENT BUTTON (+) INSIDE LEFT
+       ATTACHMENT BUTTON (DYNAMIC IMAGE OR +)
        ========================================= */
-    /* Container precisely overlaying the search bar */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 90px !important; /* Matches search bar height */
+        min-height: 90px !important; 
         z-index: 10000 !important;
         pointer-events: none !important; 
         display: flex;
         align-items: flex-end; 
-        padding-bottom: 15px; /* Pushes it up from the absolute bottom */
-        padding-left: 20px; /* Aligns with the 'Ask me anything' text */
+        padding-bottom: 15px; 
+        padding-left: 20px; 
     }}
     
     div[data-testid="stHorizontalBlock"]:last-of-type > div {{
@@ -237,21 +252,24 @@ st.markdown(f"""
 
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
         width: 35px !important; height: 35px !important;
-        background: transparent !important; border: none !important;
+        border: none !important;
         border-radius: 50% !important; padding: 0 !important;
         display: flex; align-items: center; justify-content: center;
         box-shadow: none !important;
+        transition: 0.3s;
+        {attach_bg_css}
     }}
     
-    /* Dark Grey "+" styling */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
-        font-size: 2.2rem !important;
-        color: #555555 !important; /* Dark Grey Symbol */
-        line-height: 0.9 !important; margin: 0 !important; font-weight: 300 !important;
+        {attach_p_css}
     }}
     
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
+        {attach_hover_btn_css}
+    }}
+
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover p {{
-        color: #AAAAAA !important; 
+        {attach_hover_p_css}
     }}
     
     /* Attachment Popover Body */
@@ -268,7 +286,7 @@ def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
-# 4. SIDEBAR & BRANDING
+# 5. SIDEBAR & BRANDING
 # ==========================================
 with st.sidebar:
     try:
@@ -310,7 +328,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT LOGIC
+# 6. MAIN CHAT LOGIC
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 5vh;'>AskMNIT</h1>", unsafe_allow_html=True)
@@ -327,9 +345,8 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 6. ATTACHMENT TOOL (Floating Left + Button)
+# 7. ATTACHMENT TOOL (Floating Left Button)
 # ==========================================
-# Columns trick to force it into the specific horizontal block targeted by CSS
 tool_col, _ = st.columns([1, 99]) 
 chat_img_bottom = None
 
@@ -343,7 +360,7 @@ with tool_col:
 final_vision_image = chat_img_bottom
 
 # ==========================================
-# 7. CHAT INPUT & AI GENERATION
+# 8. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     
@@ -355,7 +372,6 @@ if prompt := st.chat_input("Ask me anything..."):
 
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     
-    # Trigger AI Generation and UI shift
     st.session_state.pending_generation = True
     st.rerun()
 

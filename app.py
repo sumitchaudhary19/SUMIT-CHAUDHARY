@@ -43,7 +43,7 @@ else:
 # ==========================================
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap)');
     
     /* Global Dark Grey Background for Chat Area */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{ 
@@ -62,20 +62,30 @@ st.markdown(f"""
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
-    /* Chat Message Styling (Backgrounds and GREY TEXT) */
+    /* Chat Message Styling (Backgrounds and Width Control) */
     div[data-testid="stChatMessage"] {{ 
-        border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; 
-    }}
-    div[data-testid="stChatMessage"]:nth-child(odd) {{ 
-        background-color: #2C2C2C !important; border: 1px solid #444 !important; 
-    }}
-    div[data-testid="stChatMessage"]:nth-child(even) {{ 
-        background-color: #212121 !important; border: 1px solid #444 !important; 
+        border-radius: 12px; 
+        padding: 15px 20px; 
+        margin-bottom: 20px;
+        max-width: 75% !important; /* Bubble length at 3/4ths maximum */
+        width: fit-content !important; /* critical for bubble control */
     }}
     
-    /* =========================================
-       UPDATED: CHAT TEXT COLOR TO GREY
-       ========================================= */
+    /* 🔵 USER (Odd/First instance flow) -> Aligned RIGHT */
+    div[data-testid="stChatMessage"]:nth-child(odd) {{ 
+        background-color: #2C2C2C !important; border: 1px solid #444 !important; 
+        margin-left: auto !important; /* Alignment to right */
+        margin-right: 0 !important;
+    }}
+    
+    /* 🟢 CHATBOT (Even instances flow) -> Aligned LEFT */
+    div[data-testid="stChatMessage"]:nth-child(even) {{ 
+        background-color: #212121 !important; border: 1px solid #444 !important; 
+        margin-right: auto !important; /* Alignment to left */
+        margin-left: 0 !important;
+    }}
+    
+    /* CHAT TEXT COLOR TO GREY */
     div[data-testid="stChatMessageContent"] p {{
         color: #B0B0B0 !important; /* Nice soothing light grey */
         font-size: 1rem;

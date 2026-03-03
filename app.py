@@ -30,24 +30,22 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    # Empty Chat -> Search Bar in Middle
-    chat_pos_css = "top: 50% !important; margin-top: -25px !important;"
-    # Perfect vertical center for 32px buttons inside a ~52px search bar
-    tool_pos_css = "top: 50%; margin-top: -16px;" 
+    # Empty Chat -> Big Gemini Search Bar in Exact Middle
+    chat_pos_css = "top: 45vh !important; transform: translateX(-50%) !important;"
+    tool_pos_css = "top: calc(45vh + 15px) !important;" 
 else:
-    # Chat Started -> Search Bar shifts to Bottom
-    chat_pos_css = "bottom: 20px !important;"
-    # 20px bottom + 10px padding = 30px to perfectly center inside the bar
-    tool_pos_css = "bottom: 30px;" 
+    # Chat Started -> Search Bar shifts permanently to Bottom
+    chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
+    tool_pos_css = "bottom: 45px !important;"
 
 # ==========================================
-# 3. DARK MODE, Black Bottom, Chat Alignment & RGB SEARCH CSS
+# 3. ADVANCED CSS (Dark Theme, Chat Alignment & RGB Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* Global Backgrounds */
+    /* Global Dark Grey Background */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{ 
         font-family: 'Inter', sans-serif; 
         background-color: #1A1A1A !important; 
@@ -60,214 +58,234 @@ st.markdown(f"""
     [data-testid="stBottom"] {{
         background-color: #000000 !important;
         border-top: 1px solid #222 !important;
+        padding-top: 20px !important;
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT & STYLE
+       CHAT MESSAGES ALIGNMENT & (3/4)th WIDTH
        ========================================= */
     div[data-testid="stChatMessage"] {{ 
-        border-radius: 12px; padding: 15px 20px; 
+        border-radius: 12px; 
+        padding: 15px 20px; 
         margin-bottom: 20px;
         width: fit-content !important; 
-        max-width: 75% !important; 
+        max-width: 75% !important; /* 3/4th size */
     }}
     
-    /* 🔵 USER (Odd) -> Aligned RIGHT */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
+        border: 1px solid #444 !important; 
         margin-left: auto !important; 
-        margin-right: 1rem !important;
+        margin-right: 0 !important;
     }}
     
     /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
+        border: 1px solid #333 !important; 
         margin-right: auto !important; 
-        margin-left: 0 !important; /* Fixed left side chipka hua */
-        border: 1px solid #333 !important;
+        margin-left: 0 !important; 
     }}
     
-    /* CHAT TEXT COLOR */
+    /* CHAT TEXT COLOR (Grey) */
     div[data-testid="stChatMessageContent"] p {{
-        color: #B0B0B0 !important;
+        color: #B0B0B0 !important; 
         font-size: 1rem; line-height: 1.6;
     }}
 
-    /* Sidebar Styling */
+    /* =========================================
+       SIDEBAR & LIGHT GREY BUTTONS
+       ========================================= */
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
-    .stButton>button {{ width: 100%; text-align: left; background-color: #D3D3D3; border: none; color: #000; font-weight: 600; }}
-    .stButton>button:hover {{ background-color: #BDBDBD !important; color: #000 !important; }}
-    .new-chat-btn>div>button {{ background-color: #D3D3D3; color: #000; font-weight: 700; }}
+    
+    /* Normal Sidebar Buttons */
+    .stButton>button {{ 
+        width: 100%; text-align: left; 
+        background-color: #D3D3D3 !important; 
+        border: 1px solid #999 !important; 
+        padding: 10px 15px; border-radius: 8px; 
+        font-weight: 600; color: #000000 !important; 
+        transition: 0.2s; 
+    }}
+    .stButton>button:hover {{ background-color: #BDBDBD !important; }}
+    
+    /* Top "New Session" Button */
+    .new-chat-btn>div>button {{ 
+        background-color: #D3D3D3 !important; 
+        color: #000000 !important; 
+        justify-content: center; font-weight: 700; 
+        margin-bottom: 20px; border-radius: 8px; 
+        border: 1px solid #999 !important; 
+    }}
+    .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
+
+    /* Architect Box */
+    .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
+    .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
+    .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       FUTURISTIC RGB SEARCH BAR (MOTION)
+       GEMINI-STYLE LARGE SEARCH BAR WITH RGB MOTION
        ========================================= */
-       
-    /* The main input container modification */
     div[data-testid="stChatInputContainer"] {{ 
+        border-radius: 40px !important; 
+        max-width: 850px !important; /* Wide Gemini Look */
+        min-height: 65px !important; /* Taller Bar */
+        margin: 0 !important;
+        padding: 5px !important;
         border: none !important;
-        background-color: #2C2C2C !important; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
-        max-width: 800px !important; margin: 0 auto !important;
-        position: relative;
-        overflow: hidden; /* For border effect */
-        z-index: 1;
+        background-color: transparent !important; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+        position: fixed !important;
+        left: 50% !important;
+        overflow: hidden; 
+        z-index: 10;
         {chat_pos_css} 
     }}
 
-    /* Creating the rotating RGB border with pseudo-elements */
+    /* The Rotating RGB Border Effect */
     div[data-testid="stChatInputContainer"]::before {{
         content: '';
         position: absolute;
         z-index: -2;
         left: -50%; top: -50%;
         width: 200%; height: 200%;
-        background-color: #1A1A1A;
-        background-repeat: no-repeat;
-        background-size: 50% 50%, 50% 50%;
-        background-position: 0 0, 100% 0, 100% 100%, 0 100%;
-        /* RGB Gradient colors */
-        background-image: linear-gradient(#1A1A1A, #1A1A1A), linear-gradient(#ff0000, #ff0000), linear-gradient(#1A1A1A, #1A1A1A), linear-gradient(#0000ff, #ff0000);
-        background-image: conic-gradient(#ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
-        animation: rotateRGB 4s linear infinite;
+        background-image: conic-gradient(
+            #ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000
+        );
+        animation: rotateRGB 3s linear infinite;
     }}
+    @keyframes rotateRGB {{ 100% {{ transform: rotate(360deg); }} }}
 
-    @keyframes rotateRGB {{
-        100% {{ transform: rotate(360deg); }}
-    }}
-
-    /* Inner box to hide excess rotating gradient */
+    /* The Solid Inner Background (Hides gradient except for 3px border) */
     div[data-testid="stChatInputContainer"]::after {{
         content: '';
         position: absolute;
         z-index: -1;
-        left: 3px; top: 3px;
-        width: calc(100% - 6px); height: calc(100% - 6px);
-        background: #2C2C2C;
-        border-radius: 28px;
+        inset: 3px; /* 3px RGB Border thickness */
+        background: #1E1E1E !important; /* Deep dark inner background */
+        border-radius: 37px;
     }}
     
-    /* Text input area adjustments */
+    /* Text Input Area */
     div[data-testid="stChatInputContainer"] textarea {{ 
         color: #FFFFFF !important; 
-        font-weight: 500; 
-        padding-right: 130px !important; /* Space for Emoji + Attach + Send Arrow */
+        font-size: 1.15rem !important; /* Larger text */
+        padding-left: 15px !important;
+        padding-right: 150px !important; /* Huge right padding to fit buttons */
         background-color: transparent !important;
+        margin-top: 5px !important;
     }}
-    
-    /* Hiding default streamlit send icon to use custom Gemini style */
+    div[data-testid="stChatInputContainer"] textarea::placeholder {{
+        color: #888888 !important;
+    }}
+
+    /* Hiding Streamlit's default Send Icon */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] svg {{
         display: none !important;
     }}
 
     /* =========================================
-       CUSTOM GEMINI-STYLE SEND BUTTON
+       GEMINI-STYLE ARROW SEND BUTTON
        ========================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
-        background: transparent !important;
-        border: none !important;
-        position: relative;
-        width: 40px !important; height: 40px !important;
+        background-color: #333333 !important;
+        border-radius: 50% !important;
+        border: 1px solid #555 !important;
+        position: absolute !important;
+        width: 45px !important; height: 45px !important;
+        right: 15px !important; /* Positioned inside the bar */
+        bottom: 50% !important;
+        transform: translateY(50%) !important;
+        transition: all 0.3s ease;
     }}
 
-    /* Adding custom arrow icon */
+    /* The Arrow (➤) */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]::after {{
-        content: '➤'; /* Arrow symbol or SVG content */
-        font-size: 1.5rem;
-        color: #A0A0A0; /* Static color */
+        content: '➤';
+        font-size: 1.4rem;
+        color: #E0E0E0; 
         position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%) rotate(0deg);
-        transition: color 0.3s, transform 0.3s;
+        top: 50%; left: 52%;
+        transform: translate(-50%, -50%);
+        transition: color 0.3s;
     }}
 
-    /* Hover effect */
+    /* Hover effect for Send Button */
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{
+        background-color: #3B82F6 !important; /* Glows blue */
+        border-color: #60A5FA !important;
+    }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover::after {{
-        color: #00ffff !important; /* Light blue on hover */
-        transform: translate(-50%, -50%) scale(1.1);
+        color: #FFFFFF !important;
     }}
 
-    /* Disabled state */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:disabled::after {{
-        color: #444 !important;
-    }}
-    
     /* =========================================
-       EMOJI & ATTACH BUTTONS (INSIDE SEARCH BAR)
+       EMOJI & ATTACH BUTTONS (Left of Arrow)
        ========================================= */
-    /* Container for Emoji and Attach icons */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed;
         {tool_pos_css} 
-        width: 80px !important;
+        width: auto !important;
         z-index: 99999;
         display: flex;
-        gap: 4px;
+        gap: 6px;
         flex-direction: row;
         justify-content: flex-end;
     }}
 
-    /* Position exactly left of the Send Arrow */
+    /* Dynamic alignment exactly left of the Send button */
     @media (min-width: 850px) {{
         div[data-testid="stHorizontalBlock"]:last-of-type {{
             left: 50%;
-            margin-left: 270px; /* Places it precisely inside the 800px max-width bar */
+            margin-left: 250px; /* Aligns them safely left of the 45px send button */
         }}
     }}
     @media (max-width: 849px) {{
         div[data-testid="stHorizontalBlock"]:last-of-type {{
-            right: 55px; /* Stay just left of the default send button */
+            right: 70px; /* Sticks to the left of the send button on small screens */
         }}
     }}
     
-    /* Button Styling (Perfectly Circular, SMALLER TO FIT INSIDE) */
+    /* Toolbar Buttons (Emoji/Attach) perfectly circular */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
-        width: 32px !important;  /* Reduced from 38px to ensure it doesn't touch borders */
-        height: 32px !important; /* Reduced to fit neatly */
-        border-radius: 50% !important; /* PERFECT CIRCLE */
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 50% !important; 
         padding: 0 !important;
         border: none !important;
         background-color: transparent !important; 
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: none !important;
-        transition: 0.2s;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: none !important; transition: 0.2s;
     }}
-    
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
-        font-size: 1.2rem !important; /* Reduced icon size to fit 32px button */
-        margin: 0 !important;
-        line-height: 1 !important;
+        font-size: 1.3rem !important; margin: 0 !important; line-height: 1 !important;
     }}
-
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
-        background-color: rgba(255, 255, 255, 0.1) !important; /* Subtle hover effect inside dark bar */
+        background-color: rgba(255,255,255,0.1) !important; 
     }}
     
-    /* Popover Body */
+    /* Popover Container */
     [data-testid="stPopoverBody"] {{
-        background-color: #2C2C2C !important; 
-        border: 1px solid #444 !important; 
-        padding: 0 !important;
-        border-radius: 12px !important;
+        padding: 0 !important; border-radius: 12px !important; overflow: hidden !important;
+        background-color: #2C2C2C !important; border: 1px solid #555 !important;
     }}
     </style>
 """, unsafe_allow_html=True)
 
-# Function to encode image
+# Helper Function
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
-# 4. SIDEBAR LOGO & HISTORY
+# 4. SIDEBAR & BRANDING
 # ==========================================
 with st.sidebar:
     try:
         with open("logo.png", "rb") as image_file:
             logo_base64 = base64.b64encode(image_file.read()).decode()
-        
         logo_html = f"""
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px; padding-top: 10px;">
             <img src="data:image/png;base64,{logo_base64}" style="width: 50px; margin-right: 12px;">
@@ -276,7 +294,7 @@ with st.sidebar:
         """
         st.markdown(logo_html, unsafe_allow_html=True)
     except FileNotFoundError:
-        st.markdown("<h3 style='color: #60A5FA; text-align: center;'>AskMNIT</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>logo.png AskMNIT</h3>", unsafe_allow_html=True)
 
     st.markdown("<div class='new-chat-btn'>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
@@ -287,17 +305,28 @@ with st.sidebar:
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
+    st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
     for chat_name in reversed(list(st.session_state.sessions.keys())):
         if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}"):
             st.session_state.current_chat = chat_name
             st.session_state.pending_generation = False
             st.rerun()
+            
+    st.markdown("---")
+    st.markdown("""
+        <div class="signature-box">
+            <p>Architected by</p>
+            <h3>SUMIT CHAUDHARY</h3>
+            <p style="font-size: 0.6rem; margin-top: 5px;">Enterprise AI v6.0</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT LOGIC
 # ==========================================
-st.markdown("<h1 style='color: #FFFFFF; text-align: center;'>AskMNIT</h1>", unsafe_allow_html=True)
-st.markdown("<div style='text-align: center; color: #BBBBBB; margin-bottom: 30px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
+if is_chat_empty:
+    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 5vh;'>AskMNIT</h1>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
@@ -305,7 +334,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. ATTACHMENT POPOVER (Positioned Inside Search Bar)
+# 6. EMOJI & ATTACHMENT TOOLS
 # ==========================================
 tool_col1, tool_col2 = st.columns([1, 1]) 
 chat_img_bottom = None
@@ -319,12 +348,9 @@ with tool_col1:
             "👍","👎","👏","🙌","👐","🤲","🤝","🙏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","❤️","🔥","✨","🚀"
         ]
         emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
-        
         html_code = f"""
         <!DOCTYPE html>
-        <html>
-        <head>
-        <style>
+        <html><head><style>
         body {{ margin: 0; padding: 10px; font-family: sans-serif; background: #2C2C2C; color: #FFFFFF; }}
         .emoji-grid {{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; height: 190px; overflow-y: auto; padding-right: 5px; }}
         .emoji-btn {{ font-size: 1.6rem; cursor: pointer; text-align: center; user-select: none; transition: transform 0.1s; padding: 5px; border-radius: 8px; }}
@@ -333,12 +359,8 @@ with tool_col1:
         .emoji-grid::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 4px; }}
         .emoji-grid::-webkit-scrollbar-thumb {{ background: #555; border-radius: 4px; }}
         .emoji-grid::-webkit-scrollbar-thumb:hover {{ background: #777; }}
-        </style>
-        </head>
-        <body>
-        <div class="emoji-grid" id="grid">
-            {emoji_divs}
-        </div>
+        </style></head><body>
+        <div class="emoji-grid" id="grid">{emoji_divs}</div>
         <script>
             document.getElementById('grid').addEventListener('click', function(e) {{
                 if(e.target.classList.contains('emoji-btn')) {{
@@ -354,16 +376,16 @@ with tool_col1:
                     }}
                 }}
             }});
-        </script>
-        </body>
-        </html>
+        </script></body></html>
         """
         components.html(html_code, height=210)
         
 with tool_col2:
     with st.popover("📎"): 
         st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
-        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], key="bottom_img")
+        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+        if chat_img_bottom:
+            st.success("✅ Attached!")
 
 final_vision_image = chat_img_bottom
 
@@ -371,6 +393,7 @@ final_vision_image = chat_img_bottom
 # 7. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
+    
     curr_chat = st.session_state.current_chat
     if curr_chat.startswith("New Session") and len(st.session_state.sessions[curr_chat]) == 0:
         new_name = prompt[:20] + "..."
@@ -378,42 +401,67 @@ if prompt := st.chat_input("Ask me anything..."):
         st.session_state.current_chat = new_name
 
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+    
+    # Trigger AI Generation and UI shift
     st.session_state.pending_generation = True
     st.rerun()
 
+# Processing AI generation
 if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     
     with st.chat_message("assistant", avatar="logo.png"):
-        instructions = "You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT."
-        try:
-            def generate_response():
-                if final_vision_image:
-                    base64_image = encode_image(final_vision_image)
-                    stream = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": instructions},
-                            {"role": "user", "content": [
-                                {"type": "text", "text": prompt},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                            ]}
-                        ],
-                        model="llama-3.2-11b-vision-preview",
-                        stream=True
-                    )
-                else:
-                    stream = client.chat.completions.create(
-                        messages=[{"role": "system", "content": instructions}, {"role": "user", "content": prompt}],
-                        model="llama-3.3-70b-versatile",
-                        stream=True
-                    )
-                for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
-                        yield chunk.choices[0].delta.content
+        if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
+            with st.spinner("Generating visualization..."):
+                time.sleep(1.5)
+                safe_prompt = urllib.parse.quote(prompt)
+                img_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=800&height=400&nologo=true"
+                st.image(img_url)
+                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
+        else:
+            instructions = """
+            You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT.
+            1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
+            2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
+            3. YOU ARE AN AI. Do not claim to be human.
+            4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
+            """
+            
+            try:
+                def generate_response():
+                    if final_vision_image:
+                        base64_image = encode_image(final_vision_image)
+                        stream = client.chat.completions.create(
+                            messages=[
+                                {"role": "system", "content": instructions},
+                                {"role": "user", "content": [
+                                    {"type": "text", "text": prompt},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]}
+                            ],
+                            model="llama-3.2-11b-vision-preview",
+                            temperature=0.7,
+                            stream=True
+                        )
+                    else:
+                        stream = client.chat.completions.create(
+                            messages=[
+                                {"role": "system", "content": instructions},
+                                {"role": "user", "content": prompt}
+                            ],
+                            model="llama-3.3-70b-versatile",
+                            temperature=0.7,
+                            stream=True
+                        )
+                    
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content is not None:
+                            yield chunk.choices[0].delta.content
 
-            response_text = st.write_stream(generate_response())
-            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-        except Exception as e:
-            st.error(f"System Fault: {str(e)}")
+                response_text = st.write_stream(generate_response())
+                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+                
+            except Exception as e:
+                st.error(f"System Fault: {str(e)}")
                 
     st.session_state.pending_generation = False

@@ -23,6 +23,8 @@ if "sessions" not in st.session_state:
     st.session_state.sessions = {"New Session": []}
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
+if "pending_generation" not in st.session_state:
+    st.session_state.pending_generation = False
 
 # DYNAMIC UI LOGIC: Check if chat is empty to center the Search Bar
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
@@ -79,7 +81,7 @@ st.markdown(f"""
         border: 1px solid #999 !important; 
         background-color: #D3D3D3 !important; 
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
-        {chat_pos_css} /* Applies dynamic position */
+        {chat_pos_css} 
     }}
     
     /* Text inside Light Grey Bar */
@@ -90,7 +92,7 @@ st.markdown(f"""
     /* 2. Position the Toolbar exactly above the Chat Bar Border */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed;
-        {tool_pos_css} /* Applies dynamic position */
+        {tool_pos_css} 
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
@@ -102,12 +104,11 @@ st.markdown(f"""
         gap: 10px;
     }}
 
-    /* Make the buttons clickable */
     div[data-testid="stHorizontalBlock"]:last-of-type > div {{
         pointer-events: auto;
     }}
     
-    /* 3. Button Styling (Side by Side, Matching Light Grey) */
+    /* 3. Button Styling */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
         border-radius: 20px !important;
         padding: 6px 15px !important;
@@ -124,7 +125,7 @@ st.markdown(f"""
         border-color: #777 !important;
     }}
     
-    /* Popover Body (Light Grey Theme) */
+    /* Popover Body */
     [data-testid="stPopoverBody"] {{
         padding: 0 !important;
         border-radius: 12px !important;
@@ -162,6 +163,7 @@ with st.sidebar:
         chat_id = f"Session {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[chat_id] = []
         st.session_state.current_chat = chat_id
+        st.session_state.pending_generation = False
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -169,6 +171,7 @@ with st.sidebar:
     for chat_name in reversed(list(st.session_state.sessions.keys())):
         if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}"):
             st.session_state.current_chat = chat_name
+            st.session_state.pending_generation = False
             st.rerun()
             
     st.markdown("---")
@@ -216,28 +219,9 @@ with tool_col1:
         <head>
         <style>
         body {{ margin: 0; padding: 10px; font-family: sans-serif; background: #D3D3D3; color: #000000; }}
-        .emoji-grid {{
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 8px;
-            height: 190px; 
-            overflow-y: auto; 
-            padding-right: 5px;
-        }}
-        .emoji-btn {{
-            font-size: 1.6rem;
-            cursor: pointer;
-            text-align: center;
-            user-select: none;
-            transition: transform 0.1s;
-            padding: 5px;
-            border-radius: 8px;
-        }}
-        .emoji-btn:hover {{
-            transform: scale(1.2);
-            background-color: #BDBDBD;
-        }}
-        /* Custom Scrollbar */
+        .emoji-grid {{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; height: 190px; overflow-y: auto; padding-right: 5px; }}
+        .emoji-btn {{ font-size: 1.6rem; cursor: pointer; text-align: center; user-select: none; transition: transform 0.1s; padding: 5px; border-radius: 8px; }}
+        .emoji-btn:hover {{ transform: scale(1.2); background-color: #BDBDBD; }}
         .emoji-grid::-webkit-scrollbar {{ width: 6px; }}
         .emoji-grid::-webkit-scrollbar-track {{ background: #D3D3D3; border-radius: 4px; }}
         .emoji-grid::-webkit-scrollbar-thumb {{ background: #999; border-radius: 4px; }}
@@ -253,7 +237,6 @@ with tool_col1:
                 if(e.target.classList.contains('emoji-btn')) {{
                     const emoji = e.target.innerText;
                     const parentDoc = window.parent.document;
-                    
                     const chatInput = parentDoc.querySelector('[data-testid="stChatInputTextArea"]') || 
                                       parentDoc.querySelector('[data-testid="stChatInputContainer"] textarea') || 
                                       parentDoc.querySelector('textarea');
@@ -261,7 +244,6 @@ with tool_col1:
                     if(chatInput) {{
                         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
                         nativeInputValueSetter.call(chatInput, chatInput.value + emoji);
-                        
                         chatInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
                         chatInput.focus();
                     }}
@@ -283,8 +265,9 @@ with tool_col2:
 final_vision_image = chat_img_bottom or uploaded_image_sidebar
 
 # ==========================================
-# 7. CHAT INPUT BAR
+# 7. CHAT INPUT & AI GENERATION
 # ==========================================
+# 7A. Taking the user input
 if prompt := st.chat_input("Ask Chatmnit anything..."):
     
     curr_chat = st.session_state.current_chat
@@ -294,4 +277,68 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
         st.session_state.current_chat = new_name
 
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
-    st.rerun() # Refresh immediately to shift bar to bottom
+    
+    # Flag to trigger AI response generation & shift the bar to bottom
+    st.session_state.pending_generation = True
+    st.rerun()
+
+# 7B. Processing AI generation exactly after shifting the UI
+if st.session_state.pending_generation:
+    prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    
+    with st.chat_message("assistant", avatar="logo.png"):
+        if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
+            with st.spinner("Generating visualization..."):
+                time.sleep(1.5)
+                safe_prompt = urllib.parse.quote(prompt)
+                img_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=800&height=400&nologo=true"
+                st.image(img_url)
+                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
+        else:
+            instructions = """
+            You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
+            1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
+            2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
+            3. YOU ARE AN AI. Do not claim to be human.
+            4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
+            """
+            
+            try:
+                def generate_response():
+                    if final_vision_image:
+                        base64_image = encode_image(final_vision_image)
+                        stream = client.chat.completions.create(
+                            messages=[
+                                {"role": "system", "content": instructions},
+                                {"role": "user", "content": [
+                                    {"type": "text", "text": prompt},
+                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                                ]}
+                            ],
+                            model="llama-3.2-11b-vision-preview",
+                            temperature=0.7,
+                            stream=True
+                        )
+                    else:
+                        stream = client.chat.completions.create(
+                            messages=[
+                                {"role": "system", "content": instructions},
+                                {"role": "user", "content": prompt}
+                            ],
+                            model="llama-3.3-70b-versatile",
+                            temperature=0.7,
+                            stream=True
+                        )
+                    
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content is not None:
+                            yield chunk.choices[0].delta.content
+
+                response_text = st.write_stream(generate_response())
+                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+                
+            except Exception as e:
+                st.error(f"System Fault: {str(e)}")
+                
+    # Turn off the flag once response is complete
+    st.session_state.pending_generation = False

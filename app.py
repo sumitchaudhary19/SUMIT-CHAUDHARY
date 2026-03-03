@@ -60,7 +60,7 @@ st.markdown(f"""
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT & (3/4)th WIDTH
+       CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
        
     /* Streamlit adds padding to the chat container itself, we need to remove it for the bot to touch the edge */
@@ -73,24 +73,26 @@ st.markdown(f"""
         border-radius: 12px; 
         padding: 15px 20px; 
         margin-bottom: 20px;
-        width: fit-content !important; 
-        max-width: 75% !important; 
     }}
     
-    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
         border: 1px solid #444 !important; 
+        width: fit-content !important; 
+        max-width: 75% !important; 
         margin-left: auto !important; 
         margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT (Touching Boundary) */
+    /* 🟢 CHATBOT (Even) -> FULL WIDTH (100%), Touching Boundary */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
-        margin-right: auto !important; 
-        margin-left: 0 !important; /* Strictly touching left */
+        width: 100% !important; /* Made equal to chat section length */
+        max-width: 100% !important; 
+        margin-right: 0 !important; 
+        margin-left: 0 !important; 
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -211,6 +213,9 @@ st.markdown(f"""
     }}
     </style>
 """, unsafe_allow_html=True)
+
+def encode_image(uploaded_file):
+    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
 # 4. SIDEBAR & BRANDING

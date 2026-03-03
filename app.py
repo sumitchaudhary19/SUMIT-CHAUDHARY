@@ -16,7 +16,7 @@ else:
     st.stop()
 
 # ==========================================
-# 2. PROFESSIONAL LIGHT MODE & TOOLBAR CSS
+# 2. PROFESSIONAL CSS & CIRCULAR BUTTONS LOGIC
 # ==========================================
 st.markdown("""
     <style>
@@ -24,62 +24,83 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #F8F9FA; color: #1E293B; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
-    /* Chat Message Styling */
+    /* Normal Chat Styling */
     div[data-testid="stChatMessage"] { border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; }
-    div[data-testid="stChatMessage"]:nth-child(odd) { background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; color: #0F172A; }
-    div[data-testid="stChatMessage"]:nth-child(even) { background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.02); color: #0F172A; }
+    div[data-testid="stChatMessage"]:nth-child(odd) { background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; }
+    div[data-testid="stChatMessage"]:nth-child(even) { background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 
-    /* Sidebar Styling */
     section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
     .stButton>button { width: 100%; text-align: left; background-color: transparent; border: 1px solid transparent; padding: 10px 15px; border-radius: 8px; font-weight: 500; color: #475569; transition: 0.2s; }
     .stButton>button:hover { background-color: #F1F5F9; color: #0F172A; border: 1px solid #CBD5E1; }
-    
     .new-chat-btn>div>button { background-color: #1A56A8; color: white; justify-content: center; font-weight: 600; margin-bottom: 20px; border-radius: 8px; }
     .new-chat-btn>div>button:hover { background-color: #134282; color: white; }
 
-    .signature-box { margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #F8F9FA; border: 1px solid #E2E8F0; text-align: center; }
-    .signature-box p { margin: 0; font-size: 0.75rem; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
-    .signature-box h3 { margin: 5px 0 0 0; font-size: 1.1rem; color: #0F172A; font-weight: 700; }
-
     /* =========================================
-       NEW: CHAT BAR & TOOLBAR POSITIONING CSS
+       NEW: SINGLE BOX SEARCH BAR + CIRCULAR BUTTONS
        ========================================= */
-    .stChatInputContainer { 
-        border-radius: 12px !important; 
-        border: 1px solid #CBD5E1 !important; 
-        background-color: #FFFFFF !important; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-        bottom: 60px !important; /* Lift chat bar up */
-        padding-bottom: 0px !important;
-    }
-    
-    /* Pin the toolbar to the bottom */
-    div[data-testid="stHorizontalBlock"]:last-of-type {
-        position: fixed;
-        bottom: 15px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100%;
-        max-width: 800px;
-        z-index: 999;
-        padding: 0 20px;
-        background: transparent;
-    }
-    
-    /* Toolbar Button Styling */
-    [data-testid="stPopover"] > button {
-        border-radius: 20px !important;
-        padding: 6px 16px !important;
+       
+    /* 1. Chat Input Box Customization (Single Rounded Box) */
+    [data-testid="stChatInputContainer"] {
+        border-radius: 30px !important; /* Ends rounded like a pill */
+        padding-left: 110px !important; /* Space for Emoji & Attach buttons */
         border: 1px solid #CBD5E1 !important;
         background-color: #FFFFFF !important;
-        color: #475569 !important;
-        font-weight: 600 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-        transition: all 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
     }
-    [data-testid="stPopover"] > button:hover {
-        background-color: #F1F5F9 !important;
-        border-color: #94A3B8 !important;
+
+    /* 2. Positioning the Tools inside the Search Bar */
+    div[data-testid="stHorizontalBlock"]:last-of-type {
+        position: fixed;
+        bottom: 25px; /* Perfect vertical center inside chat box */
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 9999;
+        pointer-events: none; /* Clicks pass through empty spaces */
+        display: flex;
+        gap: 5px;
+    }
+
+    /* Keep it aligned perfectly in wide mode */
+    @media (min-width: 576px) {
+        div[data-testid="stHorizontalBlock"]:last-of-type { padding-left: calc(3rem + 15px); }
+    }
+    @media (max-width: 575px) {
+        div[data-testid="stHorizontalBlock"]:last-of-type { padding-left: calc(1rem + 15px); }
+    }
+
+    /* 3. Make buttons clickable again */
+    div[data-testid="stHorizontalBlock"]:last-of-type > div {
+        pointer-events: auto;
+        width: auto !important;
+        flex: 0 0 auto !important;
+    }
+
+    /* 4. CIRCULAR BUTTONS STYLING */
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important; /* Makes them perfectly Circular */
+        padding: 0 !important;
+        border: none !important;
+        background-color: transparent !important;
+        color: #64748B !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none !important;
+        transition: 0.2s;
+    }
+    
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {
+        font-size: 1.4rem !important; /* Size of Emoji/Icon */
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1 !important;
+    }
+
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {
+        background-color: #F1F5F9 !important; /* Light hover effect */
         color: #0F172A !important;
     }
     </style>
@@ -109,8 +130,8 @@ with st.sidebar:
         """
         st.markdown(logo_html, unsafe_allow_html=True)
     except FileNotFoundError:
-        st.warning("⚠️ logo.png not found. Upload it to GitHub!")
-        st.markdown("<h3 style='color: #1A56A8; font-weight: 800; text-align: center;'>logo.png CHATMNIT</h3>", unsafe_allow_html=True)
+        st.warning("⚠️ logo.png not found.")
+        st.markdown("<h3 style='color: #1A56A8; font-weight: 800; text-align: center;'>CHATMNIT</h3>", unsafe_allow_html=True)
 
     st.markdown("<div class='new-chat-btn'>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
@@ -127,7 +148,7 @@ with st.sidebar:
             st.rerun()
             
     st.markdown("---")
-    uploaded_image_sidebar = st.file_uploader("📸 Image Analysis (Optional)", type=['png', 'jpg', 'jpeg'], key="sidebar_img")
+    uploaded_image_sidebar = st.file_uploader("📸 Vision Upload (Optional)", type=['png', 'jpg', 'jpeg'], key="sidebar_img")
 
     st.markdown("""
         <div class="signature-box">
@@ -149,23 +170,22 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 5. BOTTOM TOOLBAR (EMOJI & ATTACH)
+# 5. CIRCULAR BUTTONS (Overlaid into Chat Input)
 # ==========================================
-tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
+tool_col1, tool_col2, _ = st.columns([1, 1, 10])
 chat_img_bottom = None
 
 with tool_col1:
-    with st.popover("😀 Emojis"):
-        st.write("Click, Copy & Paste in chat:")
+    with st.popover("😀"): # Emoji Button
+        st.write("Click, Copy & Paste:")
         st.markdown("😂 ❤️ 👍 🙏 🔥 ✨ 🚀 💡 💻 🤖 🇮🇳")
         
 with tool_col2:
-    with st.popover("📎 Attach"):
+    with st.popover("📎"): # Attach Button
         chat_img_bottom = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
-            st.success("Image attached! Type your prompt.")
+            st.success("Image attached! Type prompt.")
 
-# Logical OR: Take image from bottom toolbar OR sidebar
 final_vision_image = chat_img_bottom or uploaded_image_sidebar
 
 # ==========================================
@@ -185,7 +205,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="logo.png"):
-        # Image Generation Command
+        # Image Generation Logic
         if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
             with st.spinner("Generating visualization..."):
                 time.sleep(1.5)
@@ -194,7 +214,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                 st.image(img_url)
                 st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
         else:
-            # LLM Instructions
+            # LLM Logic
             instructions = """
             You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
             1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
@@ -205,7 +225,6 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
             
             try:
                 def generate_response():
-                    # If image is attached, use Llama Vision Model
                     if final_vision_image:
                         base64_image = encode_image(final_vision_image)
                         stream = client.chat.completions.create(
@@ -220,7 +239,6 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                             temperature=0.7,
                             stream=True
                         )
-                    # Otherwise use Standard LLM
                     else:
                         stream = client.chat.completions.create(
                             messages=[

@@ -16,7 +16,7 @@ else:
     st.stop()
 
 # ==========================================
-# 2. PROFESSIONAL LIGHT MODE CSS
+# 2. PROFESSIONAL LIGHT MODE & TOOLBAR CSS
 # ==========================================
 st.markdown("""
     <style>
@@ -24,12 +24,12 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #F8F9FA; color: #1E293B; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     
-    .stChatInputContainer { border-radius: 12px !important; border: 1px solid #CBD5E1 !important; background-color: #FFFFFF !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    
+    /* Chat Message Styling */
     div[data-testid="stChatMessage"] { border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; }
     div[data-testid="stChatMessage"]:nth-child(odd) { background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; color: #0F172A; }
     div[data-testid="stChatMessage"]:nth-child(even) { background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.02); color: #0F172A; }
 
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
     .stButton>button { width: 100%; text-align: left; background-color: transparent; border: 1px solid transparent; padding: 10px 15px; border-radius: 8px; font-weight: 500; color: #475569; transition: 0.2s; }
     .stButton>button:hover { background-color: #F1F5F9; color: #0F172A; border: 1px solid #CBD5E1; }
@@ -40,6 +40,48 @@ st.markdown("""
     .signature-box { margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #F8F9FA; border: 1px solid #E2E8F0; text-align: center; }
     .signature-box p { margin: 0; font-size: 0.75rem; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
     .signature-box h3 { margin: 5px 0 0 0; font-size: 1.1rem; color: #0F172A; font-weight: 700; }
+
+    /* =========================================
+       NEW: CHAT BAR & TOOLBAR POSITIONING CSS
+       ========================================= */
+    .stChatInputContainer { 
+        border-radius: 12px !important; 
+        border: 1px solid #CBD5E1 !important; 
+        background-color: #FFFFFF !important; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+        bottom: 60px !important; /* Lift chat bar up */
+        padding-bottom: 0px !important;
+    }
+    
+    /* Pin the toolbar to the bottom */
+    div[data-testid="stHorizontalBlock"]:last-of-type {
+        position: fixed;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 800px;
+        z-index: 999;
+        padding: 0 20px;
+        background: transparent;
+    }
+    
+    /* Toolbar Button Styling */
+    [data-testid="stPopover"] > button {
+        border-radius: 20px !important;
+        padding: 6px 16px !important;
+        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        color: #475569 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        transition: all 0.2s;
+    }
+    [data-testid="stPopover"] > button:hover {
+        background-color: #F1F5F9 !important;
+        border-color: #94A3B8 !important;
+        color: #0F172A !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -85,7 +127,7 @@ with st.sidebar:
             st.rerun()
             
     st.markdown("---")
-    uploaded_image = st.file_uploader("📸 Image Analysis (Optional)", type=['png', 'jpg', 'jpeg'])
+    uploaded_image_sidebar = st.file_uploader("📸 Image Analysis (Optional)", type=['png', 'jpg', 'jpeg'], key="sidebar_img")
 
     st.markdown("""
         <div class="signature-box">
@@ -106,6 +148,29 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
+# ==========================================
+# 5. BOTTOM TOOLBAR (EMOJI & ATTACH)
+# ==========================================
+tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
+chat_img_bottom = None
+
+with tool_col1:
+    with st.popover("😀 Emojis"):
+        st.write("Click, Copy & Paste in chat:")
+        st.markdown("😂 ❤️ 👍 🙏 🔥 ✨ 🚀 💡 💻 🤖 🇮🇳")
+        
+with tool_col2:
+    with st.popover("📎 Attach"):
+        chat_img_bottom = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+        if chat_img_bottom:
+            st.success("Image attached! Type your prompt.")
+
+# Logical OR: Take image from bottom toolbar OR sidebar
+final_vision_image = chat_img_bottom or uploaded_image_sidebar
+
+# ==========================================
+# 6. CHAT INPUT BAR
+# ==========================================
 if prompt := st.chat_input("Ask Chatmnit anything..."):
     
     curr_chat = st.session_state.current_chat
@@ -120,6 +185,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="logo.png"):
+        # Image Generation Command
         if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
             with st.spinner("Generating visualization..."):
                 time.sleep(1.5)
@@ -128,6 +194,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                 st.image(img_url)
                 st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
         else:
+            # LLM Instructions
             instructions = """
             You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
             1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
@@ -138,8 +205,9 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
             
             try:
                 def generate_response():
-                    if uploaded_image:
-                        base64_image = encode_image(uploaded_image)
+                    # If image is attached, use Llama Vision Model
+                    if final_vision_image:
+                        base64_image = encode_image(final_vision_image)
                         stream = client.chat.completions.create(
                             messages=[
                                 {"role": "system", "content": instructions},
@@ -152,6 +220,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                             temperature=0.7,
                             stream=True
                         )
+                    # Otherwise use Standard LLM
                     else:
                         stream = client.chat.completions.create(
                             messages=[

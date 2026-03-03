@@ -89,6 +89,12 @@ st.markdown("""
         background-color: #F1F5F9 !important; 
         border-color: #94A3B8 !important;
     }
+
+    /* Removing default popover padding to make emoji grid fit perfectly */
+    div[data-testid="stPopoverBody"] {
+        padding: 10px !important;
+        border-radius: 16px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -158,14 +164,72 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 5. TOOLBAR (OVERLAY ABOVE CHAT INPUT)
 # ==========================================
-# Using small columns to keep them tight and side-by-side
 tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
 chat_img_bottom = None
 
 with tool_col1:
     with st.popover("😀 Emojis"):
-        st.write("Click, Copy & Paste:")
-        st.markdown("😂 ❤️ 👍 🙏 🔥 ✨ 🚀 💡 💻 🤖 🇮🇳")
+        # Custom HTML & JS for Click-to-Insert Emojis + Scrollbar
+        emoji_list = [
+            "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗",
+            "😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁",
+            "☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥",
+            "👍","👎","👏","🙌","👐","🤲","🤝","🙏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","❤️","🔥","✨","🚀"
+        ]
+        
+        emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
+        
+        emoji_html = f"""
+        <style>
+        .emoji-grid {{
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            max-height: 220px; /* Limits height, forces scroll */
+            overflow-y: auto; /* Adds scrollbar */
+            padding-right: 5px;
+        }}
+        .emoji-btn {{
+            font-size: 1.6rem;
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            transition: transform 0.1s;
+            padding: 5px;
+            border-radius: 8px;
+        }}
+        .emoji-btn:hover {{
+            transform: scale(1.2);
+            background-color: #F1F5F9;
+        }}
+        /* Custom Scrollbar Styling */
+        .emoji-grid::-webkit-scrollbar {{ width: 6px; }}
+        .emoji-grid::-webkit-scrollbar-track {{ background: #F8F9FA; border-radius: 4px; }}
+        .emoji-grid::-webkit-scrollbar-thumb {{ background: #CBD5E1; border-radius: 4px; }}
+        .emoji-grid::-webkit-scrollbar-thumb:hover {{ background: #94A3B8; }}
+        </style>
+        
+        <div class="emoji-grid">
+            {emoji_divs}
+        </div>
+        
+        <img src="dummy" style="display:none;" onerror="
+            const grid = this.previousElementSibling;
+            grid.querySelectorAll('.emoji-btn').forEach(btn => {{
+                btn.onclick = function() {{
+                    const emoji = this.innerText;
+                    const chatInput = window.parent.document.querySelector('[data-testid=\\'stChatInputContainer\\'] textarea');
+                    if (chatInput) {{
+                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                        nativeInputValueSetter.call(chatInput, chatInput.value + emoji);
+                        chatInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                        chatInput.focus();
+                    }}
+                }}
+            }});
+        ">
+        """
+        st.markdown(emoji_html, unsafe_allow_html=True)
         
 with tool_col2:
     with st.popover("📎 Attach"):

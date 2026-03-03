@@ -60,7 +60,7 @@ st.markdown(f"""
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT & WIDTH
+       CHAT MESSAGES ALIGNMENT & (3/4)th WIDTH
        ========================================= */
        
     /* Streamlit adds padding to the chat container itself, we need to remove it for the bot to touch the edge */
@@ -73,26 +73,26 @@ st.markdown(f"""
         border-radius: 12px; 
         padding: 15px 20px; 
         margin-bottom: 20px;
+        width: fit-content !important; 
+        max-width: 75% !important; 
     }}
     
-    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
         border: 1px solid #444 !important; 
-        width: fit-content !important; 
-        max-width: 75% !important; 
         margin-left: auto !important; 
         margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> FULL WIDTH (100%), Touching Boundary */
+    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT (Touching Boundary) */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
         width: 100% !important; /* Made equal to chat section length */
         max-width: 100% !important; 
-        margin-right: 0 !important; 
-        margin-left: 0 !important; 
+        margin-right: auto !important; 
+        margin-left: 0 !important; /* Strictly touching left */
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -162,9 +162,9 @@ st.markdown(f"""
 
     /* Text Input Area */
     .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
-        color: #B0B0B0 !important; /* Text color changed to Grey */
+        color: #808080 !important; /* TYPED TEXT COLOR CHANGED TO DARK GREY */
         font-size: 1.15rem !important; 
-        padding-left: 20px !important;
+        padding-left: 50px !important; /* Room for the '+' button on the left */
         padding-top: 15px !important;
         padding-right: 60px !important; 
         background-color: transparent !important;
@@ -174,7 +174,7 @@ st.markdown(f"""
     }}
 
     /* =========================================
-       CUSTOM GEMINI-STYLE SEND BUTTON
+       CUSTOM GEMINI-STYLE SEND BUTTON (RIGHT)
        ========================================= */
     .stChatInput button, div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         background-color: #333333 !important;
@@ -210,6 +210,56 @@ st.markdown(f"""
     }}
     .stChatInput button:hover::after, div[data-testid="stChatInputContainer"] button:hover::after {{
         color: #FFFFFF !important;
+    }}
+    
+    /* =========================================
+       ATTACHMENT BUTTON (+) INSIDE LEFT
+       ========================================= */
+    /* Container precisely overlaying the search bar */
+    div[data-testid="stHorizontalBlock"]:last-of-type {{
+        position: fixed !important;
+        {chat_pos_css} /* Perfectly mimics the chat bar position */
+        left: 50% !important;
+        width: 90vw !important;
+        max-width: 850px !important; 
+        min-height: 65px !important; 
+        z-index: 10000 !important;
+        pointer-events: none !important; /* Lets clicks pass through to text area */
+        display: flex;
+        align-items: flex-end; /* Anchors the + to the bottom left */
+        padding-bottom: 12px;
+        padding-left: 12px;
+    }}
+    
+    div[data-testid="stHorizontalBlock"]:last-of-type > div {{
+        pointer-events: auto !important; /* Enables click on the button itself */
+    }}
+
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
+        width: 40px !important; height: 40px !important;
+        background: transparent !important; border: none !important;
+        border-radius: 50% !important; padding: 0 !important;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: none !important;
+    }}
+    
+    /* Dark Grey "+" styling */
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
+        font-size: 2rem !important;
+        color: #666666 !important; /* Dark Grey Color */
+        line-height: 1 !important; margin: 0 !important; font-weight: 300 !important;
+    }}
+    
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover p {{
+        color: #AAAAAA !important; /* Slightly lighter on hover */
+    }}
+    
+    /* Attachment Popover Body */
+    [data-testid="stPopoverBody"] {{
+        background-color: #2C2C2C !important;
+        border: 1px solid #444 !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -277,7 +327,23 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 6. CHAT INPUT & AI GENERATION
+# 6. ATTACHMENT TOOL (Floating Left + Button)
+# ==========================================
+# Columns trick to force it into the specific horizontal block targeted by CSS
+tool_col, _ = st.columns([1, 99]) 
+chat_img_bottom = None
+
+with tool_col:
+    with st.popover("+"): 
+        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
+        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+        if chat_img_bottom:
+            st.success("✅ Attached!")
+
+final_vision_image = chat_img_bottom
+
+# ==========================================
+# 7. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     
@@ -308,15 +374,30 @@ if st.session_state.pending_generation:
         
         try:
             def generate_response():
-                stream = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": instructions},
-                        {"role": "user", "content": prompt}
-                    ],
-                    model="llama-3.3-70b-versatile",
-                    temperature=0.7,
-                    stream=True
-                )
+                if final_vision_image:
+                    base64_image = encode_image(final_vision_image)
+                    stream = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": instructions},
+                            {"role": "user", "content": [
+                                {"type": "text", "text": prompt},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                            ]}
+                        ],
+                        model="llama-3.2-11b-vision-preview",
+                        temperature=0.7,
+                        stream=True
+                    )
+                else:
+                    stream = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": instructions},
+                            {"role": "user", "content": prompt}
+                        ],
+                        model="llama-3.3-70b-versatile",
+                        temperature=0.7,
+                        stream=True
+                    )
                 
                 for chunk in stream:
                     if chunk.choices[0].delta.content is not None:

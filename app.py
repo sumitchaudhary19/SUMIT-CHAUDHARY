@@ -465,3 +465,4 @@ if st.session_state.pending_generation:
                 st.error(f"System Fault: {str(e)}")
                 
     st.session_state.pending_generation = False
+

@@ -139,10 +139,10 @@ st.markdown(f"""
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 65px !important; 
+        min-height: 90px !important; /* HEIGHT INCREASED FOR BETTER SPACING */
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
-        border: 1px solid #444 !important; /* Subtle clean border */
+        border: 1px solid #444 !important; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
@@ -162,12 +162,13 @@ st.markdown(f"""
 
     /* Text Input Area */
     .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
-        color: #808080 !important; /* TYPED TEXT COLOR CHANGED TO DARK GREY */
+        color: #808080 !important; 
         font-size: 1.15rem !important; 
-        padding-left: 50px !important; /* Room for the '+' button on the left */
+        padding-left: 20px !important; 
         padding-top: 15px !important;
         padding-right: 60px !important; 
         background-color: transparent !important;
+        min-height: 50px !important; /* Ensuring space above the plus button */
     }}
     .stChatInput textarea::placeholder {{
         color: #888888 !important;
@@ -183,8 +184,7 @@ st.markdown(f"""
         position: absolute !important;
         width: 42px !important; height: 42px !important;
         right: 15px !important; 
-        bottom: 50% !important;
-        transform: translateY(50%) !important;
+        bottom: 25px !important; /* Adjusted slightly */
         transition: all 0.3s ease !important;
         display: flex !important;
         align-items: center !important;
@@ -218,25 +218,25 @@ st.markdown(f"""
     /* Container precisely overlaying the search bar */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed !important;
-        {chat_pos_css} /* Perfectly mimics the chat bar position */
+        {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 65px !important; 
+        min-height: 90px !important; /* Matches search bar height */
         z-index: 10000 !important;
-        pointer-events: none !important; /* Lets clicks pass through to text area */
+        pointer-events: none !important; 
         display: flex;
-        align-items: flex-end; /* Anchors the + to the bottom left */
-        padding-bottom: 12px;
-        padding-left: 12px;
+        align-items: flex-end; 
+        padding-bottom: 15px; /* Pushes it up from the absolute bottom */
+        padding-left: 20px; /* Aligns with the 'Ask me anything' text */
     }}
     
     div[data-testid="stHorizontalBlock"]:last-of-type > div {{
-        pointer-events: auto !important; /* Enables click on the button itself */
+        pointer-events: auto !important; 
     }}
 
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
-        width: 40px !important; height: 40px !important;
+        width: 35px !important; height: 35px !important;
         background: transparent !important; border: none !important;
         border-radius: 50% !important; padding: 0 !important;
         display: flex; align-items: center; justify-content: center;
@@ -245,13 +245,13 @@ st.markdown(f"""
     
     /* Dark Grey "+" styling */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
-        font-size: 2rem !important;
-        color: #666666 !important; /* Dark Grey Color */
-        line-height: 1 !important; margin: 0 !important; font-weight: 300 !important;
+        font-size: 2.2rem !important;
+        color: #555555 !important; /* Dark Grey Symbol */
+        line-height: 0.9 !important; margin: 0 !important; font-weight: 300 !important;
     }}
     
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover p {{
-        color: #AAAAAA !important; /* Slightly lighter on hover */
+        color: #AAAAAA !important; 
     }}
     
     /* Attachment Popover Body */

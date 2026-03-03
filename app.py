@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import urllib.parse
 import time
 import base64
@@ -56,7 +57,7 @@ st.markdown("""
     /* 2. Position the Toolbar exactly above the Chat Bar */
     div[data-testid="stHorizontalBlock"]:last-of-type {
         position: fixed;
-        bottom: 90px; /* Adjusts height to sit just above the chat bar */
+        bottom: 90px;
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
@@ -75,7 +76,7 @@ st.markdown("""
     
     /* 3. Button Styling (Pill shape, Side by Side) */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {
-        border-radius: 20px !important; /* Nice pill shape */
+        border-radius: 20px !important;
         padding: 6px 15px !important;
         border: 1px solid #CBD5E1 !important;
         background-color: #FFFFFF !important;
@@ -89,11 +90,12 @@ st.markdown("""
         background-color: #F1F5F9 !important; 
         border-color: #94A3B8 !important;
     }
-
-    /* Removing default popover padding to make emoji grid fit perfectly */
-    div[data-testid="stPopoverBody"] {
-        padding: 10px !important;
-        border-radius: 16px !important;
+    
+    /* Remove padding inside popover to make iframe flush */
+    [data-testid="stPopoverBody"] {
+        padding: 0 !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -169,7 +171,6 @@ chat_img_bottom = None
 
 with tool_col1:
     with st.popover("😀 Emojis"):
-        # Custom HTML & JS for Click-to-Insert Emojis + Scrollbar
         emoji_list = [
             "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗",
             "😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁",
@@ -179,14 +180,19 @@ with tool_col1:
         
         emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
         
-        emoji_html = f"""
+        # Bulletproof HTML/JS Component for Emoji Click-to-Insert
+        html_code = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
         <style>
+        body {{ margin: 0; padding: 10px; font-family: sans-serif; background: #FFFFFF; }}
         .emoji-grid {{
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 8px;
-            max-height: 220px; /* Limits height, forces scroll */
-            overflow-y: auto; /* Adds scrollbar */
+            height: 190px; 
+            overflow-y: auto; 
             padding-right: 5px;
         }}
         .emoji-btn {{
@@ -202,40 +208,53 @@ with tool_col1:
             transform: scale(1.2);
             background-color: #F1F5F9;
         }}
-        /* Custom Scrollbar Styling */
+        /* Custom Scrollbar */
         .emoji-grid::-webkit-scrollbar {{ width: 6px; }}
         .emoji-grid::-webkit-scrollbar-track {{ background: #F8F9FA; border-radius: 4px; }}
         .emoji-grid::-webkit-scrollbar-thumb {{ background: #CBD5E1; border-radius: 4px; }}
         .emoji-grid::-webkit-scrollbar-thumb:hover {{ background: #94A3B8; }}
         </style>
-        
-        <div class="emoji-grid">
+        </head>
+        <body>
+        <div class="emoji-grid" id="grid">
             {emoji_divs}
         </div>
-        
-        <img src="dummy" style="display:none;" onerror="
-            const grid = this.previousElementSibling;
-            grid.querySelectorAll('.emoji-btn').forEach(btn => {{
-                btn.onclick = function() {{
-                    const emoji = this.innerText;
-                    const chatInput = window.parent.document.querySelector('[data-testid=\\'stChatInputContainer\\'] textarea');
-                    if (chatInput) {{
+        <script>
+            // React Hack to force update input value
+            document.getElementById('grid').addEventListener('click', function(e) {{
+                if(e.target.classList.contains('emoji-btn')) {{
+                    const emoji = e.target.innerText;
+                    const parentDoc = window.parent.document;
+                    
+                    // Targeting Streamlit's text area securely
+                    const chatInput = parentDoc.querySelector('[data-testid="stChatInputTextArea"]') || 
+                                      parentDoc.querySelector('[data-testid="stChatInputContainer"] textarea') || 
+                                      parentDoc.querySelector('textarea');
+                    
+                    if(chatInput) {{
+                        // Set the value internally for React
                         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
                         nativeInputValueSetter.call(chatInput, chatInput.value + emoji);
+                        
+                        // Dispatch event so React registers the change
                         chatInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
                         chatInput.focus();
                     }}
                 }}
             }});
-        ">
+        </script>
+        </body>
+        </html>
         """
-        st.markdown(emoji_html, unsafe_allow_html=True)
+        # Using Streamlit components.html which executes JS safely inside an iframe
+        components.html(html_code, height=210)
         
 with tool_col2:
     with st.popover("📎 Attach"):
-        chat_img_bottom = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#0F172A; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
+        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
-            st.success("Image attached! Type your prompt.")
+            st.success("✅ Attached! Type prompt.")
 
 # Logical OR: Take image from bottom toolbar OR sidebar
 final_vision_image = chat_img_bottom or uploaded_image_sidebar

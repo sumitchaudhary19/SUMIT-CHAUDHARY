@@ -62,17 +62,30 @@ st.markdown(f"""
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
-    /* Chat Message Styling */
-    div[data-testid="stChatMessage"] {{ border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; }}
-    div[data-testid="stChatMessage"]:nth-child(odd) {{ background-color: #2C2C2C !important; border: 1px solid #444 !important; color: #FFFFFF; }}
-    div[data-testid="stChatMessage"]:nth-child(even) {{ background-color: #212121 !important; border: 1px solid #444 !important; color: #FFFFFF; }}
+    /* Chat Message Styling (Backgrounds and GREY TEXT) */
+    div[data-testid="stChatMessage"] {{ 
+        border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; 
+    }}
+    div[data-testid="stChatMessage"]:nth-child(odd) {{ 
+        background-color: #2C2C2C !important; border: 1px solid #444 !important; 
+    }}
+    div[data-testid="stChatMessage"]:nth-child(even) {{ 
+        background-color: #212121 !important; border: 1px solid #444 !important; 
+    }}
+    
+    /* =========================================
+       UPDATED: CHAT TEXT COLOR TO GREY
+       ========================================= */
+    div[data-testid="stChatMessageContent"] p {{
+        color: #B0B0B0 !important; /* Nice soothing light grey */
+        font-size: 1rem;
+        line-height: 1.6;
+    }}
 
     /* Sidebar Dark Styling */
     section[data-testid="stSidebar"] {{ background-color: #1A1A1A !important; border-right: 1px solid #333 !important; }}
     
-    /* =========================================
-       UPDATED: LIGHT GREY SIDEBAR BUTTONS
-       ========================================= */
+    /* LIGHT GREY SIDEBAR BUTTONS */
     /* Normal Sidebar Buttons (Chat History) */
     .stButton>button {{ 
         width: 100%; text-align: left; 
@@ -223,7 +236,7 @@ with st.sidebar:
             st.session_state.pending_generation = False
             st.rerun()
             
-    # HATA DIYA: Sidebar Wala Image Uploader 
+    st.markdown("---")
 
     st.markdown("""
         <div class="signature-box">
@@ -308,7 +321,6 @@ with tool_col2:
         if chat_img_bottom:
             st.success("✅ Attached!")
 
-# Ab sirf bottom wala attach button use hoga image input ke liye
 final_vision_image = chat_img_bottom
 
 # ==========================================

@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import urllib.parse
 import time
 import base64
@@ -30,13 +29,11 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    # Empty Chat -> Big Gemini Search Bar in Exact Middle
+    # Empty Chat -> Search Bar in Middle
     chat_pos_css = "top: 45vh !important; transform: translateX(-50%) !important;"
-    tool_pos_css = "top: calc(45vh + 15px) !important;" 
 else:
     # Chat Started -> Search Bar shifts permanently to Bottom
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
-    tool_pos_css = "bottom: 45px !important;"
 
 # ==========================================
 # 3. ADVANCED CSS (Dark Theme, Chat Alignment & RGB Gemini Bar)
@@ -70,7 +67,7 @@ st.markdown(f"""
         padding: 15px 20px; 
         margin-bottom: 20px;
         width: fit-content !important; 
-        max-width: 75% !important; /* 3/4th size */
+        max-width: 75% !important; 
     }}
     
     /* 🔵 USER (Odd) -> Aligned EXACT RIGHT */
@@ -100,7 +97,6 @@ st.markdown(f"""
        ========================================= */
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
     
-    /* Normal Sidebar Buttons */
     .stButton>button {{ 
         width: 100%; text-align: left; 
         background-color: #D3D3D3 !important; 
@@ -111,7 +107,6 @@ st.markdown(f"""
     }}
     .stButton>button:hover {{ background-color: #BDBDBD !important; }}
     
-    /* Top "New Session" Button */
     .new-chat-btn>div>button {{ 
         background-color: #D3D3D3 !important; 
         color: #000000 !important; 
@@ -121,7 +116,6 @@ st.markdown(f"""
     }}
     .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
 
-    /* Architect Box */
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
@@ -129,153 +123,96 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR WITH RGB MOTION
        ========================================= */
-    div[data-testid="stChatInputContainer"] {{ 
-        border-radius: 40px !important; 
-        max-width: 850px !important; /* Wide Gemini Look */
-        min-height: 65px !important; /* Taller Bar */
-        margin: 0 !important;
-        padding: 5px !important;
-        border: none !important;
-        background-color: transparent !important; 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+       
+    /* Targeting the toughest Streamlit classes to force changes */
+    .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
         position: fixed !important;
-        left: 50% !important;
-        overflow: hidden; 
-        z-index: 10;
         {chat_pos_css} 
+        left: 50% !important;
+        width: 90vw !important;
+        max-width: 850px !important; /* Huge Gemini Width */
+        min-height: 65px !important; /* Taller Bar */
+        border-radius: 40px !important; 
+        background-color: #1E1E1E !important; 
+        border: none !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+        padding: 5px !important;
+        z-index: 9999 !important;
     }}
 
-    /* The Rotating RGB Border Effect */
-    div[data-testid="stChatInputContainer"]::before {{
+    /* Advanced RGB Mask Border (Smoothest performance) */
+    .stChatInput::before, div[data-testid="stChatInputContainer"]::before {{
         content: '';
         position: absolute;
-        z-index: -2;
-        left: -50%; top: -50%;
-        width: 200%; height: 200%;
-        background-image: conic-gradient(
-            #ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000
-        );
+        inset: 0;
+        border-radius: 40px;
+        padding: 3px; /* RGB Border thickness */
+        background: conic-gradient(from 0deg, #ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
         animation: rotateRGB 3s linear infinite;
+        pointer-events: none;
     }}
-    @keyframes rotateRGB {{ 100% {{ transform: rotate(360deg); }} }}
 
-    /* The Solid Inner Background (Hides gradient except for 3px border) */
-    div[data-testid="stChatInputContainer"]::after {{
-        content: '';
-        position: absolute;
-        z-index: -1;
-        inset: 3px; /* 3px RGB Border thickness */
-        background: #1E1E1E !important; /* Deep dark inner background */
-        border-radius: 37px;
+    @keyframes rotateRGB {{ 
+        100% {{ transform: rotate(360deg); }} 
     }}
-    
+
     /* Text Input Area */
-    div[data-testid="stChatInputContainer"] textarea {{ 
+    .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
         color: #FFFFFF !important; 
         font-size: 1.15rem !important; /* Larger text */
-        padding-left: 15px !important;
-        padding-right: 150px !important; /* Huge right padding to fit buttons */
+        padding-left: 20px !important;
+        padding-top: 15px !important;
+        padding-right: 60px !important; /* Space for send arrow only */
         background-color: transparent !important;
-        margin-top: 5px !important;
     }}
-    div[data-testid="stChatInputContainer"] textarea::placeholder {{
+    .stChatInput textarea::placeholder {{
         color: #888888 !important;
     }}
 
-    /* Hiding Streamlit's default Send Icon */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] svg {{
-        display: none !important;
-    }}
-
     /* =========================================
-       GEMINI-STYLE ARROW SEND BUTTON
+       CUSTOM GEMINI-STYLE SEND BUTTON
        ========================================= */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
+    .stChatInput button, div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         background-color: #333333 !important;
         border-radius: 50% !important;
         border: 1px solid #555 !important;
         position: absolute !important;
-        width: 45px !important; height: 45px !important;
-        right: 15px !important; /* Positioned inside the bar */
+        width: 42px !important; height: 42px !important;
+        right: 15px !important; 
         bottom: 50% !important;
         transform: translateY(50%) !important;
-        transition: all 0.3s ease;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }}
+
+    /* Hide default SVG */
+    .stChatInput button svg, div[data-testid="stChatInputContainer"] button svg {{
+        display: none !important;
     }}
 
     /* The Arrow (➤) */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]::after {{
+    .stChatInput button::after, div[data-testid="stChatInputContainer"] button::after {{
         content: '➤';
         font-size: 1.4rem;
         color: #E0E0E0; 
         position: absolute;
-        top: 50%; left: 52%;
-        transform: translate(-50%, -50%);
-        transition: color 0.3s;
     }}
 
-    /* Hover effect for Send Button */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{
+    .stChatInput button:hover, div[data-testid="stChatInputContainer"] button:hover {{
         background-color: #3B82F6 !important; /* Glows blue */
         border-color: #60A5FA !important;
     }}
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover::after {{
+    .stChatInput button:hover::after, div[data-testid="stChatInputContainer"] button:hover::after {{
         color: #FFFFFF !important;
-    }}
-
-    /* =========================================
-       EMOJI & ATTACH BUTTONS (Left of Arrow)
-       ========================================= */
-    div[data-testid="stHorizontalBlock"]:last-of-type {{
-        position: fixed;
-        {tool_pos_css} 
-        width: auto !important;
-        z-index: 99999;
-        display: flex;
-        gap: 6px;
-        flex-direction: row;
-        justify-content: flex-end;
-    }}
-
-    /* Dynamic alignment exactly left of the Send button */
-    @media (min-width: 850px) {{
-        div[data-testid="stHorizontalBlock"]:last-of-type {{
-            left: 50%;
-            margin-left: 250px; /* Aligns them safely left of the 45px send button */
-        }}
-    }}
-    @media (max-width: 849px) {{
-        div[data-testid="stHorizontalBlock"]:last-of-type {{
-            right: 70px; /* Sticks to the left of the send button on small screens */
-        }}
-    }}
-    
-    /* Toolbar Buttons (Emoji/Attach) perfectly circular */
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
-        width: 36px !important;
-        height: 36px !important;
-        border-radius: 50% !important; 
-        padding: 0 !important;
-        border: none !important;
-        background-color: transparent !important; 
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: none !important; transition: 0.2s;
-    }}
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
-        font-size: 1.3rem !important; margin: 0 !important; line-height: 1 !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
-        background-color: rgba(255,255,255,0.1) !important; 
-    }}
-    
-    /* Popover Container */
-    [data-testid="stPopoverBody"] {{
-        padding: 0 !important; border-radius: 12px !important; overflow: hidden !important;
-        background-color: #2C2C2C !important; border: 1px solid #555 !important;
     }}
     </style>
 """, unsafe_allow_html=True)
 
-# Helper Function
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
@@ -334,63 +271,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. EMOJI & ATTACHMENT TOOLS
-# ==========================================
-tool_col1, tool_col2 = st.columns([1, 1]) 
-chat_img_bottom = None
-
-with tool_col1:
-    with st.popover("😀"): 
-        emoji_list = [
-            "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗",
-            "😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁",
-            "☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥",
-            "👍","👎","👏","🙌","👐","🤲","🤝","🙏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","❤️","🔥","✨","🚀"
-        ]
-        emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
-        html_code = f"""
-        <!DOCTYPE html>
-        <html><head><style>
-        body {{ margin: 0; padding: 10px; font-family: sans-serif; background: #2C2C2C; color: #FFFFFF; }}
-        .emoji-grid {{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; height: 190px; overflow-y: auto; padding-right: 5px; }}
-        .emoji-btn {{ font-size: 1.6rem; cursor: pointer; text-align: center; user-select: none; transition: transform 0.1s; padding: 5px; border-radius: 8px; }}
-        .emoji-btn:hover {{ transform: scale(1.2); background-color: #444; }}
-        .emoji-grid::-webkit-scrollbar {{ width: 6px; }}
-        .emoji-grid::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 4px; }}
-        .emoji-grid::-webkit-scrollbar-thumb {{ background: #555; border-radius: 4px; }}
-        .emoji-grid::-webkit-scrollbar-thumb:hover {{ background: #777; }}
-        </style></head><body>
-        <div class="emoji-grid" id="grid">{emoji_divs}</div>
-        <script>
-            document.getElementById('grid').addEventListener('click', function(e) {{
-                if(e.target.classList.contains('emoji-btn')) {{
-                    const emoji = e.target.innerText;
-                    const parentDoc = window.parent.document;
-                    const chatInput = parentDoc.querySelector('[data-testid="stChatInputTextArea"]') || 
-                                      parentDoc.querySelector('[data-testid="stChatInputContainer"] textarea');
-                    if(chatInput) {{
-                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                        nativeInputValueSetter.call(chatInput, chatInput.value + emoji);
-                        chatInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                        chatInput.focus();
-                    }}
-                }}
-            }});
-        </script></body></html>
-        """
-        components.html(html_code, height=210)
-        
-with tool_col2:
-    with st.popover("📎"): 
-        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
-        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
-        if chat_img_bottom:
-            st.success("✅ Attached!")
-
-final_vision_image = chat_img_bottom
-
-# ==========================================
-# 7. CHAT INPUT & AI GENERATION
+# 6. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     
@@ -411,58 +292,34 @@ if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     
     with st.chat_message("assistant", avatar="logo.png"):
-        if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
-            with st.spinner("Generating visualization..."):
-                time.sleep(1.5)
-                safe_prompt = urllib.parse.quote(prompt)
-                img_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=800&height=400&nologo=true"
-                st.image(img_url)
-                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
-        else:
-            instructions = """
-            You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT.
-            1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
-            2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
-            3. YOU ARE AN AI. Do not claim to be human.
-            4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
-            """
+        instructions = """
+        You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT.
+        1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
+        2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
+        3. YOU ARE AN AI. Do not claim to be human.
+        4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
+        """
+        
+        try:
+            def generate_response():
+                stream = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": instructions},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7,
+                    stream=True
+                )
+                
+                for chunk in stream:
+                    if chunk.choices[0].delta.content is not None:
+                        yield chunk.choices[0].delta.content
+
+            response_text = st.write_stream(generate_response())
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
             
-            try:
-                def generate_response():
-                    if final_vision_image:
-                        base64_image = encode_image(final_vision_image)
-                        stream = client.chat.completions.create(
-                            messages=[
-                                {"role": "system", "content": instructions},
-                                {"role": "user", "content": [
-                                    {"type": "text", "text": prompt},
-                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                                ]}
-                            ],
-                            model="llama-3.2-11b-vision-preview",
-                            temperature=0.7,
-                            stream=True
-                        )
-                    else:
-                        stream = client.chat.completions.create(
-                            messages=[
-                                {"role": "system", "content": instructions},
-                                {"role": "user", "content": prompt}
-                            ],
-                            model="llama-3.3-70b-versatile",
-                            temperature=0.7,
-                            stream=True
-                        )
-                    
-                    for chunk in stream:
-                        if chunk.choices[0].delta.content is not None:
-                            yield chunk.choices[0].delta.content
-
-                response_text = st.write_stream(generate_response())
-                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-                
-            except Exception as e:
-                st.error(f"System Fault: {str(e)}")
-                
+        except Exception as e:
+            st.error(f"System Fault: {str(e)}")
+            
     st.session_state.pending_generation = False
-

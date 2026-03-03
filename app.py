@@ -36,7 +36,7 @@ else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, Chat Alignment & RGB Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, Chat Alignment & Clean Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -121,51 +121,38 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       GEMINI-STYLE LARGE SEARCH BAR WITH RGB MOTION
+       GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
        
-    /* Targeting the toughest Streamlit classes to force changes */
     .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
-        max-width: 850px !important; /* Huge Gemini Width */
-        min-height: 65px !important; /* Taller Bar */
+        max-width: 850px !important; 
+        min-height: 65px !important; 
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
-        border: none !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+        border: 1px solid #444 !important; /* Subtle clean border */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
     }}
-
-    /* Advanced RGB Mask Border (Smoothest performance) */
-    .stChatInput::before, div[data-testid="stChatInputContainer"]::before {{
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 40px;
-        padding: 3px; /* RGB Border thickness */
-        background: conic-gradient(from 0deg, #ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        animation: rotateRGB 3s linear infinite;
-        pointer-events: none;
-    }}
-
-    @keyframes rotateRGB {{ 
-        100% {{ transform: rotate(360deg); }} 
+    
+    /* Gentle glow on hover, just like Gemini */
+    .stChatInput:hover, div[data-testid="stChatInputContainer"]:hover {{
+        border-color: #666 !important;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.7) !important;
     }}
 
     /* Text Input Area */
     .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
         color: #FFFFFF !important; 
-        font-size: 1.15rem !important; /* Larger text */
+        font-size: 1.15rem !important; 
         padding-left: 20px !important;
         padding-top: 15px !important;
-        padding-right: 60px !important; /* Space for send arrow only */
+        padding-right: 60px !important; 
         background-color: transparent !important;
     }}
     .stChatInput textarea::placeholder {{
@@ -204,7 +191,7 @@ st.markdown(f"""
     }}
 
     .stChatInput button:hover, div[data-testid="stChatInputContainer"] button:hover {{
-        background-color: #3B82F6 !important; /* Glows blue */
+        background-color: #3B82F6 !important; 
         border-color: #60A5FA !important;
     }}
     .stChatInput button:hover::after, div[data-testid="stChatInputContainer"] button:hover::after {{
@@ -213,6 +200,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# Helper Function
 def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 

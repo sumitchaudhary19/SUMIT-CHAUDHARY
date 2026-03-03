@@ -30,12 +30,16 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    chat_pos_css = "top: 50% !important; transform: translateY(-50%) !important;"
+    # Empty Chat -> Search Bar in Middle
+    chat_pos_css = "top: 50% !important; margin-top: -25px !important;"
+    tool_pos_css = "top: 50%; margin-top: -18px;"
 else:
+    # Chat Started -> Search Bar shifts to Bottom
     chat_pos_css = "bottom: 20px !important;"
+    tool_pos_css = "bottom: 27px;"
 
 # ==========================================
-# 3. ADVANCED CSS (DARK MODE, BLACK BOTTOM, DRAGGABLE MENU)
+# 3. DARK MODE, BLACK BOTTOM & INSIDE BUTTONS CSS
 # ==========================================
 st.markdown(f"""
     <style>
@@ -76,55 +80,72 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       SEARCH BAR & DRAGGABLE FLOATING MENU
+       SEARCH BAR & INSIDE RIGHT ALIGNED BUTTONS
        ========================================= */
        
-    /* 1. Chat Input Bar (Light Grey) */
+    /* 1. Chat Input Bar (Light Grey, Pill Shape) */
     div[data-testid="stChatInputContainer"] {{ 
-        border-radius: 12px !important; 
+        border-radius: 30px !important; /* Fully rounded pill shape */
         border: 1px solid #999 !important; 
         background-color: #D3D3D3 !important; 
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
+        padding-right: 110px !important; /* Space so text doesn't hide behind buttons */
+        max-width: 800px !important;
+        margin: 0 auto !important;
         {chat_pos_css} 
     }}
     div[data-testid="stChatInputContainer"] textarea {{ color: #000000 !important; font-weight: 500; }}
     div[data-testid="stChatInputContainer"] p {{ color: #555555 !important; }}
-    div[data-testid="stChatInputContainer"] svg {{ fill: #333333 !important; }}
+    div[data-testid="stChatInputContainer"] svg {{ fill: #333333 !important; display: none; /* Hiding default send icon to save space */ }} 
     
-    /* 2. Draggable Toolbar Container */
+    /* 2. Position the Toolbar exactly inside the right edge */
     div[data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed;
-        bottom: 90px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: max-content !important; /* Wrap tightly around buttons */
+        {tool_pos_css} 
+        width: auto !important;
         z-index: 99999;
-        padding: 8px 15px;
-        background: rgba(30, 30, 30, 0.85); /* Dark translucent pill */
-        backdrop-filter: blur(10px);
-        border: 1px solid #555;
-        border-radius: 30px;
         display: flex;
-        gap: 10px;
-        cursor: grab; /* Drag cursor */
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        gap: 2px;
+        flex-direction: row;
+        justify-content: flex-end;
     }}
-    div[data-testid="stHorizontalBlock"]:last-of-type:active {{
-        cursor: grabbing;
+
+    /* Media queries to keep buttons snapped to the right side of the 800px box */
+    @media (min-width: 850px) {{
+        div[data-testid="stHorizontalBlock"]:last-of-type {{
+            left: 50%;
+            margin-left: 280px; /* Aligns them inside the right edge of max-800px box */
+        }}
+    }}
+    @media (max-width: 849px) {{
+        div[data-testid="stHorizontalBlock"]:last-of-type {{
+            right: 25px; /* Stick to right side padding on smaller screens */
+        }}
     }}
     
-    /* 3. Button Styling inside Draggable Toolbar */
+    /* 3. Button Styling (Perfectly Circular) */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
-        border-radius: 20px !important;
-        padding: 6px 15px !important;
-        border: 1px solid #999 !important;
-        background-color: #D3D3D3 !important;
-        color: #000000 !important;
-        font-weight: 600 !important;
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important; /* PERFECT CIRCLE */
+        padding: 0 !important;
+        border: none !important;
+        background-color: transparent !important; /* Blend into search bar */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none !important;
         transition: 0.2s;
     }}
+    
+    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
+        font-size: 1.4rem !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+    }}
+
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
-        background-color: #BDBDBD !important; 
+        background-color: #BDBDBD !important; /* Darker grey on hover */
     }}
     
     /* Popover Body */
@@ -199,13 +220,13 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. DRAGGABLE TOOLBAR & EMOJI INJECTION SCRIPT
+# 6. RIGHT ALIGNED TOOLBAR & EMOJI SCRIPT
 # ==========================================
-tool_col1, tool_col2, _ = st.columns([1, 1, 10])
+tool_col1, tool_col2 = st.columns([1, 1]) # Only using space needed for 2 icons
 chat_img_bottom = None
 
 with tool_col1:
-    with st.popover("😀 Emojis"):
+    with st.popover("😀"): # Removed text to keep it perfectly circular
         emoji_list = [
             "😀","😃","😄","😁","😆","😅","😂","🤣","🥲","☺️","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗",
             "😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁",
@@ -215,7 +236,6 @@ with tool_col1:
         
         emoji_divs = "".join([f'<div class="emoji-btn">{e}</div>' for e in emoji_list])
         
-        # Super JS: Combines Emoji Insertion AND Toolbar Draggability!
         html_code = f"""
         <!DOCTYPE html>
         <html>
@@ -236,7 +256,6 @@ with tool_col1:
             {emoji_divs}
         </div>
         <script>
-            // 1. Emoji Click-to-Insert Logic
             document.getElementById('grid').addEventListener('click', function(e) {{
                 if(e.target.classList.contains('emoji-btn')) {{
                     const emoji = e.target.innerText;
@@ -251,41 +270,6 @@ with tool_col1:
                     }}
                 }}
             }});
-
-            // 2. Make the entire Toolbar Menu Draggable across the screen
-            const parentDoc = window.parent.document;
-            const toolbar = parentDoc.querySelector('div[data-testid="stHorizontalBlock"]:last-of-type');
-            
-            if (toolbar && !toolbar.dataset.dragEnabled) {{
-                toolbar.dataset.dragEnabled = "true";
-                let isDragging = false;
-                let initialX, initialY, currentX = 0, currentY = 0;
-                
-                toolbar.addEventListener('mousedown', (e) => {{
-                    // Only start drag if clicking on the background, not the buttons
-                    if (e.target.closest('button')) return;
-                    
-                    isDragging = true;
-                    // Extract current translation state
-                    const style = window.parent.getComputedStyle(toolbar);
-                    const matrix = new DOMMatrixReadOnly(style.transform);
-                    initialX = e.clientX - matrix.m41;
-                    initialY = e.clientY - matrix.m42;
-                    toolbar.style.transition = 'none'; // Disable smooth css transitions while dragging
-                }});
-
-                parentDoc.addEventListener('mousemove', (e) => {{
-                    if (!isDragging) return;
-                    e.preventDefault();
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                    toolbar.style.transform = `translate(${{currentX}}px, ${{currentY}}px)`;
-                }});
-
-                parentDoc.addEventListener('mouseup', () => {{
-                    isDragging = false;
-                }});
-            }}
         </script>
         </body>
         </html>
@@ -293,11 +277,11 @@ with tool_col1:
         components.html(html_code, height=210)
         
 with tool_col2:
-    with st.popover("📎 Attach"):
+    with st.popover("📎"): # Removed text for a perfect circle icon
         st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#000000; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
         chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
-            st.success("✅ Attached! Type prompt.")
+            st.success("✅ Attached!")
 
 final_vision_image = chat_img_bottom or uploaded_image_sidebar
 
@@ -315,7 +299,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
 
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     
-    # Flag to trigger AI response generation & shift the bar to bottom
+    # Trigger generation
     st.session_state.pending_generation = True
     st.rerun()
 

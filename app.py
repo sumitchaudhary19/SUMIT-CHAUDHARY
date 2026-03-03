@@ -54,7 +54,7 @@ st.markdown(f"""
     /* 🔴 PITCH BLACK BOTTOM SECTION */
     [data-testid="stBottom"] {{
         background-color: #000000 !important;
-        border-top: 1px solid #222 !important;
+        border-top: none !important; /* Removed top border from bottom section */
         padding-top: 20px !important;
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
@@ -133,22 +133,27 @@ st.markdown(f"""
         min-height: 65px !important; 
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
-        border: 1px solid #444 !important; /* Subtle clean border */
+        border: none !important; /* Hiding the border */
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
-        transition: border-color 0.3s ease, box-shadow 0.3s ease !important;
+        transition: box-shadow 0.3s ease !important;
     }}
     
-    /* Gentle glow on hover, just like Gemini */
+    /* Hover state for search container */
     .stChatInput:hover, div[data-testid="stChatInputContainer"]:hover {{
-        border-color: #666 !important;
         box-shadow: 0 6px 20px rgba(0,0,0,0.7) !important;
+    }}
+    
+    /* Removing the outline Streamlit applies on focus */
+    .stChatInput:focus-within, div[data-testid="stChatInputContainer"]:focus-within {{
+        outline: none !important;
+        border: none !important;
     }}
 
     /* Text Input Area */
     .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
-        color: #FFFFFF !important; 
+        color: #B0B0B0 !important; /* Text color changed to Grey */
         font-size: 1.15rem !important; 
         padding-left: 20px !important;
         padding-top: 15px !important;

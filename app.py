@@ -42,66 +42,52 @@ st.markdown("""
     .signature-box h3 { margin: 5px 0 0 0; font-size: 1.1rem; color: #0F172A; font-weight: 700; }
 
     /* =========================================
-       NEW: INSIDE SEARCH BAR + CIRCULAR BUTTONS CSS
+       NEW: TOOLBAR JUST ABOVE CHAT BAR
        ========================================= */
        
-    /* 1. Chat Input Bar Modification */
+    /* 1. Chat Input Bar (Normal, clean look) */
     div[data-testid="stChatInputContainer"] { 
-        border-radius: 30px !important; /* Make the bar fully rounded */
+        border-radius: 12px !important; 
         border: 1px solid #CBD5E1 !important; 
         background-color: #FFFFFF !important; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        padding-left: 95px !important; /* Create empty space inside the bar on the left */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
     }
     
-    /* 2. Overlay the Toolbar in that empty space */
+    /* 2. Position the Toolbar exactly above the Chat Bar */
     div[data-testid="stHorizontalBlock"]:last-of-type {
         position: fixed;
-        bottom: 28px; /* Perfectly centers the buttons vertically inside the bar */
+        bottom: 90px; /* Adjusts height to sit just above the chat bar */
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
         max-width: 800px;
         z-index: 9999;
         pointer-events: none; /* Let clicks pass through empty spaces */
-        padding-left: 10px; /* Shift icons slightly right from the edge */
+        padding: 0 20px;
         display: flex;
-        gap: 0px;
+        gap: 10px;
     }
 
-    /* 3. Make only the buttons clickable */
+    /* Make the buttons clickable */
     div[data-testid="stHorizontalBlock"]:last-of-type > div {
         pointer-events: auto;
-        width: auto !important;
-        flex: 0 0 auto !important;
     }
     
-    /* 4. CIRCULAR Button Styling */
+    /* 3. Button Styling (Pill shape, Side by Side) */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {
-        width: 40px !important;
-        height: 40px !important;
-        border-radius: 50% !important; /* PERFECT CIRCLE */
-        padding: 0 !important;
-        border: none !important;
-        background-color: transparent !important;
-        color: #64748B !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: none !important;
-        transition: background-color 0.2s;
-    }
-    
-    /* Center and resize the Emojis/Icons inside the circle */
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {
-        font-size: 1.3rem !important;
-        margin: 0 !important;
-        line-height: 1 !important;
+        border-radius: 20px !important; /* Nice pill shape */
+        padding: 6px 15px !important;
+        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+        transition: 0.2s;
     }
 
-    /* Hover effect for circular buttons */
     div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {
-        background-color: #E2E8F0 !important; 
+        background-color: #F1F5F9 !important; 
+        border-color: #94A3B8 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -170,18 +156,19 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 5. BOTTOM TOOLBAR (CIRCULAR, INSIDE BAR)
+# 5. TOOLBAR (OVERLAY ABOVE CHAT INPUT)
 # ==========================================
-tool_col1, tool_col2, _ = st.columns([1, 1, 10])
+# Using small columns to keep them tight and side-by-side
+tool_col1, tool_col2, _ = st.columns([1.5, 1.5, 7])
 chat_img_bottom = None
 
 with tool_col1:
-    with st.popover("😀"):
-        st.write("Click, Copy & Paste in chat:")
+    with st.popover("😀 Emojis"):
+        st.write("Click, Copy & Paste:")
         st.markdown("😂 ❤️ 👍 🙏 🔥 ✨ 🚀 💡 💻 🤖 🇮🇳")
         
 with tool_col2:
-    with st.popover("📎"):
+    with st.popover("📎 Attach"):
         chat_img_bottom = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
         if chat_img_bottom:
             st.success("Image attached! Type your prompt.")
@@ -206,7 +193,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant", avatar="logo.png"):
-        # Image Generation Command
+        # Image Generation Logic
         if any(word in prompt.lower() for word in ["draw", "pic", "image", "photo bana"]):
             with st.spinner("Generating visualization..."):
                 time.sleep(1.5)
@@ -215,7 +202,7 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                 st.image(img_url)
                 st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
         else:
-            # LLM Instructions
+            # LLM Logic
             instructions = """
             You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
             1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
@@ -226,7 +213,6 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
             
             try:
                 def generate_response():
-                    # If image is attached, use Llama Vision Model
                     if final_vision_image:
                         base64_image = encode_image(final_vision_image)
                         stream = client.chat.completions.create(
@@ -241,7 +227,6 @@ if prompt := st.chat_input("Ask Chatmnit anything..."):
                             temperature=0.7,
                             stream=True
                         )
-                    # Otherwise use Standard LLM
                     else:
                         stream = client.chat.completions.create(
                             messages=[

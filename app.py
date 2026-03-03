@@ -8,7 +8,7 @@ from groq import Groq
 # ==========================================
 # 1. PAGE CONFIG & SECRETS VALIDATION
 # ==========================================
-st.set_page_config(page_title="CHATMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -163,7 +163,7 @@ def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
-# 4. SIDEBAR WITH CUSTOM CHATMNIT LOGO
+# 4. SIDEBAR WITH CUSTOM AskMNIT LOGO
 # ==========================================
 with st.sidebar:
     try:
@@ -173,13 +173,13 @@ with st.sidebar:
         logo_html = f"""
         <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px; padding-top: 10px;">
             <img src="data:image/png;base64,{logo_base64}" style="width: 50px; margin-right: 12px;">
-            <span style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: #60A5FA; letter-spacing: 1.5px;">CHATMNIT</span>
+            <span style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: #60A5FA; letter-spacing: 1.5px;">AskMNIT</span>
         </div>
         """
         st.markdown(logo_html, unsafe_allow_html=True)
     except FileNotFoundError:
         st.warning("⚠️ logo.png not found. Upload it to GitHub!")
-        st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>logo.png CHATMNIT</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>logo.png AskMNIT</h3>", unsafe_allow_html=True)
 
     st.markdown("<div class='new-chat-btn'>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
@@ -211,7 +211,7 @@ with st.sidebar:
 # ==========================================
 # 5. MAIN CHAT LOGIC
 # ==========================================
-st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 2.5rem;'>CHATMNIT INTELLIGENCE</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 2.5rem;'>AskMNIT</h1>", unsafe_allow_html=True)
 st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; margin-top: -10px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
@@ -289,7 +289,7 @@ final_vision_image = chat_img_bottom or uploaded_image_sidebar
 # 7. CHAT INPUT & AI GENERATION
 # ==========================================
 # 7A. Taking the user input
-if prompt := st.chat_input("Ask Chatmnit anything..."):
+if prompt := st.chat_input("Ask me anything..."):
     
     curr_chat = st.session_state.current_chat
     if curr_chat.startswith("New Session") and len(st.session_state.sessions[curr_chat]) == 0:
@@ -317,7 +317,7 @@ if st.session_state.pending_generation:
                 st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": f"![Generated Image]({img_url})"})
         else:
             instructions = """
-            You are 'CHATMNIT', an exceptionally intelligent and professional AI assistant.
+            You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT.
             1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
             2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
             3. YOU ARE AN AI. Do not claim to be human.

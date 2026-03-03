@@ -29,31 +29,12 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    # Empty Chat -> Search Bar in Middle
     chat_pos_css = "top: 45vh !important; transform: translateX(-50%) !important;"
 else:
-    # Chat Started -> Search Bar shifts permanently to Bottom
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ATTACHMENT ICON LOGIC
-# ==========================================
-# Try to load custom attachment icon, otherwise fallback to "+"
-try:
-    with open("attach_icon.png", "rb") as f:
-        attach_b64 = base64.b64encode(f.read()).decode()
-    attach_bg_css = f"background-image: url('data:image/png;base64,{attach_b64}') !important; background-size: 22px 22px !important; background-position: center !important; background-repeat: no-repeat !important; opacity: 0.7;"
-    attach_p_css = "display: none !important;"
-    attach_hover_btn_css = "opacity: 1 !important; background-color: rgba(255,255,255,0.1) !important;"
-    attach_hover_p_css = "display: none !important;"
-except FileNotFoundError:
-    attach_bg_css = "background: transparent !important;"
-    attach_p_css = "font-size: 2.2rem !important; color: #555555 !important; line-height: 0.9 !important; margin: 0 !important; font-weight: 300 !important;"
-    attach_hover_btn_css = "background: transparent !important;"
-    attach_hover_p_css = "color: #AAAAAA !important;"
-
-# ==========================================
-# 4. ADVANCED CSS
+# 3. ADVANCED CSS (Bulletproof Targeting)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -79,7 +60,6 @@ st.markdown(f"""
     /* =========================================
        CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
-       
     [data-testid="stChatMessageContainer"] {{
         padding-left: 0 !important;
         padding-right: 0 !important;
@@ -101,7 +81,7 @@ st.markdown(f"""
         margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> FULL WIDTH (100%), Touching Boundary */
+    /* 🟢 CHATBOT (Even) -> FULL WIDTH, Touching Left */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
@@ -109,6 +89,7 @@ st.markdown(f"""
         max-width: 100% !important; 
         margin-right: auto !important; 
         margin-left: 0 !important; 
+        border-radius: 0 12px 12px 0 !important; /* Flat left edge */
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -139,7 +120,6 @@ st.markdown(f"""
         margin-bottom: 20px; border-radius: 8px; 
         border: 1px solid #999 !important; 
     }}
-    .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
 
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
@@ -148,8 +128,7 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
-       
-    .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
+    div[data-testid="stChatInputContainer"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
@@ -162,38 +141,32 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
-        transition: box-shadow 0.3s ease !important;
     }}
     
-    /* Hover state for search container */
-    .stChatInput:hover, div[data-testid="stChatInputContainer"]:hover {{
-        box-shadow: 0 6px 20px rgba(0,0,0,0.7) !important;
-    }}
-    
-    /* Removing the outline Streamlit applies on focus */
-    .stChatInput:focus-within, div[data-testid="stChatInputContainer"]:focus-within {{
-        outline: none !important;
-        border: none !important;
+    div[data-testid="stChatInputContainer"]:focus-within {{
+        outline: none !important; border: 1px solid #666 !important;
     }}
 
-    /* Text Input Area */
-    .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
+    /* 🟢 TYPING TEXT COLOR -> FORCED DARK GREY */
+    div[data-testid="stChatInputContainer"] textarea {{ 
         color: #808080 !important; 
+        -webkit-text-fill-color: #808080 !important; /* Force Safari/Chrome to obey */
         font-size: 1.15rem !important; 
-        padding-left: 20px !important; 
+        padding-left: 50px !important; /* Room for the '+' button */
         padding-top: 15px !important;
         padding-right: 60px !important; 
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
-    .stChatInput textarea::placeholder {{
-        color: #888888 !important;
+    div[data-testid="stChatInputContainer"] textarea::placeholder {{
+        color: #666666 !important;
+        -webkit-text-fill-color: #666666 !important;
     }}
 
     /* =========================================
-       CUSTOM GEMINI-STYLE SEND BUTTON (RIGHT)
+       CUSTOM GEMINI-STYLE SEND BUTTON
        ========================================= */
-    .stChatInput button, div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         background-color: #333333 !important;
         border-radius: 50% !important;
         border: 1px solid #555 !important;
@@ -201,37 +174,21 @@ st.markdown(f"""
         width: 42px !important; height: 42px !important;
         right: 15px !important; 
         bottom: 25px !important; 
-        transition: all 0.3s ease !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }}
-
-    /* Hide default SVG */
-    .stChatInput button svg, div[data-testid="stChatInputContainer"] button svg {{
-        display: none !important;
+    div[data-testid="stChatInputContainer"] button svg {{ display: none !important; }}
+    div[data-testid="stChatInputContainer"] button::after {{
+        content: '➤'; font-size: 1.4rem; color: #E0E0E0; position: absolute;
     }}
-
-    /* The Arrow (➤) */
-    .stChatInput button::after, div[data-testid="stChatInputContainer"] button::after {{
-        content: '➤';
-        font-size: 1.4rem;
-        color: #E0E0E0; 
-        position: absolute;
-    }}
-
-    .stChatInput button:hover, div[data-testid="stChatInputContainer"] button:hover {{
-        background-color: #3B82F6 !important; 
-        border-color: #60A5FA !important;
-    }}
-    .stChatInput button:hover::after, div[data-testid="stChatInputContainer"] button:hover::after {{
-        color: #FFFFFF !important;
-    }}
+    div[data-testid="stChatInputContainer"] button:hover {{ background-color: #3B82F6 !important; border-color: #60A5FA !important; }}
+    div[data-testid="stChatInputContainer"] button:hover::after {{ color: #FFFFFF !important; }}
     
     /* =========================================
-       ATTACHMENT BUTTON (DYNAMIC IMAGE OR +)
+       ATTACHMENT BUTTON (NATIVE SVG EMBEDDED)
        ========================================= */
-    div[data-testid="stHorizontalBlock"]:last-of-type {{
+    [data-testid="stPopover"] {{
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
@@ -242,34 +199,34 @@ st.markdown(f"""
         pointer-events: none !important; 
         display: flex;
         align-items: flex-end; 
-        padding-bottom: 15px; 
+        padding-bottom: 25px; 
         padding-left: 20px; 
     }}
     
-    div[data-testid="stHorizontalBlock"]:last-of-type > div {{
+    [data-testid="stPopover"] > button {{
         pointer-events: auto !important; 
-    }}
-
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button {{
-        width: 35px !important; height: 35px !important;
+        width: 32px !important; height: 32px !important;
+        background-color: transparent !important; 
         border: none !important;
-        border-radius: 50% !important; padding: 0 !important;
-        display: flex; align-items: center; justify-content: center;
+        border-radius: 50% !important; 
+        padding: 0 !important;
         box-shadow: none !important;
-        transition: 0.3s;
-        {attach_bg_css}
+        /* Direct SVG Plus Icon Injection */
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23808080" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>') !important;
+        background-size: contain !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        transition: opacity 0.2s !important;
     }}
     
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button p {{
-        {attach_p_css}
+    /* Hide the native text of the popover button */
+    [data-testid="stPopover"] > button p, [data-testid="stPopover"] > button div {{
+        display: none !important;
     }}
     
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover {{
-        {attach_hover_btn_css}
-    }}
-
-    div[data-testid="stHorizontalBlock"]:last-of-type [data-testid="stPopover"] > button:hover p {{
-        {attach_hover_p_css}
+    [data-testid="stPopover"] > button:hover {{
+        opacity: 0.7 !important;
+        background-color: transparent !important;
     }}
     
     /* Attachment Popover Body */
@@ -278,6 +235,7 @@ st.markdown(f"""
         border: 1px solid #444 !important;
         border-radius: 12px !important;
         padding: 15px !important;
+        pointer-events: auto !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -286,7 +244,7 @@ def encode_image(uploaded_file):
     return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
-# 5. SIDEBAR & BRANDING
+# 4. SIDEBAR & BRANDING
 # ==========================================
 with st.sidebar:
     try:
@@ -328,13 +286,12 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CHAT LOGIC
+# 5. MAIN CHAT LOGIC
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 5vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-# Start of the main chat container
 st.markdown('<div data-testid="stChatMessageContainer">', unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
@@ -345,22 +302,21 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 7. ATTACHMENT TOOL (Floating Left Button)
+# 6. ATTACHMENT TOOL (Floating Left Button)
 # ==========================================
-tool_col, _ = st.columns([1, 99]) 
 chat_img_bottom = None
 
-with tool_col:
-    with st.popover("+"): 
-        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
-        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
-        if chat_img_bottom:
-            st.success("✅ Attached!")
+# Using popover directly without extra columns for cleaner targeting
+with st.popover("+"): 
+    st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
+    chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+    if chat_img_bottom:
+        st.success("✅ Attached!")
 
 final_vision_image = chat_img_bottom
 
 # ==========================================
-# 8. CHAT INPUT & AI GENERATION
+# 7. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     
@@ -371,11 +327,9 @@ if prompt := st.chat_input("Ask me anything..."):
         st.session_state.current_chat = new_name
 
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
-    
     st.session_state.pending_generation = True
     st.rerun()
 
-# Processing AI generation
 if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     

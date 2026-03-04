@@ -34,7 +34,7 @@ else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, User Right/Bot Left & Premium Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, 3-Dot Menu & Premium Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -134,6 +134,56 @@ st.markdown(f"""
         color: #111111 !important;
     }}
 
+    /* =========================================
+       ✨ 3-DOT POPOVER STYLING (SIDEBAR)
+       ========================================= */
+    [data-testid="stSidebar"] [data-testid="stPopover"] > button {{
+        background-color: transparent !important;
+        border: none !important;
+        color: #555555 !important; /* Dark Grey 3 dots */
+        font-size: 1.5rem !important;
+        font-weight: 900 !important;
+        line-height: 1 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stPopover"] > button:hover {{
+        color: #AAAAAA !important;
+        background-color: transparent !important;
+    }}
+    [data-testid="stSidebar"] [data-testid="stPopover"] > button svg {{
+        display: none !important; /* Hide default arrow */
+    }}
+
+    /* Popover Menu Body */
+    [data-testid="stPopoverBody"] {{
+        background-color: #E0E0E0 !important; /* Light Grey Background */
+        border: 1px solid #CCCCCC !important;
+        border-radius: 12px !important; /* Square-shaped with rounded corners */
+        padding: 5px !important;
+        width: 220px !important;
+    }}
+
+    /* Options inside the Popover */
+    [data-testid="stPopoverBody"] .stButton > button {{
+        background-color: transparent !important;
+        border: none !important;
+        color: #333333 !important; /* Dark Grey Text */
+        text-align: left !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
+        padding: 8px 10px !important;
+        margin: 2px 0 !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+    }}
+    [data-testid="stPopoverBody"] .stButton > button:hover {{
+        background-color: #CCCCCC !important; /* Highlight on hover */
+        color: #000000 !important;
+    }}
+
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
@@ -148,8 +198,8 @@ st.markdown(f"""
         width: 90vw !important;
         max-width: 800px !important; 
         min-height: 60px !important; 
-        border-radius: 50px !important; /* Perfect Pill Shape */
-        background-color: #F0F4F9 !important; /* Gemini Light Grey */
+        border-radius: 50px !important; 
+        background-color: #F0F4F9 !important; 
         border: 1px solid #E0E4E9 !important; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
         padding: 5px 10px !important;
@@ -157,13 +207,11 @@ st.markdown(f"""
         transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
     }}
     
-    /* Glow on focus */
     div[data-testid="stChatInputContainer"]:focus-within {{
         background-color: #FFFFFF !important;
         box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
     }}
 
-    /* Placeholder and Text Styling */
     div[data-testid="stChatInputContainer"] textarea {{ 
         color: #1F1F1F !important; 
         -webkit-text-fill-color: #1F1F1F !important; 
@@ -171,7 +219,7 @@ st.markdown(f"""
         font-weight: 400 !important;
         padding-left: 20px !important; 
         padding-top: 14px !important;
-        padding-right: 60px !important; /* Space only for the Send Button */
+        padding-right: 60px !important; 
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
@@ -207,7 +255,7 @@ st.markdown(f"""
         display: none !important; 
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{ 
-        background-color: #E2E7EB !important; /* Subtle hover effect */
+        background-color: #E2E7EB !important; 
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -239,18 +287,41 @@ with st.sidebar:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
+    
+    # 🔥 CHAT HISTORY WITH 3-DOT MENU
     for chat_name in reversed(list(st.session_state.sessions.keys())):
-        if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}"):
-            st.session_state.current_chat = chat_name
-            st.session_state.pending_generation = False
-            st.rerun()
+        col1, col2 = st.columns([85, 15], vertical_alignment="center")
+        
+        with col1:
+            if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}", use_container_width=True):
+                st.session_state.current_chat = chat_name
+                st.session_state.pending_generation = False
+                st.rerun()
+                
+        with col2:
+            with st.popover("⋮"): # 3 Vertical Dots
+                if st.button("📂 Open this session", key=f"opn_{chat_name}", use_container_width=True):
+                    st.session_state.current_chat = chat_name
+                    st.session_state.pending_generation = False
+                    st.rerun()
+                
+                if st.button("📌 Pin this session", key=f"pin_{chat_name}", use_container_width=True):
+                    st.toast(f"📌 '{chat_name}' pinned successfully!")
+                
+                if st.button("🗑️ Delete this session", key=f"del_{chat_name}", use_container_width=True):
+                    del st.session_state.sessions[chat_name]
+                    # If active chat is deleted, switch to a new session
+                    if st.session_state.current_chat == chat_name:
+                        st.session_state.current_chat = "New Session"
+                        if "New Session" not in st.session_state.sessions:
+                            st.session_state.sessions["New Session"] = []
+                    st.rerun()
             
     # ==========================================
     # 🔥 NEW E-BOOKS TAB
     # ==========================================
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     if st.button("E-BOOKS 😎", key="ebooks_tab"):
-        # Yahan par tu future mein E-Books section open karwane ka logic daal sakta hai
         st.toast("📚 E-BOOKS Section is coming soon!")
     st.markdown("</div>", unsafe_allow_html=True)
             

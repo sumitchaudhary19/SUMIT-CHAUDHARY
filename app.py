@@ -28,16 +28,13 @@ if "pending_generation" not in st.session_state:
 # DYNAMIC UI LOGIC: Check if chat is empty to center the Search Bar
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
-# 🔥 MAGICAL POSITIONING LOGIC
 if is_chat_empty:
-    # Empty Chat -> Search Bar in Middle
-    chat_pos_css = "top: 50% !important; transform: translate(-50%, -50%) !important;"
+    chat_pos_css = "top: 45vh !important; transform: translateX(-50%) !important;"
 else:
-    # Chat Started -> Search Bar shifts permanently to Bottom
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, Right Aligned Tools & Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, User Right/Bot Left & Clean Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -54,14 +51,24 @@ st.markdown(f"""
     
     /* 🔴 PITCH BLACK BOTTOM SECTION */
     [data-testid="stBottom"] {{
-        background-color: #000000 !important;
+        background-color: transparent !important; /* Force transparent to prevent white blocks */
         border-top: none !important; 
         padding-top: 20px !important;
     }}
-    [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
+    [data-testid="stBottom"] > div {{ 
+        background-color: transparent !important; 
+    }}
     
+    /* 🛑 KILLING THE WHITE GHOST SEARCH BAR */
+    div[data-testid="stChatInput"], div.stChatInput {{
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }}
+
     /* =========================================
-       CHAT MESSAGES ALIGNMENT
+       CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
     [data-testid="stChatMessageContainer"] {{
         padding-left: 0 !important;
@@ -122,7 +129,6 @@ st.markdown(f"""
         margin-bottom: 20px; border-radius: 8px; 
         border: 1px solid #999 !important; 
     }}
-    .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
 
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
@@ -131,7 +137,7 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
-    .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
+    div[data-testid="stChatInputContainer"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
@@ -144,7 +150,7 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
-        transition: all 0.4s ease-in-out !important; /* Smooth animation when it drops down */
+        transition: all 0.4s ease-in-out !important; 
     }}
     
     div[data-testid="stChatInputContainer"]:focus-within {{
@@ -155,7 +161,7 @@ st.markdown(f"""
         color: #808080 !important; 
         -webkit-text-fill-color: #808080 !important; 
         font-size: 1.15rem !important; 
-        padding-left: 20px !important; 
+        padding-left: 50px !important; 
         padding-top: 15px !important;
         padding-right: 120px !important; 
         background-color: transparent !important;
@@ -164,6 +170,12 @@ st.markdown(f"""
     div[data-testid="stChatInputContainer"] textarea::placeholder {{
         color: #666666 !important;
         -webkit-text-fill-color: #666666 !important;
+    }}
+    
+    /* Fix for browser autofill background turning white */
+    div[data-testid="stChatInputContainer"] textarea:-webkit-autofill {{
+        -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+        -webkit-text-fill-color: #808080 !important;
     }}
 
     /* =========================================
@@ -206,13 +218,12 @@ st.markdown(f"""
         justify-content: flex-end; 
         padding-bottom: 25px; 
         padding-right: 65px; 
-        transition: all 0.4s ease-in-out !important; /* Smooth animation when it drops down */
+        transition: all 0.4s ease-in-out !important; 
     }}
     
     @media (min-width: 850px) {{
         [data-testid="stPopover"] {{
             left: 50% !important;
-            /* In center mode, translate needs to match the parent container's translation to stay perfectly aligned */
             transform: { "translate(-50%, -50%)" if is_chat_empty else "translateX(-50%)" } !important;
             padding-right: 65px;
         }}

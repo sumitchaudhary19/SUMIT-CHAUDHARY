@@ -156,7 +156,7 @@ st.markdown(f"""
         font-weight: 400 !important;
         padding-left: 20px !important; 
         padding-top: 14px !important;
-        padding-right: 140px !important; /* Room for Upload, Mic, and Send */
+        padding-right: 60px !important; /* Space only for the Send Button */
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
@@ -194,74 +194,8 @@ st.markdown(f"""
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{ 
         background-color: #E2E7EB !important; /* Subtle hover effect */
     }}
-    
-    /* =========================================
-       UPLOAD & MIC ICONS (Right Aligned)
-       ========================================= */
-    [data-testid="stHorizontalBlock"]:last-of-type {{
-        position: fixed !important;
-        {chat_pos_css} 
-        left: 50% !important;
-        width: 90vw !important;
-        max-width: 800px !important; 
-        height: 60px !important; 
-        z-index: 10000 !important;
-        pointer-events: none !important; 
-        display: flex;
-        align-items: center; 
-        justify-content: flex-end; 
-        padding-right: 60px; /* Aligns just left of Send button */
-        gap: 5px !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-    }}
-    
-    @media (min-width: 800px) {{
-        [data-testid="stHorizontalBlock"]:last-of-type {{
-            transform: { "translate(-50%, -50%)" if is_chat_empty else "translateX(-50%)" } !important;
-        }}
-    }}
-    
-    /* Common Icon Button Styling */
-    [data-testid="stPopover"] > button {{
-        pointer-events: auto !important; 
-        width: 40px !important; height: 40px !important;
-        background-color: transparent !important; 
-        border: none !important;
-        border-radius: 50% !important; 
-        padding: 0 !important;
-        box-shadow: none !important;
-        background-size: 22px !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        transition: background-color 0.2s !important;
-    }}
-    
-    /* 1. Upload/Gallery Icon */
-    div[data-testid="column"]:nth-child(1) [data-testid="stPopover"] > button {{
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23444746"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>') !important;
-    }}
-
-    /* 2. Microphone Icon */
-    div[data-testid="column"]:nth-child(2) [data-testid="stPopover"] > button {{
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23444746"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>') !important;
-    }}
-    
-    [data-testid="stPopover"] > button p, [data-testid="stPopover"] > button div, [data-testid="stPopover"] > button svg {{ 
-        display: none !important; 
-    }}
-    
-    [data-testid="stPopover"] > button:hover {{ background-color: #E2E7EB !important; }}
-    
-    /* Popover Body */
-    [data-testid="stPopoverBody"] {{
-        background-color: #2C2C2C !important; border: 1px solid #444 !important;
-        border-radius: 12px !important; padding: 15px !important; pointer-events: auto !important;
-    }}
     </style>
 """, unsafe_allow_html=True)
-
-def encode_image(uploaded_file):
-    return base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
 
 # ==========================================
 # 4. SIDEBAR & BRANDING
@@ -322,26 +256,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 6. ATTACHMENT & MIC TOOLS (Inside Search Bar)
-# ==========================================
-tool_col1, tool_col2 = st.columns([1, 1]) 
-chat_img_bottom = None
-
-with tool_col1:
-    with st.popover(" "): # Upload Icon Popover
-        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
-        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
-        if chat_img_bottom:
-            st.success("✅ Attached!")
-
-with tool_col2:
-    with st.popover("  "): # Mic Icon Popover (double space to separate key)
-        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>🎤 Voice input coming soon!</p>", unsafe_allow_html=True)
-
-final_vision_image = chat_img_bottom
-
-# ==========================================
-# 7. CHAT INPUT & AI GENERATION
+# 6. CHAT INPUT & AI GENERATION
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     
@@ -370,30 +285,15 @@ if st.session_state.pending_generation:
         
         try:
             def generate_response():
-                if final_vision_image:
-                    base64_image = encode_image(final_vision_image)
-                    stream = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": instructions},
-                            {"role": "user", "content": [
-                                {"type": "text", "text": prompt},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                            ]}
-                        ],
-                        model="llama-3.2-11b-vision-preview",
-                        temperature=0.7,
-                        stream=True
-                    )
-                else:
-                    stream = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": instructions},
-                            {"role": "user", "content": prompt}
-                        ],
-                        model="llama-3.3-70b-versatile",
-                        temperature=0.7,
-                        stream=True
-                    )
+                stream = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": instructions},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7,
+                    stream=True
+                )
                 
                 for chunk in stream:
                     if chunk.choices[0].delta.content is not None:

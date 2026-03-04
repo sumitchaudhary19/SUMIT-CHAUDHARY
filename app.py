@@ -128,22 +128,21 @@ st.markdown(f"""
        ========================================= */
     .ebook-btn button, 
     .ebook-btn a[data-testid="stLinkButton"] {{
-        background-color: #E0E0E0 !important; /* Light Grey Background */
-        color: #333333 !important; /* Dark Grey Text */
+        background-color: #E0E0E0 !important;
+        color: #333333 !important;
         width: 100% !important;
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-        font-weight: 900 !important; /* Bold font */
+        font-weight: 900 !important;
         margin-top: 12px !important;
         border: 1px solid #AAAAAA !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
         text-decoration: none !important;
         border-radius: 8px !important;
-        min-height: 48px !important; /* Fixed height so all tabs match perfectly */
+        min-height: 48px !important;
     }}
     
-    /* Target the text explicitly inside these buttons to enforce bold dark grey */
     .ebook-btn button p, 
     .ebook-btn a[data-testid="stLinkButton"] p,
     .ebook-btn a[data-testid="stLinkButton"] span {{
@@ -168,7 +167,7 @@ st.markdown(f"""
         font-size: 1.2rem;
         z-index: 100;
         filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.6));
-        pointer-events: none; /* Allows clicking the button underneath */
+        pointer-events: none;
     }}
 
     /* =========================================
@@ -226,43 +225,45 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       ✨ NEW GEMINI MINIMALIST SEARCH BAR
+       ✨ UPDATED SEARCH BAR — Shorter length, More height/width
        ========================================= */
     div[data-testid="stChatInputContainer"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
-        width: 85vw !important; /* Slightly reduced width */
-        max-width: 700px !important; /* Shorter length horizontally */
-        min-height: 65px !important; /* Increased thickness/width vertically */
-        border-radius: 50px !important; /* Perfect Pill Shape */
+        width: 60vw !important;          /* ✅ Reduced from 85vw → shorter horizontally */
+        max-width: 560px !important;     /* ✅ Reduced from 700px → compact length */
+        min-height: 80px !important;     /* ✅ Increased from 65px → taller/thicker bar */
+        border-radius: 50px !important;  /* Perfect Pill Shape */
         background-color: #F0F4F9 !important; 
-        border: 1px solid #E0E4E9 !important; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        padding: 5px 15px !important;
+        border: 1.5px solid #D0D5DD !important; 
+        box-shadow: 0 6px 24px rgba(0,0,0,0.13), 0 1.5px 6px rgba(0,0,0,0.07) !important;
+        padding: 8px 18px !important;
         z-index: 9999 !important;
         transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
     }}
     
     div[data-testid="stChatInputContainer"]:focus-within {{
         background-color: #FFFFFF !important;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+        border-color: #A8B8D8 !important;
+        box-shadow: 0 8px 28px rgba(96, 165, 250, 0.18), 0 2px 8px rgba(0,0,0,0.1) !important;
     }}
 
     div[data-testid="stChatInputContainer"] textarea {{ 
         color: #1F1F1F !important; 
         -webkit-text-fill-color: #1F1F1F !important; 
-        font-size: 1.15rem !important; 
+        font-size: 1.1rem !important; 
         font-weight: 400 !important;
-        padding-left: 20px !important; 
-        padding-top: 18px !important; /* Adjusted for taller pill */
-        padding-right: 65px !important; 
+        padding-left: 22px !important; 
+        padding-top: 22px !important;   /* ✅ More vertical padding for taller bar */
+        padding-right: 72px !important; 
         background-color: transparent !important;
-        min-height: 50px !important; 
+        min-height: 58px !important;    /* ✅ Taller textarea */
     }}
     div[data-testid="stChatInputContainer"] textarea::placeholder {{
-        color: #747775 !important;
-        -webkit-text-fill-color: #747775 !important;
+        color: #888E99 !important;
+        -webkit-text-fill-color: #888E99 !important;
+        font-style: italic !important;
     }}
     div[data-testid="stChatInputContainer"] textarea:-webkit-autofill {{
         -webkit-box-shadow: 0 0 0 1000px #F0F4F9 inset !important;
@@ -270,24 +271,28 @@ st.markdown(f"""
     }}
 
     /* =========================================
-       SEND BUTTON (Gemini Style Paper Plane Icon)
+       ✨ UPGRADED SEND BUTTON — Gradient Circle with Glow
        ========================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
-        background-color: #F0F4F9 !important;
+        /* ✅ Gradient background — blue to indigo like modern AI apps */
+        background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #6366F1 100%) !important;
         border-radius: 50% !important;
         border: none !important;
         position: absolute !important;
-        width: 48px !important; 
-        height: 48px !important;
-        right: 8px !important; 
-        top: 50% !important; /* Perfect vertical centering */
+        width: 52px !important;          /* ✅ Slightly bigger button */
+        height: 52px !important;
+        right: 14px !important;
+        top: 50% !important;
         transform: translateY(-50%) !important;
-        /* Modern outlined send icon */
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%231F1F1F"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg>') !important;
-        background-size: 26px !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        transition: all 0.2s ease !important;
+        /* ✅ Clean white send icon */
+        background-image: 
+            linear-gradient(135deg, #60A5FA 0%, #3B82F6 50%, #6366F1 100%),
+            url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="%23FFFFFF"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg>') !important;
+        background-size: cover, 22px !important;
+        background-repeat: no-repeat, no-repeat !important;
+        background-position: center, center !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.45), 0 2px 6px rgba(99, 102, 241, 0.3) !important; /* ✅ Blue glow */
+        transition: all 0.25s ease !important;
         z-index: 10001 !important;
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] svg,
@@ -295,11 +300,19 @@ st.markdown(f"""
         display: none !important; 
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{ 
-        background-color: #E2E7EB !important; /* Subtle circle hover */
-        transform: translateY(-50%) scale(1.05) !important;
+        background: linear-gradient(135deg, #93C5FD 0%, #60A5FA 50%, #818CF8 100%) !important;
+        background-image: 
+            linear-gradient(135deg, #93C5FD 0%, #60A5FA 50%, #818CF8 100%),
+            url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="%23FFFFFF"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg>') !important;
+        background-size: cover, 22px !important;
+        background-repeat: no-repeat, no-repeat !important;
+        background-position: center, center !important;
+        box-shadow: 0 6px 22px rgba(59, 130, 246, 0.6), 0 3px 10px rgba(99, 102, 241, 0.4) !important;
+        transform: translateY(-50%) scale(1.08) !important;
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:active {{
-        transform: translateY(-50%) scale(0.95) !important;
+        transform: translateY(-50%) scale(0.94) !important;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35) !important;
     }}
     </style>
 """, unsafe_allow_html=True)

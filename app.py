@@ -58,8 +58,9 @@ st.markdown(f"""
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT (BOTH LEFT)
+       CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
+       
     [data-testid="stChatMessageContainer"] {{
         padding-left: 0 !important;
         padding-right: 0 !important;
@@ -69,24 +70,26 @@ st.markdown(f"""
         border-radius: 12px; 
         padding: 15px 20px; 
         margin-bottom: 20px;
-        margin-left: 0 !important; /* BOTH Start from the Left */
-        margin-right: auto !important; 
     }}
     
-    /* 🔵 USER (Odd) -> LEFT ALIGNED, 75% Width */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
         border: 1px solid #444 !important; 
         width: fit-content !important; 
         max-width: 75% !important; 
+        margin-left: auto !important; 
+        margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> LEFT ALIGNED, 100% Width */
+    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT, FULL WIDTH (100%) */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
         width: 100% !important; 
         max-width: 100% !important; 
+        margin-right: auto !important; 
+        margin-left: 0 !important; 
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -117,6 +120,7 @@ st.markdown(f"""
         margin-bottom: 20px; border-radius: 8px; 
         border: 1px solid #999 !important; 
     }}
+    .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
 
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
@@ -125,6 +129,7 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
+       
     .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
         position: fixed !important;
         {chat_pos_css} 
@@ -138,10 +143,16 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
+        transition: box-shadow 0.3s ease !important;
     }}
     
-    div[data-testid="stChatInputContainer"]:focus-within {{
-        outline: none !important; border: 1px solid #666 !important;
+    .stChatInput:hover, div[data-testid="stChatInputContainer"]:hover {{
+        box-shadow: 0 6px 20px rgba(0,0,0,0.7) !important;
+    }}
+    
+    .stChatInput:focus-within, div[data-testid="stChatInputContainer"]:focus-within {{
+        outline: none !important;
+        border: none !important;
     }}
 
     div[data-testid="stChatInputContainer"] textarea {{ 
@@ -160,7 +171,7 @@ st.markdown(f"""
     }}
 
     /* =========================================
-       CUSTOM GEMINI-STYLE SEND BUTTON
+       CUSTOM GEMINI-STYLE SEND BUTTON (RIGHT)
        ========================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         background-color: #333333 !important;
@@ -174,15 +185,28 @@ st.markdown(f"""
         align-items: center !important;
         justify-content: center !important;
     }}
-    div[data-testid="stChatInputContainer"] button svg {{ display: none !important; }}
-    div[data-testid="stChatInputContainer"] button::after {{
-        content: '➤'; font-size: 1.4rem; color: #E0E0E0; position: absolute;
+
+    div[data-testid="stChatInputContainer"] button svg {{
+        display: none !important;
     }}
-    div[data-testid="stChatInputContainer"] button:hover {{ background-color: #3B82F6 !important; border-color: #60A5FA !important; }}
-    div[data-testid="stChatInputContainer"] button:hover::after {{ color: #FFFFFF !important; }}
+
+    div[data-testid="stChatInputContainer"] button::after {{
+        content: '➤';
+        font-size: 1.4rem;
+        color: #E0E0E0; 
+        position: absolute;
+    }}
+
+    div[data-testid="stChatInputContainer"] button:hover {{
+        background-color: #3B82F6 !important; 
+        border-color: #60A5FA !important;
+    }}
+    div[data-testid="stChatInputContainer"] button:hover::after {{
+        color: #FFFFFF !important;
+    }}
     
     /* =========================================
-       ATTACHMENT BUTTON (NATIVE SVG EMBEDDED)
+       ATTACHMENT BUTTON (+) INSIDE LEFT
        ========================================= */
     [data-testid="stPopover"] {{
         position: fixed !important;
@@ -215,11 +239,14 @@ st.markdown(f"""
         transition: opacity 0.2s !important;
     }}
     
-    /* HIDDEN TEXT AND DEFAULT STREAMLIT ARROW INSIDE POPOVER */
-    [data-testid="stPopover"] > button p, 
-    [data-testid="stPopover"] > button div, 
+    /* HIDING ONLY THE DEFAULT STREAMLIT ARROW INSIDE POPOVER BUTTON */
     [data-testid="stPopover"] > button svg {{ 
         display: none !important; 
+    }}
+    
+    /* Ensure no text overwrites the SVG background */
+    [data-testid="stPopover"] > button p {{
+        display: none !important;
     }}
     
     [data-testid="stPopover"] > button:hover {{ opacity: 0.7 !important; background-color: transparent !important; }}
@@ -300,6 +327,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ==========================================
 chat_img_bottom = None
 
+# Using an empty space so native text doesn't show, only the SVG background remains.
 with st.popover(" "): 
     st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
     chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")

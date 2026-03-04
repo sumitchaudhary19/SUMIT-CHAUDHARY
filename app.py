@@ -232,14 +232,14 @@ st.markdown(f"""
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
-        width: 90vw !important;
-        max-width: 800px !important; 
-        min-height: 60px !important; 
-        border-radius: 50px !important; 
+        width: 85vw !important; /* Slightly reduced width */
+        max-width: 700px !important; /* Shorter length horizontally */
+        min-height: 65px !important; /* Increased thickness/width vertically */
+        border-radius: 50px !important; /* Perfect Pill Shape */
         background-color: #F0F4F9 !important; 
         border: 1px solid #E0E4E9 !important; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        padding: 5px 10px !important;
+        padding: 5px 15px !important;
         z-index: 9999 !important;
         transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
     }}
@@ -255,8 +255,8 @@ st.markdown(f"""
         font-size: 1.15rem !important; 
         font-weight: 400 !important;
         padding-left: 20px !important; 
-        padding-top: 14px !important;
-        padding-right: 60px !important; 
+        padding-top: 18px !important; /* Adjusted for taller pill */
+        padding-right: 65px !important; 
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
@@ -270,21 +270,24 @@ st.markdown(f"""
     }}
 
     /* =========================================
-       SEND BUTTON (Paper Plane Icon)
+       SEND BUTTON (Gemini Style Paper Plane Icon)
        ========================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
-        background-color: transparent !important;
+        background-color: #F0F4F9 !important;
         border-radius: 50% !important;
         border: none !important;
         position: absolute !important;
-        width: 45px !important; height: 45px !important;
-        right: 10px !important; 
-        bottom: 7px !important; 
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231F1F1F"><path d="M3 20v-6l8-2-8-2V4l19 8z"/></svg>') !important;
-        background-size: 24px !important;
+        width: 48px !important; 
+        height: 48px !important;
+        right: 8px !important; 
+        top: 50% !important; /* Perfect vertical centering */
+        transform: translateY(-50%) !important;
+        /* Modern outlined send icon */
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%231F1F1F"><path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></svg>') !important;
+        background-size: 26px !important;
         background-repeat: no-repeat !important;
         background-position: center !important;
-        transition: background-color 0.2s ease !important;
+        transition: all 0.2s ease !important;
         z-index: 10001 !important;
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] svg,
@@ -292,7 +295,11 @@ st.markdown(f"""
         display: none !important; 
     }}
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{ 
-        background-color: #E2E7EB !important; 
+        background-color: #E2E7EB !important; /* Subtle circle hover */
+        transform: translateY(-50%) scale(1.05) !important;
+    }}
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:active {{
+        transform: translateY(-50%) scale(0.95) !important;
     }}
     </style>
 """, unsafe_allow_html=True)

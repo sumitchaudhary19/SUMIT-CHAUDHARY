@@ -124,7 +124,7 @@ st.markdown(f"""
     }}
 
     /* =========================================
-       ✨ NEW E-BOOKS & SCHEDULE TABS STYLING
+       ✨ NEW E-BOOKS, SCHEDULE & ERP TABS STYLING
        ========================================= */
     .ebook-btn button, 
     .ebook-btn a[data-testid="stLinkButton"] {{
@@ -140,7 +140,7 @@ st.markdown(f"""
         box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
         text-decoration: none !important;
         border-radius: 8px !important;
-        min-height: 48px !important; /* Fixed height so both tabs match perfectly */
+        min-height: 48px !important; /* Fixed height so all tabs match perfectly */
     }}
     
     /* Target the text explicitly inside these buttons to enforce bold dark grey */
@@ -369,8 +369,9 @@ with st.sidebar:
                     st.rerun()
             
     # ==========================================
-    # 🔥 NEW E-BOOKS & SCHEDULE TABS
+    # 🔥 NEW E-BOOKS, SCHEDULE & ERP TABS
     # ==========================================
+    
     # E-BOOKS Button
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     if st.button("E-BOOKS 😎", key="ebooks_tab", use_container_width=True):
@@ -380,6 +381,11 @@ with st.sidebar:
     # Class Schedule Link Button
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ERP Link Button
+    st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
+    st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
             
     st.markdown("---")

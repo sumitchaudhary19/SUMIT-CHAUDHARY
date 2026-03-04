@@ -29,12 +29,12 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 if is_chat_empty:
-    chat_pos_css = "top: 45vh !important; transform: translateX(-50%) !important;"
+    chat_pos_css = "top: 45vh !important; transform: translate(-50%, -50%) !important;"
 else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, User Right/Bot Left & Clean Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, User Right/Bot Left & Premium Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -51,13 +51,11 @@ st.markdown(f"""
     
     /* 🔴 PITCH BLACK BOTTOM SECTION */
     [data-testid="stBottom"] {{
-        background-color: transparent !important; /* Force transparent to prevent white blocks */
+        background-color: transparent !important; 
         border-top: none !important; 
         padding-top: 20px !important;
     }}
-    [data-testid="stBottom"] > div {{ 
-        background-color: transparent !important; 
-    }}
+    [data-testid="stBottom"] > div {{ background-color: transparent !important; }}
     
     /* 🛑 KILLING THE WHITE GHOST SEARCH BAR */
     div[data-testid="stChatInput"], div.stChatInput {{
@@ -71,14 +69,11 @@ st.markdown(f"""
        CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
     [data-testid="stChatMessageContainer"] {{
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding-left: 0 !important; padding-right: 0 !important;
     }}
     
     div[data-testid="stChatMessage"] {{ 
-        border-radius: 12px; 
-        padding: 15px 20px; 
-        margin-bottom: 20px;
+        border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;
     }}
     
     /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
@@ -101,10 +96,9 @@ st.markdown(f"""
         margin-left: 0 !important; 
     }}
     
-    /* CHAT TEXT COLOR (Grey) */
+    /* CHAT TEXT COLOR */
     div[data-testid="stChatMessageContent"] p {{
-        color: #B0B0B0 !important; 
-        font-size: 1rem; line-height: 1.6;
+        color: #B0B0B0 !important; font-size: 1rem; line-height: 1.6;
     }}
 
     /* =========================================
@@ -113,20 +107,15 @@ st.markdown(f"""
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
     
     .stButton>button {{ 
-        width: 100%; text-align: left; 
-        background-color: #D3D3D3 !important; 
-        border: 1px solid #999 !important; 
-        padding: 10px 15px; border-radius: 8px; 
-        font-weight: 600; color: #000000 !important; 
-        transition: 0.2s; 
+        width: 100%; text-align: left; background-color: #D3D3D3 !important; 
+        border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px; 
+        font-weight: 600; color: #000000 !important; transition: 0.2s; 
     }}
     .stButton>button:hover {{ background-color: #BDBDBD !important; }}
     
     .new-chat-btn>div>button {{ 
-        background-color: #D3D3D3 !important; 
-        color: #000000 !important; 
-        justify-content: center; font-weight: 700; 
-        margin-bottom: 20px; border-radius: 8px; 
+        background-color: #D3D3D3 !important; color: #000000 !important; 
+        justify-content: center; font-weight: 700; margin-bottom: 20px; border-radius: 8px; 
         border: 1px solid #999 !important; 
     }}
 
@@ -135,105 +124,104 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =========================================
-       GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
+       ✨ NEW GEMINI MINIMALIST SEARCH BAR
        ========================================= */
     div[data-testid="stChatInputContainer"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
-        max-width: 850px !important; 
-        min-height: 90px !important; 
-        border-radius: 40px !important; 
-        background-color: #1E1E1E !important; 
-        border: 1px solid #444 !important; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
-        padding: 5px !important;
+        max-width: 800px !important; 
+        min-height: 60px !important; 
+        border-radius: 50px !important; /* Perfect Pill Shape */
+        background-color: #F0F4F9 !important; /* Gemini Light Grey */
+        border: 1px solid #E0E4E9 !important; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        padding: 5px 10px !important;
         z-index: 9999 !important;
-        transition: all 0.4s ease-in-out !important; 
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important; 
     }}
     
+    /* Glow on focus */
     div[data-testid="stChatInputContainer"]:focus-within {{
-        outline: none !important; border: 1px solid #666 !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
     }}
 
+    /* Placeholder and Text Styling */
     div[data-testid="stChatInputContainer"] textarea {{ 
-        color: #808080 !important; 
-        -webkit-text-fill-color: #808080 !important; 
+        color: #1F1F1F !important; 
+        -webkit-text-fill-color: #1F1F1F !important; 
         font-size: 1.15rem !important; 
-        padding-left: 50px !important; 
-        padding-top: 15px !important;
-        padding-right: 120px !important; 
+        font-weight: 400 !important;
+        padding-left: 20px !important; 
+        padding-top: 14px !important;
+        padding-right: 140px !important; /* Room for Upload, Mic, and Send */
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
     div[data-testid="stChatInputContainer"] textarea::placeholder {{
-        color: #666666 !important;
-        -webkit-text-fill-color: #666666 !important;
+        color: #747775 !important;
+        -webkit-text-fill-color: #747775 !important;
     }}
-    
-    /* Fix for browser autofill background turning white */
     div[data-testid="stChatInputContainer"] textarea:-webkit-autofill {{
-        -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-        -webkit-text-fill-color: #808080 !important;
+        -webkit-box-shadow: 0 0 0 1000px #F0F4F9 inset !important;
+        -webkit-text-fill-color: #1F1F1F !important;
     }}
 
     /* =========================================
-       CUSTOM GEMINI-STYLE SEND BUTTON (RIGHT)
+       SEND BUTTON (Paper Plane Icon)
        ========================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
-        background-color: #333333 !important;
+        background-color: transparent !important;
         border-radius: 50% !important;
-        border: 1px solid #555 !important;
+        border: none !important;
         position: absolute !important;
-        width: 42px !important; height: 42px !important;
-        right: 15px !important; 
-        bottom: 25px !important; 
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        width: 45px !important; height: 45px !important;
+        right: 10px !important; 
+        bottom: 7px !important; 
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231F1F1F"><path d="M3 20v-6l8-2-8-2V4l19 8z"/></svg>') !important;
+        background-size: 24px !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        transition: background-color 0.2s ease !important;
         z-index: 10001 !important;
     }}
-    div[data-testid="stChatInputContainer"] button svg {{ display: none !important; }}
-    div[data-testid="stChatInputContainer"] button::after {{
-        content: '➤'; font-size: 1.4rem; color: #E0E0E0; position: absolute;
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] svg,
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]::after {{ 
+        display: none !important; 
     }}
-    div[data-testid="stChatInputContainer"] button:hover {{ background-color: #3B82F6 !important; border-color: #60A5FA !important; }}
-    div[data-testid="stChatInputContainer"] button:hover::after {{ color: #FFFFFF !important; }}
+    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:hover {{ 
+        background-color: #E2E7EB !important; /* Subtle hover effect */
+    }}
     
     /* =========================================
-       ATTACHMENT BUTTON (+) INSIDE RIGHT (NEXT TO SEND)
+       UPLOAD & MIC ICONS (Right Aligned)
        ========================================= */
-    [data-testid="stPopover"] {{
+    [data-testid="stHorizontalBlock"]:last-of-type {{
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
-        max-width: 850px !important; 
-        min-height: 90px !important; 
+        max-width: 800px !important; 
+        height: 60px !important; 
         z-index: 10000 !important;
         pointer-events: none !important; 
         display: flex;
-        align-items: flex-end; 
+        align-items: center; 
         justify-content: flex-end; 
-        padding-bottom: 25px; 
-        padding-right: 65px; 
-        transition: all 0.4s ease-in-out !important; 
+        padding-right: 60px; /* Aligns just left of Send button */
+        gap: 5px !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     }}
     
-    @media (min-width: 850px) {{
-        [data-testid="stPopover"] {{
-            left: 50% !important;
+    @media (min-width: 800px) {{
+        [data-testid="stHorizontalBlock"]:last-of-type {{
             transform: { "translate(-50%, -50%)" if is_chat_empty else "translateX(-50%)" } !important;
-            padding-right: 65px;
-        }}
-    }}
-    @media (max-width: 849px) {{
-        [data-testid="stPopover"] {{
-            padding-right: 70px;
         }}
     }}
     
+    /* Common Icon Button Styling */
     [data-testid="stPopover"] > button {{
         pointer-events: auto !important; 
         width: 40px !important; height: 40px !important;
@@ -242,25 +230,32 @@ st.markdown(f"""
         border-radius: 50% !important; 
         padding: 0 !important;
         box-shadow: none !important;
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23808080" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>') !important;
-        background-size: 70% !important;
+        background-size: 22px !important;
         background-repeat: no-repeat !important;
         background-position: center !important;
-        transition: opacity 0.2s !important;
+        transition: background-color 0.2s !important;
+    }}
+    
+    /* 1. Upload/Gallery Icon */
+    div[data-testid="column"]:nth-child(1) [data-testid="stPopover"] > button {{
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23444746"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>') !important;
+    }}
+
+    /* 2. Microphone Icon */
+    div[data-testid="column"]:nth-child(2) [data-testid="stPopover"] > button {{
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23444746"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>') !important;
     }}
     
     [data-testid="stPopover"] > button p, [data-testid="stPopover"] > button div, [data-testid="stPopover"] > button svg {{ 
         display: none !important; 
     }}
     
-    [data-testid="stPopover"] > button:hover {{ opacity: 0.6 !important; background-color: transparent !important; }}
+    [data-testid="stPopover"] > button:hover {{ background-color: #E2E7EB !important; }}
     
+    /* Popover Body */
     [data-testid="stPopoverBody"] {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
-        pointer-events: auto !important;
+        background-color: #2C2C2C !important; border: 1px solid #444 !important;
+        border-radius: 12px !important; padding: 15px !important; pointer-events: auto !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -327,15 +322,21 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 6. ATTACHMENT TOOL (Floating Right Next to Send)
+# 6. ATTACHMENT & MIC TOOLS (Inside Search Bar)
 # ==========================================
+tool_col1, tool_col2 = st.columns([1, 1]) 
 chat_img_bottom = None
 
-with st.popover(" "): 
-    st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
-    chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
-    if chat_img_bottom:
-        st.success("✅ Attached!")
+with tool_col1:
+    with st.popover(" "): # Upload Icon Popover
+        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
+        chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
+        if chat_img_bottom:
+            st.success("✅ Attached!")
+
+with tool_col2:
+    with st.popover("  "): # Mic Icon Popover (double space to separate key)
+        st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>🎤 Voice input coming soon!</p>", unsafe_allow_html=True)
 
 final_vision_image = chat_img_bottom
 

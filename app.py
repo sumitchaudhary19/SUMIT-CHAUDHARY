@@ -42,7 +42,7 @@ else:
 # ==========================================
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     
     /* Global Dark Grey Background */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{ 
@@ -123,20 +123,39 @@ st.markdown(f"""
         border: 1px solid #999 !important; 
     }}
 
-    /* ✨ NEW E-BOOKS & SCHEDULE TABS STYLING */
-    .ebook-btn button, .ebook-btn a {{
-        background-color: #E0E0E0 !important; 
-        color: #333333 !important; 
+    /* =========================================
+       ✨ NEW E-BOOKS & SCHEDULE TABS STYLING
+       ========================================= */
+    .ebook-btn button, 
+    .ebook-btn a[data-testid="stLinkButton"] {{
+        background-color: #E0E0E0 !important; /* Light Grey Background */
+        color: #333333 !important; /* Dark Grey Text */
+        width: 100% !important;
+        display: flex !important;
         justify-content: center !important;
-        font-weight: 800 !important;
+        align-items: center !important;
+        font-weight: 900 !important; /* Bold font */
         margin-top: 12px !important;
         border: 1px solid #AAAAAA !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
-        text-decoration: none !important; /* For the link button */
+        text-decoration: none !important;
+        border-radius: 8px !important;
+        min-height: 48px !important; /* Fixed height so both tabs match perfectly */
     }}
-    .ebook-btn button:hover, .ebook-btn a:hover {{
+    
+    /* Target the text explicitly inside these buttons to enforce bold dark grey */
+    .ebook-btn button p, 
+    .ebook-btn a[data-testid="stLinkButton"] p,
+    .ebook-btn a[data-testid="stLinkButton"] span {{
+        color: #333333 !important;
+        font-weight: 900 !important;
+        font-size: 1.05rem !important;
+        margin: 0 !important;
+    }}
+
+    .ebook-btn button:hover, 
+    .ebook-btn a[data-testid="stLinkButton"]:hover {{
         background-color: #CCCCCC !important;
-        color: #111111 !important;
     }}
 
     /* =========================================
@@ -352,8 +371,9 @@ with st.sidebar:
     # ==========================================
     # 🔥 NEW E-BOOKS & SCHEDULE TABS
     # ==========================================
+    # E-BOOKS Button
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
-    if st.button("E-BOOKS 😎", key="ebooks_tab"):
+    if st.button("E-BOOKS 😎", key="ebooks_tab", use_container_width=True):
         st.toast("📚 E-BOOKS Section is coming soon!")
     st.markdown("</div>", unsafe_allow_html=True)
     

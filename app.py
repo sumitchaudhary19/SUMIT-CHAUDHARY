@@ -70,7 +70,7 @@ st.markdown(f"""
         padding: 15px 20px; 
         margin-bottom: 20px;
         margin-left: 0 !important; /* BOTH Start from the Left */
-        margin-right: auto !important; /* Push remaining space to the right */
+        margin-right: auto !important; 
     }}
     
     /* 🔵 USER (Odd) -> LEFT ALIGNED, 75% Width */
@@ -215,7 +215,13 @@ st.markdown(f"""
         transition: opacity 0.2s !important;
     }}
     
-    [data-testid="stPopover"] > button p, [data-testid="stPopover"] > button div {{ display: none !important; }}
+    /* HIDDEN TEXT AND DEFAULT STREAMLIT ARROW INSIDE POPOVER */
+    [data-testid="stPopover"] > button p, 
+    [data-testid="stPopover"] > button div, 
+    [data-testid="stPopover"] > button svg {{ 
+        display: none !important; 
+    }}
+    
     [data-testid="stPopover"] > button:hover {{ opacity: 0.7 !important; background-color: transparent !important; }}
     
     [data-testid="stPopoverBody"] {{
@@ -293,7 +299,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 6. ATTACHMENT TOOL (Floating Left Button)
 # ==========================================
 chat_img_bottom = None
-with st.popover("+"): 
+
+with st.popover(" "): 
     st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
     chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
     if chat_img_bottom:

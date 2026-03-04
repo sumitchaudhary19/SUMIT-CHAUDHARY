@@ -34,7 +34,7 @@ else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, Left-Aligned Chat & Clean Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, Chat Alignment & Clean Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -58,8 +58,9 @@ st.markdown(f"""
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
     /* =========================================
-       CHAT MESSAGES ALIGNMENT (BOTH LEFT)
+       CHAT MESSAGES ALIGNMENT & WIDTH
        ========================================= */
+       
     [data-testid="stChatMessageContainer"] {{
         padding-left: 0 !important;
         padding-right: 0 !important;
@@ -69,24 +70,26 @@ st.markdown(f"""
         border-radius: 12px; 
         padding: 15px 20px; 
         margin-bottom: 20px;
-        margin-left: 0 !important; /* BOTH Start from the Left */
-        margin-right: auto !important; /* Push remaining space to the right */
     }}
     
-    /* 🔵 USER (Odd) -> LEFT ALIGNED, 75% Width */
+    /* 🔵 USER (Odd) -> Aligned EXACT RIGHT, 75% Width */
     div[data-testid="stChatMessage"]:nth-child(odd) {{ 
         background-color: #2C2C2C !important; 
         border: 1px solid #444 !important; 
         width: fit-content !important; 
         max-width: 75% !important; 
+        margin-left: auto !important;  /* Pushes to Right */
+        margin-right: 0 !important;
     }}
     
-    /* 🟢 CHATBOT (Even) -> LEFT ALIGNED, 100% Width */
+    /* 🟢 CHATBOT (Even) -> Aligned EXACT LEFT, FULL WIDTH (100%) */
     div[data-testid="stChatMessage"]:nth-child(even) {{ 
         background-color: #212121 !important; 
         border: 1px solid #333 !important; 
         width: 100% !important; 
         max-width: 100% !important; 
+        margin-right: auto !important; /* Stays on Left */
+        margin-left: 0 !important; 
     }}
     
     /* CHAT TEXT COLOR (Grey) */
@@ -117,6 +120,7 @@ st.markdown(f"""
         margin-bottom: 20px; border-radius: 8px; 
         border: 1px solid #999 !important; 
     }}
+    .new-chat-btn>div>button:hover {{ background-color: #BDBDBD !important; }}
 
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
@@ -125,26 +129,34 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
+       
     .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 90px !important; 
+        min-height: 65px !important; 
         border-radius: 40px !important; 
         background-color: #1E1E1E !important; 
         border: 1px solid #444 !important; 
         box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
         padding: 5px !important;
         z-index: 9999 !important;
+        transition: box-shadow 0.3s ease !important;
     }}
     
-    div[data-testid="stChatInputContainer"]:focus-within {{
-        outline: none !important; border: 1px solid #666 !important;
+    .stChatInput:hover, div[data-testid="stChatInputContainer"]:hover {{
+        box-shadow: 0 6px 20px rgba(0,0,0,0.7) !important;
+    }}
+    
+    .stChatInput:focus-within, div[data-testid="stChatInputContainer"]:focus-within {{
+        outline: none !important;
+        border: none !important;
     }}
 
-    div[data-testid="stChatInputContainer"] textarea {{ 
+    /* Text Input Area */
+    .stChatInput textarea, div[data-testid="stChatInputContainer"] textarea {{ 
         color: #808080 !important; 
         -webkit-text-fill-color: #808080 !important; 
         font-size: 1.15rem !important; 
@@ -154,7 +166,7 @@ st.markdown(f"""
         background-color: transparent !important;
         min-height: 50px !important; 
     }}
-    div[data-testid="stChatInputContainer"] textarea::placeholder {{
+    .stChatInput textarea::placeholder {{
         color: #666666 !important;
         -webkit-text-fill-color: #666666 !important;
     }}
@@ -162,24 +174,39 @@ st.markdown(f"""
     /* =========================================
        CUSTOM GEMINI-STYLE SEND BUTTON
        ========================================= */
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
+    .stChatInput button, div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         background-color: #333333 !important;
         border-radius: 50% !important;
         border: 1px solid #555 !important;
         position: absolute !important;
         width: 42px !important; height: 42px !important;
         right: 15px !important; 
-        bottom: 25px !important; 
+        bottom: 50% !important;
+        transform: translateY(50%) !important;
+        transition: all 0.3s ease !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }}
-    div[data-testid="stChatInputContainer"] button svg {{ display: none !important; }}
-    div[data-testid="stChatInputContainer"] button::after {{
-        content: '➤'; font-size: 1.4rem; color: #E0E0E0; position: absolute;
+
+    .stChatInput button svg, div[data-testid="stChatInputContainer"] button svg {{
+        display: none !important;
     }}
-    div[data-testid="stChatInputContainer"] button:hover {{ background-color: #3B82F6 !important; border-color: #60A5FA !important; }}
-    div[data-testid="stChatInputContainer"] button:hover::after {{ color: #FFFFFF !important; }}
+
+    .stChatInput button::after, div[data-testid="stChatInputContainer"] button::after {{
+        content: '➤';
+        font-size: 1.4rem;
+        color: #E0E0E0; 
+        position: absolute;
+    }}
+
+    .stChatInput button:hover, div[data-testid="stChatInputContainer"] button:hover {{
+        background-color: #3B82F6 !important; 
+        border-color: #60A5FA !important;
+    }}
+    .stChatInput button:hover::after, div[data-testid="stChatInputContainer"] button:hover::after {{
+        color: #FFFFFF !important;
+    }}
     
     /* =========================================
        ATTACHMENT BUTTON (NATIVE SVG EMBEDDED)
@@ -190,7 +217,7 @@ st.markdown(f"""
         left: 50% !important;
         width: 90vw !important;
         max-width: 850px !important; 
-        min-height: 90px !important; 
+        min-height: 65px !important; 
         z-index: 10000 !important;
         pointer-events: none !important; 
         display: flex;
@@ -207,7 +234,6 @@ st.markdown(f"""
         border-radius: 50% !important; 
         padding: 0 !important;
         box-shadow: none !important;
-        /* Direct SVG Plus Icon Injection */
         background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23808080" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>') !important;
         background-size: contain !important;
         background-repeat: no-repeat !important;
@@ -293,6 +319,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 6. ATTACHMENT TOOL (Floating Left Button)
 # ==========================================
 chat_img_bottom = None
+
 with st.popover("+"): 
     st.markdown("<p style='font-size:0.9rem; font-weight:600; color:#FFFFFF; margin-bottom:5px;'>Upload context image:</p>", unsafe_allow_html=True)
     chat_img_bottom = st.file_uploader("", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed", key="bottom_img")
@@ -316,6 +343,7 @@ if prompt := st.chat_input("Ask me anything..."):
     st.session_state.pending_generation = True
     st.rerun()
 
+# Processing AI generation
 if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     

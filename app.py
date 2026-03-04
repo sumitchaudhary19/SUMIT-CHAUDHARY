@@ -119,6 +119,21 @@ st.markdown(f"""
         border: 1px solid #999 !important; 
     }}
 
+    /* ✨ NEW E-BOOKS TAB STYLING */
+    .ebook-btn button {{
+        background-color: #E0E0E0 !important; /* Light Grey Background */
+        color: #333333 !important; /* Dark Grey Text */
+        justify-content: center !important;
+        font-weight: 800 !important;
+        margin-top: 15px !important;
+        border: 1px solid #AAAAAA !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    }}
+    .ebook-btn button:hover {{
+        background-color: #CCCCCC !important;
+        color: #111111 !important;
+    }}
+
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
@@ -229,6 +244,15 @@ with st.sidebar:
             st.session_state.current_chat = chat_name
             st.session_state.pending_generation = False
             st.rerun()
+            
+    # ==========================================
+    # 🔥 NEW E-BOOKS TAB
+    # ==========================================
+    st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
+    if st.button("E-BOOKS 😎", key="ebooks_tab"):
+        # Yahan par tu future mein E-Books section open karwane ka logic daal sakta hai
+        st.toast("📚 E-BOOKS Section is coming soon!")
+    st.markdown("</div>", unsafe_allow_html=True)
             
     st.markdown("---")
     st.markdown("""

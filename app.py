@@ -123,17 +123,18 @@ st.markdown(f"""
         border: 1px solid #999 !important; 
     }}
 
-    /* ✨ NEW E-BOOKS TAB STYLING */
-    .ebook-btn button {{
-        background-color: #E0E0E0 !important; /* Light Grey Background */
-        color: #333333 !important; /* Dark Grey Text */
+    /* ✨ NEW E-BOOKS & SCHEDULE TABS STYLING */
+    .ebook-btn button, .ebook-btn a {{
+        background-color: #E0E0E0 !important; 
+        color: #333333 !important; 
         justify-content: center !important;
         font-weight: 800 !important;
-        margin-top: 15px !important;
+        margin-top: 12px !important;
         border: 1px solid #AAAAAA !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        text-decoration: none !important; /* For the link button */
     }}
-    .ebook-btn button:hover {{
+    .ebook-btn button:hover, .ebook-btn a:hover {{
         background-color: #CCCCCC !important;
         color: #111111 !important;
     }}
@@ -157,7 +158,7 @@ st.markdown(f"""
     [data-testid="stSidebar"] [data-testid="stPopover"] > button {{
         background-color: transparent !important;
         border: none !important;
-        color: #555555 !important; /* Dark Grey 3 dots */
+        color: #555555 !important; 
         font-size: 1.5rem !important;
         font-weight: 900 !important;
         line-height: 1 !important;
@@ -169,14 +170,14 @@ st.markdown(f"""
         background-color: transparent !important;
     }}
     [data-testid="stSidebar"] [data-testid="stPopover"] > button svg {{
-        display: none !important; /* Hide default arrow */
+        display: none !important; 
     }}
 
     /* Popover Menu Body */
     [data-testid="stPopoverBody"] {{
-        background-color: #E0E0E0 !important; /* Light Grey Background */
+        background-color: #E0E0E0 !important; 
         border: 1px solid #CCCCCC !important;
-        border-radius: 12px !important; /* Square-shaped with rounded corners */
+        border-radius: 12px !important; 
         padding: 5px !important;
         width: 220px !important;
     }}
@@ -185,7 +186,7 @@ st.markdown(f"""
     [data-testid="stPopoverBody"] .stButton > button {{
         background-color: transparent !important;
         border: none !important;
-        color: #333333 !important; /* Dark Grey Text */
+        color: #333333 !important; 
         text-align: left !important;
         font-weight: 600 !important;
         box-shadow: none !important;
@@ -197,7 +198,7 @@ st.markdown(f"""
         justify-content: flex-start !important;
     }}
     [data-testid="stPopoverBody"] .stButton > button:hover {{
-        background-color: #CCCCCC !important; /* Highlight on hover */
+        background-color: #CCCCCC !important; 
         color: #000000 !important;
     }}
 
@@ -349,11 +350,16 @@ with st.sidebar:
                     st.rerun()
             
     # ==========================================
-    # 🔥 NEW E-BOOKS TAB
+    # 🔥 NEW E-BOOKS & SCHEDULE TABS
     # ==========================================
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     if st.button("E-BOOKS 😎", key="ebooks_tab"):
         st.toast("📚 E-BOOKS Section is coming soon!")
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Class Schedule Link Button
+    st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
+    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
             
     st.markdown("---")

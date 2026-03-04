@@ -25,6 +25,10 @@ if "current_chat" not in st.session_state:
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 
+# New Session State for Pinned Sessions
+if "pinned_sessions" not in st.session_state:
+    st.session_state.pinned_sessions = []
+
 # DYNAMIC UI LOGIC: Check if chat is empty to center the Search Bar
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
@@ -132,6 +136,19 @@ st.markdown(f"""
     .ebook-btn button:hover {{
         background-color: #CCCCCC !important;
         color: #111111 !important;
+    }}
+
+    /* =========================================
+       ✨ PIN STICKER STYLING
+       ========================================= */
+    .pin-sticker {{
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        font-size: 1.2rem;
+        z-index: 100;
+        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.6));
+        pointer-events: none; /* Allows clicking the button underneath */
     }}
 
     /* =========================================
@@ -288,11 +305,15 @@ with st.sidebar:
 
     st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
     
-    # 🔥 CHAT HISTORY WITH 3-DOT MENU
+    # 🔥 CHAT HISTORY WITH 3-DOT MENU AND PIN LOGIC
     for chat_name in reversed(list(st.session_state.sessions.keys())):
-        col1, col2 = st.columns([85, 15], vertical_alignment="center")
+        col1, col2 = st.columns([85, 15])
         
         with col1:
+            # Show red pin sticker if the session is pinned
+            if chat_name in st.session_state.pinned_sessions:
+                st.markdown('<div class="pin-sticker">📍</div>', unsafe_allow_html=True)
+                
             if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}", use_container_width=True):
                 st.session_state.current_chat = chat_name
                 st.session_state.pending_generation = False
@@ -305,11 +326,21 @@ with st.sidebar:
                     st.session_state.pending_generation = False
                     st.rerun()
                 
-                if st.button("📌 Pin this session", key=f"pin_{chat_name}", use_container_width=True):
-                    st.toast(f"📌 '{chat_name}' pinned successfully!")
+                # Toggle Pin/Unpin
+                pin_label = "🔕 Unpin this session" if chat_name in st.session_state.pinned_sessions else "📌 Pin this session"
+                if st.button(pin_label, key=f"pin_{chat_name}", use_container_width=True):
+                    if chat_name in st.session_state.pinned_sessions:
+                        st.session_state.pinned_sessions.remove(chat_name)
+                    else:
+                        st.session_state.pinned_sessions.append(chat_name)
+                    st.rerun()
                 
+                # Delete Session
                 if st.button("🗑️ Delete this session", key=f"del_{chat_name}", use_container_width=True):
                     del st.session_state.sessions[chat_name]
+                    if chat_name in st.session_state.pinned_sessions:
+                        st.session_state.pinned_sessions.remove(chat_name)
+                    
                     # If active chat is deleted, switch to a new session
                     if st.session_state.current_chat == chat_name:
                         st.session_state.current_chat = "New Session"

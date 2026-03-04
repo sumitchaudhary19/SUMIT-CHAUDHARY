@@ -34,7 +34,7 @@ else:
     chat_pos_css = "bottom: 30px !important; transform: translateX(-50%) !important;"
 
 # ==========================================
-# 3. ADVANCED CSS (Dark Theme, Right Aligned Tools & Gemini Bar)
+# 3. ADVANCED CSS (Dark Theme, Single Clean Gemini Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -57,6 +57,9 @@ st.markdown(f"""
     }}
     [data-testid="stBottom"] > div {{ background-color: #000000 !important; }}
     
+    /* Hide the old default inner block if it appears behind */
+    [data-testid="stChatInput"] {{ background-color: transparent !important; }}
+
     /* =========================================
        CHAT MESSAGES ALIGNMENT (BOTH LEFT)
        ========================================= */
@@ -125,7 +128,9 @@ st.markdown(f"""
     /* =========================================
        GEMINI-STYLE LARGE SEARCH BAR (CLEAN)
        ========================================= */
-    .stChatInput, div[data-testid="stChatInputContainer"], div[data-testid="stChatInput"] {{ 
+       
+    /* Targeting ONLY the outermost chat container so nothing duplicates behind it */
+    div[data-testid="stChatInputContainer"] {{ 
         position: fixed !important;
         {chat_pos_css} 
         left: 50% !important;
@@ -196,9 +201,9 @@ st.markdown(f"""
         pointer-events: none !important; 
         display: flex;
         align-items: flex-end; 
-        justify-content: flex-end; /* Moves button to the right */
+        justify-content: flex-end; 
         padding-bottom: 25px; 
-        padding-right: 65px; /* Spaces it exactly left of the Send Arrow */
+        padding-right: 65px; 
     }}
     
     /* Responsive adjustment for Attachment Button */
@@ -335,6 +340,7 @@ if prompt := st.chat_input("Ask me anything..."):
     st.session_state.pending_generation = True
     st.rerun()
 
+# Processing AI generation
 if st.session_state.pending_generation:
     prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     

@@ -22,13 +22,13 @@ if "sessions" not in st.session_state:
     st.session_state.sessions = {"New Session": []}
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
-if "pinned_sessions" not in st.session_state:
-    st.session_state.pinned_sessions = []
+if "pending_generation" not in st.session_state:
+    st.session_state.pending_generation = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS
+# 3. CSS (Custom UI & Functional Fix)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -42,34 +42,85 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ background-color: transparent !important; }}
 
-    [data-testid="stChatMessageContainer"] {{
-        padding-left: 0 !important; padding-right: 0 !important;
-    }}
-
-    div[data-testid="stChatMessage"] {{
-        border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;
-    }}
-
+    /* --- Chat Message Styling --- */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
-        width: fit-content !important;
+        border-radius: 12px;
         max-width: 75% !important;
         margin-left: auto !important;
-        margin-right: 0 !important;
     }}
 
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #212121 !important;
         border: 1px solid #333 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin-right: auto !important;
-        margin-left: 0 !important;
+        border-radius: 12px;
+    }}
+
+    /* --- Functional Search Bar Styling --- */
+    /* Hum Streamlit ke native chat_input ko customize kar rahe hain taaki logic kaam kare */
+    div[data-testid="stChatInput"] {{
+        width: 650px !important;
+        margin: 0 auto !important;
+        background-color: transparent !important;
+    }}
+
+    div[data-testid="stChatInput"] > div {{
+        background-color: #2C2C2C !important;
+        border: 1px solid #444 !important;
+        border-radius: 15px !important;
+        height: 120px !important;
+        padding: 10px !important;
+    }}
+
+    div[data-testid="stChatInput"] textarea {{
+        background-color: transparent !important;
+        color: #E0E0E0 !important;
+        font-size: 1.1rem !important;
+        padding: 10px 60px 45px 10px !important;
+        line-height: 1.5 !important;
+        overflow-y: auto !important;
+    }}
+
+    /* Arrow Tab Design (The Submit Button) */
+    div[data-testid="stChatInput"] button {{
+        background-color: #E0E0E0 !important;
+        border-radius: 50% !important;
+        right: 15px !important;
+        bottom: 42px !important; 
+        width: 35px !important;
+        height: 35px !important;
+        border: none !important;
+    }}
+    
+    div[data-testid="stChatInput"] button:hover {{
+        background-color: #FFFFFF !important;
+    }}
+
+    /* Replacing default SVG icon with your Arrow Design */
+    div[data-testid="stChatInput"] button::after {{
+        content: ">";
+        color: #1A1A1A;
+        font-weight: 900;
+        font-size: 1.2rem;
+    }}
+    div[data-testid="stChatInput"] button svg {{
+        display: none !important;
+    }}
+
+    /* Fixed Plus Icon Decoration */
+    .fixed-plus-icon {{
+        position: fixed;
+        bottom: 35px;
+        left: calc(50% - 310px);
+        color: #888888;
+        font-size: 24px;
+        z-index: 1000;
+        pointer-events: none;
+        font-weight: 400;
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
-
     .stButton>button {{
         width: 100%; text-align: left; background-color: #D3D3D3 !important;
         border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
@@ -77,92 +128,6 @@ st.markdown(f"""
     }}
     
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
-    .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
-    .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
-
-    /* --- Custom Search Bar Wrapper --- */
-    .search-wrapper {{
-        position: relative;
-        width: 650px;
-        margin: 25px auto 0 auto;
-    }}
-
-    .custom-search-bar {{
-        width: 100%;
-        height: 120px;
-        background-color: #2C2C2C;
-        border: 1px solid #444;
-        border-radius: 15px;
-        color: #E0E0E0;
-        /* Padding left/bottom ensures text doesn't overlap icons */
-        padding: 15px 60px 45px 20px; 
-        font-size: 1.1rem;
-        line-height: 1.5;
-        outline: none;
-        resize: none;
-        font-family: 'Inter', sans-serif;
-        overflow-y: auto;
-        box-sizing: border-box;
-    }}
-
-    .custom-search-bar::placeholder {{
-        color: #888888;
-    }}
-
-    /* Custom Scrollbar */
-    .custom-search-bar::-webkit-scrollbar {{
-        width: 6px;
-    }}
-    .custom-search-bar::-webkit-scrollbar-thumb {{
-        background: #444;
-        border-radius: 10px;
-    }}
-
-    /* Fixed Plus Icon (Bottom Left) */
-    .fixed-plus {{
-        position: absolute;
-        bottom: 12px;
-        left: 20px;
-        color: #888888;
-        font-size: 24px;
-        font-weight: 400;
-        cursor: pointer;
-        user-select: none;
-        z-index: 102;
-        transition: 0.2s;
-    }}
-    .fixed-plus:hover {{
-        color: #60A5FA;
-    }}
-
-    /* Arrow Tab Design (Middle Right) */
-    .arrow-tab {{
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 35px;
-        height: 35px;
-        background-color: #E0E0E0;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: 0.2s;
-        border: none;
-        z-index: 102;
-    }}
-    .arrow-tab:hover {{
-        background-color: #FFFFFF;
-        box-shadow: 0 0 8px rgba(255,255,255,0.2);
-    }}
-    .arrow-symbol {{
-        color: #1A1A1A;
-        font-size: 20px;
-        font-weight: 900;
-        margin-left: 2px;
-    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -192,28 +157,59 @@ with st.sidebar:
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.7rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT LOGIC
+# 5. MAIN CHAT DISPLAY
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
-    
-    # Custom Search Bar with all necessary tabs
-    st.markdown("""
-        <div class="search-wrapper">
-            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
-            <div class="fixed-plus">+</div>
-            <div class="arrow-tab">
-                <span class="arrow-symbol">></span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-else:
-    for message in st.session_state.sessions[st.session_state.current_chat]:
-        avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
-        with st.chat_message(message["role"], avatar=avatar_icon):
-            st.markdown(message["content"])
+# Display conversations
+for message in st.session_state.sessions[st.session_state.current_chat]:
+    avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
+    with st.chat_message(message["role"], avatar=avatar_icon):
+        st.markdown(message["content"])
+
+# ==========================================
+# 6. CHAT INPUT & LOGIC (FIXED)
+# ==========================================
+# Show the fixed plus icon overlay
+if is_chat_empty:
+    st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
+
+# Functional Search Input
+if prompt := st.chat_input("Ask me anything..."):
+    # User message add karo
+    st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+    st.session_state.pending_generation = True
+    st.rerun()
+
+# AI Response Generation
+if st.session_state.pending_generation:
+    user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    
+    with st.chat_message("assistant", avatar="logo.png"):
+        try:
+            def generate_response():
+                stream = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are 'AskMNIT', a professional AI assistant for MNIT Jaipur students."},
+                        {"role": "user", "content": user_query}
+                    ],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7,
+                    stream=True
+                )
+                for chunk in stream:
+                    if chunk.choices[0].delta.content is not None:
+                        yield chunk.choices[0].delta.content
+
+            response_text = st.write_stream(generate_response())
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+            
+        except Exception as e:
+            st.error(f"Groq API Error: {str(e)}")
+    
+    st.session_state.pending_generation = False

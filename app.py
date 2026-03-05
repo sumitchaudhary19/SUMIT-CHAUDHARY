@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Layout - Plus Removed)
+# 3. CSS (Updated with Plus Circular Tab)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -77,6 +77,7 @@ st.markdown(f"""
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
+        position: relative !important;
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -91,7 +92,8 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         color: #FFFFFF !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 10px 15px !important; /* Left padding restored as plus is gone */
+        /* Bottom padding ensures text stays above the plus button */
+        padding: 10px 60px 50px 15px !important; 
         line-height: 1.5 !important;
         overflow-y: auto !important;
         border: none !important;
@@ -102,7 +104,7 @@ st.markdown(f"""
         opacity: 1 !important;
     }}
 
-    /* Arrow Tab Design */
+    /* Arrow Tab Design (Submit Button) */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
@@ -126,6 +128,31 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{
         display: none !important;
+    }}
+
+    /* --- Circular Grey Plus Tab (Inside Search Bar) --- */
+    .plus-tab {{
+        position: absolute;
+        bottom: 15px;
+        left: 15px;
+        width: 32px;
+        height: 32px;
+        background-color: #444444; /* Grey background */
+        border-radius: 50%; /* Circular frame */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #BBBBBB;
+        font-size: 20px;
+        font-weight: 400;
+        cursor: pointer;
+        z-index: 1001;
+        transition: 0.2s;
+    }}
+
+    .plus-tab:hover {{
+        background-color: #555555;
+        color: #FFFFFF;
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -184,6 +211,9 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
 
+# Overlaying the Plus Circular Tab inside the search input area
+st.markdown('<div class="plus-tab">+</div>', unsafe_allow_html=True)
+
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
@@ -196,7 +226,7 @@ if st.session_state.pending_generation:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur."},
+                        {"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",

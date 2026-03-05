@@ -94,11 +94,17 @@ st.markdown(f"""
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px 60px 15px 15px; /* Right padding for arrow */
+        padding: 15px 60px 15px 20px; /* Left padding ensures text alignment */
         font-size: 1.1rem;
         outline: none;
         resize: none;
         font-family: 'Inter', sans-serif;
+    }}
+
+    /* Placeholder Text Styling */
+    .custom-search-bar::placeholder {{
+        color: #888888;
+        opacity: 1;
     }}
 
     .custom-search-bar:focus {{
@@ -106,7 +112,7 @@ st.markdown(f"""
         box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
     }}
 
-    /* --- Photo-like Arrow Tab Design --- */
+    /* --- Arrow Tab Design --- */
     .arrow-tab {{
         position: absolute;
         right: 15px;
@@ -114,7 +120,7 @@ st.markdown(f"""
         transform: translateY(-50%);
         width: 35px;
         height: 35px;
-        background-color: #E0E0E0; /* Light/White circular background as per image */
+        background-color: #E0E0E0;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -126,12 +132,10 @@ st.markdown(f"""
 
     .arrow-tab:hover {{
         background-color: #FFFFFF;
-        box-shadow: 0 0 8px rgba(255,255,255,0.3);
     }}
 
-    /* The '>' Arrow Symbol */
     .arrow-symbol {{
-        color: #1A1A1A; /* Dark arrow color as per image */
+        color: #1A1A1A;
         font-size: 20px;
         font-weight: 900;
         margin-left: 2px;
@@ -175,7 +179,7 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar with Photo-style Arrow Tab
+    # Custom Search Bar with Default Placeholder Text
     st.markdown("""
         <div class="search-wrapper">
             <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>

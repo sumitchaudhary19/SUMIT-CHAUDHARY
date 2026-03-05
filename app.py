@@ -22,7 +22,6 @@ if "sessions" not in st.session_state:
     st.session_state.sessions = {"New Session": []}
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
-
 if "pinned_sessions" not in st.session_state:
     st.session_state.pinned_sessions = []
 
@@ -81,30 +80,62 @@ st.markdown(f"""
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
-    /* Custom Search Bar Styling */
-    .search-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 25px;
+    /* --- Custom Search Bar Container --- */
+    .search-wrapper {{
+        position: relative;
+        width: 650px;
+        margin: 25px auto 0 auto;
     }}
 
     .custom-search-bar {{
-        width: 650px; /* 2.3 times approx of the text length */
-        height: 100px; /* Sufficient for double-lined text */
+        width: 100%;
+        height: 100px;
         background-color: #2C2C2C;
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px;
+        padding: 15px 60px 15px 15px; /* Right padding for arrow */
         font-size: 1.1rem;
         outline: none;
-        resize: none; /* No manual resizing */
+        resize: none;
         font-family: 'Inter', sans-serif;
     }}
 
     .custom-search-bar:focus {{
         border-color: #60A5FA;
         box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+    }}
+
+    /* --- Photo-like Arrow Tab Design --- */
+    .arrow-tab {{
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 35px;
+        height: 35px;
+        background-color: #E0E0E0; /* Light/White circular background as per image */
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+        border: none;
+    }}
+
+    .arrow-tab:hover {{
+        background-color: #FFFFFF;
+        box-shadow: 0 0 8px rgba(255,255,255,0.3);
+    }}
+
+    /* The '>' Arrow Symbol */
+    .arrow-symbol {{
+        color: #1A1A1A; /* Dark arrow color as per image */
+        font-size: 20px;
+        font-weight: 900;
+        margin-left: 2px;
+        user-select: none;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -132,28 +163,10 @@ with st.sidebar:
         st.session_state.current_chat = chat_id
         st.rerun()
 
-    st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
-
-    for chat_name in reversed(list(st.session_state.sessions.keys())):
-        col1, col2 = st.columns([85, 15])
-        with col1:
-            if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}", use_container_width=True):
-                st.session_state.current_chat = chat_name
-                st.rerun()
-        with col2:
-            if st.button("🗑️", key=f"del_{chat_name}"):
-                del st.session_state.sessions[chat_name]
-                st.rerun()
-
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""
-        <div class="signature-box">
-            <p>Architected by</p>
-            <h3>SUMIT CHAUDHARY</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT LOGIC (DISPLAY ONLY)
@@ -162,10 +175,13 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar added here
+    # Custom Search Bar with Photo-style Arrow Tab
     st.markdown("""
-        <div class="search-container">
+        <div class="search-wrapper">
             <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
+            <div class="arrow-tab">
+                <span class="arrow-symbol">></span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 

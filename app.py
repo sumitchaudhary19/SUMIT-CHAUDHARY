@@ -89,30 +89,53 @@ st.markdown(f"""
 
     .custom-search-bar {{
         width: 100%;
-        height: 100px;
+        height: 120px;
         background-color: #2C2C2C;
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px 60px 15px 20px; /* Left padding ensures text alignment */
+        padding: 15px 60px 45px 20px; /* Padding for scroll and fixed icon */
         font-size: 1.1rem;
         outline: none;
         resize: none;
         font-family: 'Inter', sans-serif;
+        overflow-y: auto; /* Scrollbar enabled */
     }}
 
-    /* Placeholder Text Styling */
+    /* Custom Scrollbar Styling */
+    .custom-search-bar::-webkit-scrollbar {{
+        width: 6px;
+    }}
+    .custom-search-bar::-webkit-scrollbar-thumb {{
+        background: #444;
+        border-radius: 10px;
+    }}
+    .custom-search-bar::-webkit-scrollbar-thumb:hover {{
+        background: #555;
+    }}
+
     .custom-search-bar::placeholder {{
         color: #888888;
         opacity: 1;
     }}
 
-    .custom-search-bar:focus {{
-        border-color: #60A5FA;
-        box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+    /* Fixed Grey Plus Symbol */
+    .fixed-plus {{
+        position: absolute;
+        bottom: 12px;
+        left: 20px;
+        color: #888888;
+        font-size: 22px;
+        font-weight: 400;
+        cursor: pointer;
+        user-select: none;
+        transition: 0.2s;
+    }}
+    .fixed-plus:hover {{
+        color: #60A5FA;
     }}
 
-    /* --- Arrow Tab Design --- */
+    /* Arrow Tab Design */
     .arrow-tab {{
         position: absolute;
         right: 15px;
@@ -129,17 +152,14 @@ st.markdown(f"""
         transition: 0.2s;
         border: none;
     }}
-
     .arrow-tab:hover {{
         background-color: #FFFFFF;
     }}
-
     .arrow-symbol {{
         color: #1A1A1A;
         font-size: 20px;
         font-weight: 900;
         margin-left: 2px;
-        user-select: none;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -173,16 +193,17 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT LOGIC (DISPLAY ONLY)
+# 5. MAIN CHAT LOGIC
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar with Default Placeholder Text
+    # Custom Search Bar with Fixed Plus and Scroll
     st.markdown("""
         <div class="search-wrapper">
             <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
+            <div class="fixed-plus">+</div>
             <div class="arrow-tab">
                 <span class="arrow-symbol">></span>
             </div>

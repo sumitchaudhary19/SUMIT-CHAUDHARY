@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Layout and Plus Position)
+# 3. CSS (Updated Layout - Plus Removed)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -77,7 +77,6 @@ st.markdown(f"""
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
-        position: relative !important; /* To anchor the plus symbol */
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -92,7 +91,7 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         color: #FFFFFF !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 45px 15px !important; /* Left padding adjusted */
+        padding: 10px 60px 10px 15px !important; /* Left padding restored as plus is gone */
         line-height: 1.5 !important;
         overflow-y: auto !important;
         border: none !important;
@@ -127,18 +126,6 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{
         display: none !important;
-    }}
-
-    /* Fixed Plus Symbol INSIDE the search bar */
-    .inner-plus-icon {{
-        position: absolute;
-        bottom: 15px; /* Aligned below the text */
-        left: 25px; /* Inside left edge */
-        color: #888888;
-        font-size: 24px;
-        font-weight: 400;
-        z-index: 1001;
-        pointer-events: none; /* Allows clicks to go to textarea if needed */
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -196,9 +183,6 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
-
-# Plus symbol is now placed inside the chat input container via absolute positioning
-st.markdown('<div class="inner-plus-icon">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

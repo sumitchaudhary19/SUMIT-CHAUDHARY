@@ -94,15 +94,17 @@ st.markdown(f"""
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px 60px 45px 20px; /* Padding for scroll and fixed icon */
+        /* Padding bottom is high (55px) to ensure text never reaches the + symbol */
+        padding: 15px 60px 55px 20px; 
         font-size: 1.1rem;
+        line-height: 1.5;
         outline: none;
         resize: none;
         font-family: 'Inter', sans-serif;
-        overflow-y: auto; /* Scrollbar enabled */
+        overflow-y: auto;
     }}
 
-    /* Custom Scrollbar Styling */
+    /* Custom Scrollbar */
     .custom-search-bar::-webkit-scrollbar {{
         width: 6px;
     }}
@@ -110,26 +112,26 @@ st.markdown(f"""
         background: #444;
         border-radius: 10px;
     }}
-    .custom-search-bar::-webkit-scrollbar-thumb:hover {{
-        background: #555;
-    }}
 
     .custom-search-bar::placeholder {{
         color: #888888;
         opacity: 1;
     }}
 
-    /* Fixed Grey Plus Symbol */
+    /* Fixed Grey Plus Symbol - Higher Z-index to stay on top */
     .fixed-plus {{
         position: absolute;
-        bottom: 12px;
+        bottom: 15px;
         left: 20px;
         color: #888888;
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 400;
         cursor: pointer;
         user-select: none;
         transition: 0.2s;
+        z-index: 10;
+        background-color: #2C2C2C; /* Matches bar background to act as a shield */
+        padding-right: 5px;
     }}
     .fixed-plus:hover {{
         color: #60A5FA;
@@ -193,13 +195,13 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT LOGIC
+# 5. MAIN CHAT LOGIC (DISPLAY ONLY)
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar with Fixed Plus and Scroll
+    # Custom Search Bar with Safe-Padding for + Symbol
     st.markdown("""
         <div class="search-wrapper">
             <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>

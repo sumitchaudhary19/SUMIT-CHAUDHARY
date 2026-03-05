@@ -28,19 +28,35 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Custom UI & Functional Fix)
+# 3. CSS (Fixing the White Background)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
+    /* Base background */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #1A1A1A !important;
         color: #E0E0E0 !important;
     }}
+    
+    [data-testid="stMain"] {{
+        background-color: #1E1E1E !important;
+    }}
+
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ background-color: transparent !important; }}
+
+    /* FIX: Darkening the bottom container where the search bar sits */
+    [data-testid="stBottom"] {{
+        background-color: #1E1E1E !important;
+        border-top: none !important;
+    }}
+    
+    [data-testid="stBottom"] > div {{
+        background-color: transparent !important;
+    }}
 
     /* --- Chat Message Styling --- */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
@@ -58,7 +74,6 @@ st.markdown(f"""
     }}
 
     /* --- Functional Search Bar Styling --- */
-    /* Hum Streamlit ke native chat_input ko customize kar rahe hain taaki logic kaam kare */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -82,7 +97,7 @@ st.markdown(f"""
         overflow-y: auto !important;
     }}
 
-    /* Arrow Tab Design (The Submit Button) */
+    /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
@@ -97,7 +112,6 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
     }}
 
-    /* Replacing default SVG icon with your Arrow Design */
     div[data-testid="stChatInput"] button::after {{
         content: ">";
         color: #1A1A1A;
@@ -157,7 +171,7 @@ with st.sidebar:
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.7rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.75rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT DISPLAY
@@ -173,23 +187,18 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & LOGIC (FIXED)
+# 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
-# Show the fixed plus icon overlay
 if is_chat_empty:
     st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
 
-# Functional Search Input
 if prompt := st.chat_input("Ask me anything..."):
-    # User message add karo
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
     st.rerun()
 
-# AI Response Generation
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
-    
     with st.chat_message("assistant", avatar="logo.png"):
         try:
             def generate_response():
@@ -208,8 +217,6 @@ if st.session_state.pending_generation:
 
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-            
         except Exception as e:
             st.error(f"Groq API Error: {str(e)}")
-    
     st.session_state.pending_generation = False

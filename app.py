@@ -22,8 +22,8 @@ if "sessions" not in st.session_state:
     st.session_state.sessions = {"New Session": []}
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
-if "pending_generation" not in st.session_state:
-    st.session_state.pending_generation = False
+if "pinned_sessions" not in st.session_state:
+    st.session_state.pinned_sessions = []
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
@@ -70,54 +70,6 @@ st.markdown(f"""
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
 
-    /* --- Functional Search Bar Styling --- */
-    div[data-testid="stChatInput"] {{
-        width: 650px !important;
-        margin: 0 auto !important;
-        background-color: transparent !important;
-    }}
-
-    div[data-testid="stChatInput"] > div {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
-        border-radius: 15px !important;
-        height: 120px !important;
-        padding: 10px !important;
-    }}
-
-    div[data-testid="stChatInput"] textarea {{
-        background-color: transparent !important;
-        color: #E0E0E0 !important;
-        font-size: 1.1rem !important;
-        padding: 5px 60px 45px 10px !important;
-        line-height: 1.5 !important;
-    }}
-
-    /* Custom Arrow Button Style to match your design */
-    div[data-testid="stChatInput"] button {{
-        background-color: #E0E0E0 !important;
-        border-radius: 50% !important;
-        right: 15px !important;
-        bottom: 42px !important; /* Adjusted to stay middle of height */
-        width: 35px !important;
-        height: 35px !important;
-    }}
-    
-    div[data-testid="stChatInput"] button:hover {{
-        background-color: #FFFFFF !important;
-    }}
-
-    /* The Fixed Plus Overlay */
-    .plus-overlay {{
-        position: fixed;
-        bottom: 38px; /* Adjusted based on chat input position */
-        left: calc(50% - 305px);
-        color: #888888;
-        font-size: 24px;
-        z-index: 1000;
-        pointer-events: none;
-    }}
-
     .stButton>button {{
         width: 100%; text-align: left; background-color: #D3D3D3 !important;
         border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
@@ -127,6 +79,92 @@ st.markdown(f"""
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
+
+    /* --- Custom Search Bar Container --- */
+    .search-wrapper {{
+        position: relative;
+        width: 650px;
+        margin: 25px auto 0 auto;
+    }}
+
+    .custom-search-bar {{
+        width: 100%;
+        height: 120px;
+        background-color: #2C2C2C;
+        border: 1px solid #444;
+        border-radius: 15px;
+        color: #E0E0E0;
+        /* Padding-bottom is strictly 55px to create a dead zone for the + symbol */
+        padding: 15px 60px 55px 20px; 
+        font-size: 1.1rem;
+        line-height: 1.5;
+        outline: none;
+        resize: none;
+        font-family: 'Inter', sans-serif;
+        overflow-y: auto;
+        /* Force scroll behavior to respect padding */
+        box-sizing: border-box;
+    }}
+
+    /* Custom Scrollbar styling */
+    .custom-search-bar::-webkit-scrollbar {{
+        width: 6px;
+    }}
+    .custom-search-bar::-webkit-scrollbar-thumb {{
+        background: #444;
+        border-radius: 10px;
+    }}
+
+    .custom-search-bar::placeholder {{
+        color: #888888;
+        opacity: 1;
+    }}
+
+    /* Fixed Grey Plus Symbol - Shielded from text scroll */
+    .fixed-plus {{
+        position: absolute;
+        bottom: 15px;
+        left: 20px;
+        color: #888888;
+        font-size: 24px;
+        font-weight: 400;
+        cursor: pointer;
+        user-select: none;
+        transition: 0.2s;
+        z-index: 100; /* Higher than textarea content */
+        background-color: #2C2C2C; /* Solid background to block text behind it */
+    }}
+    .fixed-plus:hover {{
+        color: #60A5FA;
+    }}
+
+    /* Arrow Tab Design */
+    .arrow-tab {{
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 35px;
+        height: 35px;
+        background-color: #E0E0E0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+        border: none;
+        z-index: 101;
+    }}
+    .arrow-tab:hover {{
+        background-color: #FFFFFF;
+    }}
+    .arrow-symbol {{
+        color: #1A1A1A;
+        font-size: 20px;
+        font-weight: 900;
+        margin-left: 2px;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -159,57 +197,25 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT DISPLAY
+# 5. MAIN CHAT LOGIC (DISPLAY ONLY)
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 40px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
-
-# Display Chat Messages
-for message in st.session_state.sessions[st.session_state.current_chat]:
-    avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
-    with st.chat_message(message["role"], avatar=avatar_icon):
-        st.markdown(message["content"])
-
-# ==========================================
-# 6. CHAT INPUT & GENERATION LOGIC
-# ==========================================
-# Overlay the + symbol visually
-if is_chat_empty:
-    st.markdown('<div class="plus-overlay">+</div>', unsafe_allow_html=True)
-
-if prompt := st.chat_input("Ask me anything..."):
-    # Save user message
-    st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
-    st.session_state.pending_generation = True
-    st.rerun()
-
-# AI Response Logic
-if st.session_state.pending_generation:
-    user_prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    with st.chat_message("assistant", avatar="logo.png"):
-        instructions = "You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT."
-        
-        try:
-            def generate_response():
-                stream = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": instructions},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    model="llama-3.3-70b-versatile",
-                    temperature=0.7,
-                    stream=True
-                )
-                for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
-                        yield chunk.choices[0].delta.content
+    # Custom Search Bar with Safe-Zone for + Symbol
+    st.markdown("""
+        <div class="search-wrapper">
+            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
+            <div class="fixed-plus">+</div>
+            <div class="arrow-tab">
+                <span class="arrow-symbol">></span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-            full_response = st.write_stream(generate_response())
-            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
-    
-    st.session_state.pending_generation = False
+else:
+    for message in st.session_state.sessions[st.session_state.current_chat]:
+        avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
+        with st.chat_message(message["role"], avatar=avatar_icon):
+            st.markdown(message["content"])

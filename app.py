@@ -200,14 +200,14 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =============================================
-       SEARCH BAR — Shorter + Taller
+        SEARCH BAR — Updated Width (3/4th of previous)
        ============================================= */
     div[data-testid="stChatInputContainer"] {{
         position: fixed !important;
         {chat_pos_css}
         left: 50% !important;
-        width: 42vw !important;
-        max-width: 480px !important;
+        width: 31.5vw !important; /* Reduced from 42vw to 31.5vw */
+        max-width: 380px !important; /* Reduced max-width for balance */
         min-height: 72px !important;
         border-radius: 40px !important;
         background-color: #F0F4F9 !important;
@@ -245,7 +245,7 @@ st.markdown(f"""
     }}
 
     /* =============================================
-       SEND BUTTON — Blue Circle + White Arrow
+        SEND BUTTON — Blue Circle + White Arrow
        ============================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         position: absolute !important;

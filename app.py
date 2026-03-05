@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Colors for Search Bar)
+# 3. CSS (Updated Colors for Uniform Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -73,7 +73,7 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* --- Customizing st.chat_input (Updated Interior Colour) --- */
+    /* --- Customizing st.chat_input (UNIFORM DARK GREY) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -81,7 +81,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        /* Hum pure box ka background Dark Grey kar rahe hain match karne ke liye */
+        /* Outer box background - Dark Grey */
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
         border-radius: 15px !important;
@@ -90,19 +90,19 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        /* Hum actual input area (the "white" area) ko Grey kar rahe hain */
-        background-color: #333333 !important;
-        color: #FFFFFF !important; /* Text color is pure white for clarity */
+        /* Inner textarea area (the "grey box") - NOW DARK GREY JAISE OUTER BOX */
+        background-color: #2C2C2C !important; /* Uniform Color */
+        color: #FFFFFF !important; /* Text color pure white */
         font-size: 1.1rem !important;
         padding: 10px 60px 45px 10px !important;
         line-height: 1.5 !important;
         overflow-y: auto !important;
-        border-radius: 8px !important; /* Slight rounding for inner area */
+        border: none !important; /* Remove inner border to make it uniform */
     }}
 
     /* Placeholder Text Styling (Ask me anything...) */
     div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #BBBBBB !important; /* Light grey placeholder */
+        color: #BBBBBB !important;
         opacity: 1 !important;
     }}
 
@@ -122,7 +122,6 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
     }}
 
-    /* Arrows symbol inside button */
     div[data-testid="stChatInput"] button::after {{
         content: ">";
         color: #1A1A1A;
@@ -138,7 +137,7 @@ st.markdown(f"""
         position: fixed;
         bottom: 35px;
         left: calc(50% - 310px);
-        color: #AAAAAA; /* Light grey icon */
+        color: #AAAAAA; 
         font-size: 24px;
         z-index: 1000;
         pointer-events: none;

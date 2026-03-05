@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated with Plus Circular Tab)
+# 3. CSS (Fixing the Plus Tab Position)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -77,7 +77,7 @@ st.markdown(f"""
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
-        position: relative !important;
+        position: relative !important; /* To anchor the plus tab inside */
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -92,8 +92,7 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         color: #FFFFFF !important;
         font-size: 1.1rem !important;
-        /* Bottom padding ensures text stays above the plus button */
-        padding: 10px 60px 50px 15px !important; 
+        padding: 10px 60px 55px 15px !important; 
         line-height: 1.5 !important;
         overflow-y: auto !important;
         border: none !important;
@@ -104,7 +103,7 @@ st.markdown(f"""
         opacity: 1 !important;
     }}
 
-    /* Arrow Tab Design (Submit Button) */
+    /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
@@ -130,15 +129,15 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* --- Circular Grey Plus Tab (Inside Search Bar) --- */
+    /* --- Circular Grey Plus Tab (Locked Inside Search Bar) --- */
     .plus-tab {{
         position: absolute;
-        bottom: 15px;
+        bottom: 15px; /* Aligned inside the search bar at bottom */
         left: 15px;
         width: 32px;
         height: 32px;
-        background-color: #444444; /* Grey background */
-        border-radius: 50%; /* Circular frame */
+        background-color: #444444; 
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -146,13 +145,9 @@ st.markdown(f"""
         font-size: 20px;
         font-weight: 400;
         cursor: pointer;
-        z-index: 1001;
+        z-index: 1001; /* Higher than textarea */
         transition: 0.2s;
-    }}
-
-    .plus-tab:hover {{
-        background-color: #555555;
-        color: #FFFFFF;
+        pointer-events: none; /* In future we can add file upload logic here */
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -211,7 +206,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
 
-# Overlaying the Plus Circular Tab inside the search input area
+# Injecting the Plus Tab visually inside the Chat Input's structure
 st.markdown('<div class="plus-tab">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):

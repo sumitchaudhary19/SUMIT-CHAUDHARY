@@ -27,14 +27,21 @@ if "pending_generation" not in st.session_state:
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
+# Dynamic positioning logic based on chat state
+if is_chat_empty:
+    chat_input_pos = "top: 45vh !important; transform: translateY(-50%) !important;"
+    plus_tab_pos = "top: calc(45vh + 35px) !important;"
+else:
+    chat_input_pos = "bottom: 20px !important;"
+    plus_tab_pos = "bottom: 35px !important;"
+
 # ==========================================
-# 3. CSS (Fixing the Plus Tab Position)
+# 3. CSS (Updated Positioning Logic)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    /* Base background */
     html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #1A1A1A !important;
@@ -72,12 +79,16 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* --- Functional Search Bar Container --- */
+    /* --- DYNAMIC SEARCH BAR POSITIONING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
-        position: relative !important; /* To anchor the plus tab inside */
+        position: fixed !important;
+        left: 0;
+        right: 0;
+        z-index: 999;
+        {chat_input_pos}
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -92,7 +103,7 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         color: #FFFFFF !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 55px 15px !important; 
+        padding: 10px 60px 50px 15px !important; 
         line-height: 1.5 !important;
         overflow-y: auto !important;
         border: none !important;
@@ -114,10 +125,6 @@ st.markdown(f"""
         border: none !important;
         z-index: 102;
     }}
-    
-    div[data-testid="stChatInput"] button:hover {{
-        background-color: #FFFFFF !important;
-    }}
 
     div[data-testid="stChatInput"] button::after {{
         content: ">";
@@ -129,11 +136,10 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* --- Circular Grey Plus Tab (Locked Inside Search Bar) --- */
+    /* Fixed Plus Tab Dynamic Position */
     .plus-tab {{
-        position: absolute;
-        bottom: 15px; /* Aligned inside the search bar at bottom */
-        left: 15px;
+        position: fixed;
+        left: calc(50% - 310px);
         width: 32px;
         height: 32px;
         background-color: #444444; 
@@ -144,10 +150,9 @@ st.markdown(f"""
         color: #BBBBBB;
         font-size: 20px;
         font-weight: 400;
-        cursor: pointer;
-        z-index: 1001; /* Higher than textarea */
-        transition: 0.2s;
-        pointer-events: none; /* In future we can add file upload logic here */
+        z-index: 1001;
+        transition: 0.3s ease-in-out;
+        {plus_tab_pos}
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -193,7 +198,7 @@ with st.sidebar:
 # 5. MAIN CHAT DISPLAY
 # ==========================================
 if is_chat_empty:
-    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 10vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
 # Display conversations
@@ -206,7 +211,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
 
-# Injecting the Plus Tab visually inside the Chat Input's structure
+# Plus Tab
 st.markdown('<div class="plus-tab">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):

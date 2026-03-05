@@ -80,7 +80,7 @@ st.markdown(f"""
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
-    /* --- Empty Custom Search Bar Container --- */
+    /* --- Custom Search Bar Wrapper --- */
     .search-wrapper {{
         position: relative;
         width: 650px;
@@ -94,7 +94,8 @@ st.markdown(f"""
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px; 
+        /* Padding left/bottom ensures text doesn't overlap icons */
+        padding: 15px 60px 45px 20px; 
         font-size: 1.1rem;
         line-height: 1.5;
         outline: none;
@@ -104,13 +105,63 @@ st.markdown(f"""
         box-sizing: border-box;
     }}
 
-    /* Custom Scrollbar styling */
+    .custom-search-bar::placeholder {{
+        color: #888888;
+    }}
+
+    /* Custom Scrollbar */
     .custom-search-bar::-webkit-scrollbar {{
         width: 6px;
     }}
     .custom-search-bar::-webkit-scrollbar-thumb {{
         background: #444;
         border-radius: 10px;
+    }}
+
+    /* Fixed Plus Icon (Bottom Left) */
+    .fixed-plus {{
+        position: absolute;
+        bottom: 12px;
+        left: 20px;
+        color: #888888;
+        font-size: 24px;
+        font-weight: 400;
+        cursor: pointer;
+        user-select: none;
+        z-index: 102;
+        transition: 0.2s;
+    }}
+    .fixed-plus:hover {{
+        color: #60A5FA;
+    }}
+
+    /* Arrow Tab Design (Middle Right) */
+    .arrow-tab {{
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 35px;
+        height: 35px;
+        background-color: #E0E0E0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: 0.2s;
+        border: none;
+        z-index: 102;
+    }}
+    .arrow-tab:hover {{
+        background-color: #FFFFFF;
+        box-shadow: 0 0 8px rgba(255,255,255,0.2);
+    }}
+    .arrow-symbol {{
+        color: #1A1A1A;
+        font-size: 20px;
+        font-weight: 900;
+        margin-left: 2px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -144,16 +195,20 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT LOGIC (DISPLAY ONLY)
+# 5. MAIN CHAT LOGIC
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Empty Search Bar
+    # Custom Search Bar with all necessary tabs
     st.markdown("""
         <div class="search-wrapper">
-            <textarea class="custom-search-bar"></textarea>
+            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
+            <div class="fixed-plus">+</div>
+            <div class="arrow-tab">
+                <span class="arrow-symbol">></span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 

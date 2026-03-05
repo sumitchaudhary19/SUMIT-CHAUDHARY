@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Colors for Uniform Search Bar)
+# 3. CSS (Updated Layout and Plus Position)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -48,7 +48,6 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ background-color: transparent !important; }}
 
-    /* FIX: Darkening the bottom container where the search bar sits */
     [data-testid="stBottom"] {{
         background-color: #1E1E1E !important;
         border-top: none !important;
@@ -73,15 +72,15 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* --- Customizing st.chat_input (UNIFORM DARK GREY) --- */
+    /* --- Functional Search Bar Container --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
+        position: relative !important; /* To anchor the plus symbol */
     }}
 
     div[data-testid="stChatInput"] > div {{
-        /* Outer box background - Dark Grey */
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
         border-radius: 15px !important;
@@ -90,23 +89,21 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        /* Inner textarea area (the "grey box") - NOW DARK GREY JAISE OUTER BOX */
-        background-color: #2C2C2C !important; /* Uniform Color */
-        color: #FFFFFF !important; /* Text color pure white */
+        background-color: #2C2C2C !important;
+        color: #FFFFFF !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 45px 10px !important;
+        padding: 10px 60px 45px 15px !important; /* Left padding adjusted */
         line-height: 1.5 !important;
         overflow-y: auto !important;
-        border: none !important; /* Remove inner border to make it uniform */
+        border: none !important;
     }}
 
-    /* Placeholder Text Styling (Ask me anything...) */
     div[data-testid="stChatInput"] textarea::placeholder {{
         color: #BBBBBB !important;
         opacity: 1 !important;
     }}
 
-    /* Arrow Tab Design (Middle Right) */
+    /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
@@ -132,23 +129,23 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* Fixed Plus Icon Decoration (Bottom Left) */
-    .fixed-plus-icon {{
-        position: fixed;
-        bottom: 35px;
-        left: calc(50% - 310px);
-        color: #AAAAAA; 
+    /* Fixed Plus Symbol INSIDE the search bar */
+    .inner-plus-icon {{
+        position: absolute;
+        bottom: 15px; /* Aligned below the text */
+        left: 25px; /* Inside left edge */
+        color: #888888;
         font-size: 24px;
-        z-index: 1000;
-        pointer-events: none;
         font-weight: 400;
+        z-index: 1001;
+        pointer-events: none; /* Allows clicks to go to textarea if needed */
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
     .stButton>button {{
         width: 100%; text-align: left; background-color: #D3D3D3 !important;
         border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
-        font-weight: 600; color: #000000 !important; transition: 0.2s;
+        font-weight: 600; color: #000000 !important;
     }}
     
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
@@ -197,29 +194,25 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & BACKEND LOGIC (FIXED)
+# 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
-# Show the fixed plus icon overlay
-if is_chat_empty:
-    st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
 
-# Functional Search Input
+# Plus symbol is now placed inside the chat input container via absolute positioning
+st.markdown('<div class="inner-plus-icon">+</div>', unsafe_allow_html=True)
+
 if prompt := st.chat_input("Ask me anything..."):
-    # Append user question
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
     st.rerun()
 
-# Generation Process
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
-    
     with st.chat_message("assistant", avatar="logo.png"):
         try:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT Jaipur students."},
+                        {"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",
@@ -232,8 +225,6 @@ if st.session_state.pending_generation:
 
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-            
         except Exception as e:
-            st.error(f"Groq API Error: {str(e)}")
-    
+            st.error(f"Error: {str(e)}")
     st.session_state.pending_generation = False

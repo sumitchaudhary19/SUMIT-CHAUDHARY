@@ -29,7 +29,7 @@ if "pinned_sessions" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Bina Search Bar Styles ke)
+# 3. CSS
 # ==========================================
 st.markdown(f"""
     <style>
@@ -80,6 +80,32 @@ st.markdown(f"""
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
+
+    /* Custom Search Bar Styling */
+    .search-container {{
+        display: flex;
+        justify-content: center;
+        margin-top: 25px;
+    }}
+
+    .custom-search-bar {{
+        width: 650px; /* 2.3 times approx of the text length */
+        height: 100px; /* Sufficient for double-lined text */
+        background-color: #2C2C2C;
+        border: 1px solid #444;
+        border-radius: 15px;
+        color: #E0E0E0;
+        padding: 15px;
+        font-size: 1.1rem;
+        outline: none;
+        resize: none; /* No manual resizing */
+        font-family: 'Inter', sans-serif;
+    }}
+
+    .custom-search-bar:focus {{
+        border-color: #60A5FA;
+        box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -135,10 +161,16 @@ with st.sidebar:
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
+    
+    # Custom Search Bar added here
+    st.markdown("""
+        <div class="search-container">
+            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
+        </div>
+    """, unsafe_allow_html=True)
+
 else:
     for message in st.session_state.sessions[st.session_state.current_chat]:
         avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
         with st.chat_message(message["role"], avatar=avatar_icon):
             st.markdown(message["content"])
-
-# CHAT INPUT REMOVED AS REQUESTED

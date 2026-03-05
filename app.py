@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Fixing the White Background)
+# 3. CSS (Updated Colors for Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -73,7 +73,7 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* --- Functional Search Bar Styling --- */
+    /* --- Customizing st.chat_input (Updated Interior Colour) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -81,6 +81,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
+        /* Hum pure box ka background Dark Grey kar rahe hain match karne ke liye */
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
         border-radius: 15px !important;
@@ -89,15 +90,23 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        background-color: transparent !important;
-        color: #E0E0E0 !important;
+        /* Hum actual input area (the "white" area) ko Grey kar rahe hain */
+        background-color: #333333 !important;
+        color: #FFFFFF !important; /* Text color is pure white for clarity */
         font-size: 1.1rem !important;
         padding: 10px 60px 45px 10px !important;
         line-height: 1.5 !important;
         overflow-y: auto !important;
+        border-radius: 8px !important; /* Slight rounding for inner area */
     }}
 
-    /* Arrow Tab Design */
+    /* Placeholder Text Styling (Ask me anything...) */
+    div[data-testid="stChatInput"] textarea::placeholder {{
+        color: #BBBBBB !important; /* Light grey placeholder */
+        opacity: 1 !important;
+    }}
+
+    /* Arrow Tab Design (Middle Right) */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
@@ -106,12 +115,14 @@ st.markdown(f"""
         width: 35px !important;
         height: 35px !important;
         border: none !important;
+        z-index: 102;
     }}
     
     div[data-testid="stChatInput"] button:hover {{
         background-color: #FFFFFF !important;
     }}
 
+    /* Arrows symbol inside button */
     div[data-testid="stChatInput"] button::after {{
         content: ">";
         color: #1A1A1A;
@@ -122,12 +133,12 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* Fixed Plus Icon Decoration */
+    /* Fixed Plus Icon Decoration (Bottom Left) */
     .fixed-plus-icon {{
         position: fixed;
         bottom: 35px;
         left: calc(50% - 310px);
-        color: #888888;
+        color: #AAAAAA; /* Light grey icon */
         font-size: 24px;
         z-index: 1000;
         pointer-events: none;
@@ -187,24 +198,29 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & BACKEND LOGIC
+# 6. CHAT INPUT & BACKEND LOGIC (FIXED)
 # ==========================================
+# Show the fixed plus icon overlay
 if is_chat_empty:
     st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
 
+# Functional Search Input
 if prompt := st.chat_input("Ask me anything..."):
+    # Append user question
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
     st.rerun()
 
+# Generation Process
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    
     with st.chat_message("assistant", avatar="logo.png"):
         try:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', a professional AI assistant for MNIT Jaipur students."},
+                        {"role": "system", "content": "You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT Jaipur students."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",
@@ -217,6 +233,8 @@ if st.session_state.pending_generation:
 
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+            
         except Exception as e:
             st.error(f"Groq API Error: {str(e)}")
+    
     st.session_state.pending_generation = False

@@ -94,7 +94,7 @@ st.markdown(f"""
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        /* Padding bottom is high (55px) to ensure text never reaches the + symbol */
+        /* Padding-bottom is strictly 55px to create a dead zone for the + symbol */
         padding: 15px 60px 55px 20px; 
         font-size: 1.1rem;
         line-height: 1.5;
@@ -102,9 +102,11 @@ st.markdown(f"""
         resize: none;
         font-family: 'Inter', sans-serif;
         overflow-y: auto;
+        /* Force scroll behavior to respect padding */
+        box-sizing: border-box;
     }}
 
-    /* Custom Scrollbar */
+    /* Custom Scrollbar styling */
     .custom-search-bar::-webkit-scrollbar {{
         width: 6px;
     }}
@@ -118,7 +120,7 @@ st.markdown(f"""
         opacity: 1;
     }}
 
-    /* Fixed Grey Plus Symbol - Higher Z-index to stay on top */
+    /* Fixed Grey Plus Symbol - Shielded from text scroll */
     .fixed-plus {{
         position: absolute;
         bottom: 15px;
@@ -129,9 +131,8 @@ st.markdown(f"""
         cursor: pointer;
         user-select: none;
         transition: 0.2s;
-        z-index: 10;
-        background-color: #2C2C2C; /* Matches bar background to act as a shield */
-        padding-right: 5px;
+        z-index: 100; /* Higher than textarea content */
+        background-color: #2C2C2C; /* Solid background to block text behind it */
     }}
     .fixed-plus:hover {{
         color: #60A5FA;
@@ -153,6 +154,7 @@ st.markdown(f"""
         cursor: pointer;
         transition: 0.2s;
         border: none;
+        z-index: 101;
     }}
     .arrow-tab:hover {{
         background-color: #FFFFFF;
@@ -201,7 +203,7 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar with Safe-Padding for + Symbol
+    # Custom Search Bar with Safe-Zone for + Symbol
     st.markdown("""
         <div class="search-wrapper">
             <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>

@@ -28,49 +28,58 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Colors)
+# 3. CSS
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    /* --- Poore Chat Section Ka Background Dark Grey --- */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
-        background-color: #121212 !important; /* Base Deep Dark */
+        background-color: #1A1A1A !important;
         color: #E0E0E0 !important;
     }}
-    
-    [data-testid="stMain"] {{
-        background-color: #1E1E1E !important; /* Chat Section Dark Grey */
+    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    [data-testid="stHeader"] {{ background-color: transparent !important; }}
+
+    [data-testid="stChatMessageContainer"] {{
+        padding-left: 0 !important; padding-right: 0 !important;
     }}
 
-    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    div[data-testid="stChatMessage"] {{
+        border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;
+    }}
 
-    /* --- Chat Message Styling --- */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
-        border-radius: 12px;
+        width: fit-content !important;
         max-width: 75% !important;
         margin-left: auto !important;
+        margin-right: 0 !important;
     }}
 
     div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #252525 !important;
+        background-color: #212121 !important;
         border: 1px solid #333 !important;
-        border-radius: 12px;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-right: auto !important;
+        margin-left: 0 !important;
     }}
 
-    /* --- Search Bar Interior Colour Grey --- */
+    section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
+
+    /* --- Functional Search Bar Styling --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
+        background-color: transparent !important;
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #333333 !important; /* Interior Grey */
-        border: 1px solid #555 !important;
+        background-color: #2C2C2C !important;
+        border: 1px solid #444 !important;
         border-radius: 15px !important;
         height: 120px !important;
         padding: 10px !important;
@@ -78,52 +87,46 @@ st.markdown(f"""
 
     div[data-testid="stChatInput"] textarea {{
         background-color: transparent !important;
-        color: #FFFFFF !important;
+        color: #E0E0E0 !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 45px 10px !important;
+        padding: 5px 60px 45px 10px !important;
         line-height: 1.5 !important;
     }}
 
-    /* Arrow Tab Button */
+    /* Custom Arrow Button Style to match your design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
         right: 15px !important;
-        bottom: 42px !important;
+        bottom: 42px !important; /* Adjusted to stay middle of height */
         width: 35px !important;
         height: 35px !important;
     }}
-
-    div[data-testid="stChatInput"] button::after {{
-        content: ">";
-        color: #1A1A1A;
-        font-weight: 900;
-        font-size: 1.2rem;
-    }}
-    div[data-testid="stChatInput"] button svg {{
-        display: none !important;
+    
+    div[data-testid="stChatInput"] button:hover {{
+        background-color: #FFFFFF !important;
     }}
 
-    /* Plus Icon Overlay */
-    .fixed-plus-icon {{
+    /* The Fixed Plus Overlay */
+    .plus-overlay {{
         position: fixed;
-        bottom: 35px;
-        left: calc(50% - 310px);
-        color: #BBBBBB;
+        bottom: 38px; /* Adjusted based on chat input position */
+        left: calc(50% - 305px);
+        color: #888888;
         font-size: 24px;
         z-index: 1000;
         pointer-events: none;
     }}
 
-    section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
-    
     .stButton>button {{
         width: 100%; text-align: left; background-color: #D3D3D3 !important;
         border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
-        color: #000000 !important;
+        font-weight: 600; color: #000000 !important; transition: 0.2s;
     }}
     
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
+    .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
+    .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -153,41 +156,47 @@ with st.sidebar:
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.75rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT DISPLAY
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 40px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-# Container for messages
+# Display Chat Messages
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & BACKEND LOGIC
+# 6. CHAT INPUT & GENERATION LOGIC
 # ==========================================
+# Overlay the + symbol visually
 if is_chat_empty:
-    st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
+    st.markdown('<div class="plus-overlay">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
+    # Save user message
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
     st.rerun()
 
+# AI Response Logic
 if st.session_state.pending_generation:
-    user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    user_prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    
     with st.chat_message("assistant", avatar="logo.png"):
+        instructions = "You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT."
+        
         try:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', a professional AI assistant for MNIT Jaipur students."},
-                        {"role": "user", "content": user_query}
+                        {"role": "system", "content": instructions},
+                        {"role": "user", "content": user_prompt}
                     ],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,
@@ -197,8 +206,10 @@ if st.session_state.pending_generation:
                     if chunk.choices[0].delta.content is not None:
                         yield chunk.choices[0].delta.content
 
-            response_text = st.write_stream(generate_response())
-            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+            full_response = st.write_stream(generate_response())
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": full_response})
+            
         except Exception as e:
-            st.error(f"API Error: {str(e)}")
+            st.error(f"Error: {str(e)}")
+    
     st.session_state.pending_generation = False

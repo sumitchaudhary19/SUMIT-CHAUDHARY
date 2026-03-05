@@ -80,7 +80,7 @@ st.markdown(f"""
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
-    /* --- Custom Search Bar Container --- */
+    /* --- Empty Custom Search Bar Container --- */
     .search-wrapper {{
         position: relative;
         width: 650px;
@@ -94,15 +94,13 @@ st.markdown(f"""
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        /* Padding-bottom is strictly 55px to create a dead zone for the + symbol */
-        padding: 15px 60px 55px 20px; 
+        padding: 15px; 
         font-size: 1.1rem;
         line-height: 1.5;
         outline: none;
         resize: none;
         font-family: 'Inter', sans-serif;
         overflow-y: auto;
-        /* Force scroll behavior to respect padding */
         box-sizing: border-box;
     }}
 
@@ -113,57 +111,6 @@ st.markdown(f"""
     .custom-search-bar::-webkit-scrollbar-thumb {{
         background: #444;
         border-radius: 10px;
-    }}
-
-    .custom-search-bar::placeholder {{
-        color: #888888;
-        opacity: 1;
-    }}
-
-    /* Fixed Grey Plus Symbol - Shielded from text scroll */
-    .fixed-plus {{
-        position: absolute;
-        bottom: 15px;
-        left: 20px;
-        color: #888888;
-        font-size: 24px;
-        font-weight: 400;
-        cursor: pointer;
-        user-select: none;
-        transition: 0.2s;
-        z-index: 100; /* Higher than textarea content */
-        background-color: #2C2C2C; /* Solid background to block text behind it */
-    }}
-    .fixed-plus:hover {{
-        color: #60A5FA;
-    }}
-
-    /* Arrow Tab Design */
-    .arrow-tab {{
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 35px;
-        height: 35px;
-        background-color: #E0E0E0;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: 0.2s;
-        border: none;
-        z-index: 101;
-    }}
-    .arrow-tab:hover {{
-        background-color: #FFFFFF;
-    }}
-    .arrow-symbol {{
-        color: #1A1A1A;
-        font-size: 20px;
-        font-weight: 900;
-        margin-left: 2px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -203,14 +150,10 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar with Safe-Zone for + Symbol
+    # Custom Empty Search Bar
     st.markdown("""
         <div class="search-wrapper">
-            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
-            <div class="fixed-plus">+</div>
-            <div class="arrow-tab">
-                <span class="arrow-symbol">></span>
-            </div>
+            <textarea class="custom-search-bar"></textarea>
         </div>
     """, unsafe_allow_html=True)
 

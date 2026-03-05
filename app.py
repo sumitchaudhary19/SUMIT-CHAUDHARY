@@ -200,14 +200,15 @@ st.markdown(f"""
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
     /* =============================================
-        SEARCH BAR — Updated Width (3/4th of previous)
+        SEARCH BAR — UPDATED SMALLER WIDTH (Fixed)
        ============================================= */
     div[data-testid="stChatInputContainer"] {{
         position: fixed !important;
         {chat_pos_css}
         left: 50% !important;
-        width: 31.5vw !important; /* Reduced from 42vw to 31.5vw */
-        max-width: 380px !important; /* Reduced max-width for balance */
+        width: 30vw !important; /* Force width to 30% of viewport */
+        min-width: 300px !important; /* Ensure it's not too small on mobile */
+        max-width: 420px !important; /* Lock maximum length */
         min-height: 72px !important;
         border-radius: 40px !important;
         background-color: #F0F4F9 !important;
@@ -239,13 +240,9 @@ st.markdown(f"""
         color: #888E99 !important;
         -webkit-text-fill-color: #888E99 !important;
     }}
-    div[data-testid="stChatInputContainer"] textarea:-webkit-autofill {{
-        -webkit-box-shadow: 0 0 0 1000px #F0F4F9 inset !important;
-        -webkit-text-fill-color: #1F1F1F !important;
-    }}
 
     /* =============================================
-        SEND BUTTON — Blue Circle + White Arrow
+        SEND BUTTON
        ============================================= */
     div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"] {{
         position: absolute !important;
@@ -277,15 +274,6 @@ st.markdown(f"""
         background-color: #2563EB !important;
         box-shadow: 0 6px 20px rgba(59,130,246,0.7) !important;
         transform: translateY(-50%) scale(1.1) !important;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='22' y1='2' x2='11' y2='13'%3E%3C/line%3E%3Cpolygon points='22 2 15 22 11 13 2 9 22 2'%3E%3C/polygon%3E%3C/svg%3E") !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-        background-size: 20px 20px !important;
-    }}
-
-    div[data-testid="stChatInputContainer"] button[data-testid="stChatInputSubmit"]:active {{
-        transform: translateY(-50%) scale(0.95) !important;
-        box-shadow: 0 2px 8px rgba(59,130,246,0.4) !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -320,39 +308,29 @@ with st.sidebar:
 
     for chat_name in reversed(list(st.session_state.sessions.keys())):
         col1, col2 = st.columns([85, 15])
-
         with col1:
             if chat_name in st.session_state.pinned_sessions:
                 st.markdown('<div class="pin-sticker">📍</div>', unsafe_allow_html=True)
-
             if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}", use_container_width=True):
                 st.session_state.current_chat = chat_name
                 st.session_state.pending_generation = False
                 st.rerun()
-
         with col2:
             with st.popover("⋮"):
                 if st.button("📂 Open this session", key=f"opn_{chat_name}", use_container_width=True):
                     st.session_state.current_chat = chat_name
-                    st.session_state.pending_generation = False
                     st.rerun()
-
-                pin_label = "🔕 Unpin this session" if chat_name in st.session_state.pinned_sessions else "📌 Pin this session"
+                pin_label = "🔕 Unpin" if chat_name in st.session_state.pinned_sessions else "📌 Pin"
                 if st.button(pin_label, key=f"pin_{chat_name}", use_container_width=True):
                     if chat_name in st.session_state.pinned_sessions:
                         st.session_state.pinned_sessions.remove(chat_name)
                     else:
                         st.session_state.pinned_sessions.append(chat_name)
                     st.rerun()
-
-                if st.button("🗑️ Delete this session", key=f"del_{chat_name}", use_container_width=True):
+                if st.button("🗑️ Delete", key=f"del_{chat_name}", use_container_width=True):
                     del st.session_state.sessions[chat_name]
-                    if chat_name in st.session_state.pinned_sessions:
-                        st.session_state.pinned_sessions.remove(chat_name)
                     if st.session_state.current_chat == chat_name:
                         st.session_state.current_chat = "New Session"
-                        if "New Session" not in st.session_state.sessions:
-                            st.session_state.sessions["New Session"] = []
                     st.rerun()
 
     st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
@@ -360,13 +338,8 @@ with st.sidebar:
         st.toast("📚 E-BOOKS Section is coming soon!")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<div class='ebook-btn'>", unsafe_allow_html=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("""
@@ -384,14 +357,10 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 5vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; margin-bottom: 30px; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-st.markdown('<div data-testid="stChatMessageContainer">', unsafe_allow_html=True)
-
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
-
-st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 6. CHAT INPUT & AI GENERATION
@@ -413,19 +382,15 @@ if st.session_state.pending_generation:
     with st.chat_message("assistant", avatar="logo.png"):
         instructions = """
         You are 'AskMNIT', an exceptionally intelligent and professional AI assistant for MNIT.
-        1. You possess universal knowledge. You can answer ANY question about coding, science, history, daily life, or business perfectly.
-        2. Keep your tone professional, highly accurate, and helpful. Use clear formatting.
-        3. YOU ARE AN AI. Do not claim to be human.
-        4. IF AND ONLY IF asked about your creator, owner, or who made you, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
+        1. You possess universal knowledge. 
+        2. Keep your tone professional and highly accurate.
+        3. IF asked about your creator, reply exactly with: "I was architected and developed by SUMIT CHAUDHARY."
         """
 
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": instructions},
-                        {"role": "user", "content": prompt}
-                    ],
+                    messages=[{"role": "system", "content": instructions}, {"role": "user", "content": prompt}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,
                     stream=True

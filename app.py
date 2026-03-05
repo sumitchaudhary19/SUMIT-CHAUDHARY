@@ -24,6 +24,8 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
 if "pinned_sessions" not in st.session_state:
     st.session_state.pinned_sessions = []
+if "pending_generation" not in st.session_state:
+    st.session_state.pending_generation = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
@@ -80,86 +82,36 @@ st.markdown(f"""
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
-    /* --- Custom Search Bar Container --- */
-    .search-wrapper {{
-        position: relative;
-        width: 650px;
-        margin: 25px auto 0 auto;
+    /* --- Modified Search Bar UI to avoid overlap --- */
+    div[data-testid="stChatInput"] {{
+        width: 650px !important;
+        margin: 25px auto 0 auto !important;
+    }}
+    
+    div[data-testid="stChatInput"] textarea {{
+        background-color: #2C2C2C !important;
+        border: 1px solid #444 !important;
+        border-radius: 15px !important;
+        color: #E0E0E0 !important;
+        padding-bottom: 50px !important; /* Prevents text from covering the + symbol area */
+        overflow-y: auto !important;
     }}
 
-    .custom-search-bar {{
-        width: 100%;
-        height: 120px;
-        background-color: #2C2C2C;
-        border: 1px solid #444;
-        border-radius: 15px;
-        color: #E0E0E0;
-        padding: 15px 60px 45px 20px; /* Padding for scroll and fixed icon */
-        font-size: 1.1rem;
-        outline: none;
-        resize: none;
-        font-family: 'Inter', sans-serif;
-        overflow-y: auto; /* Scrollbar enabled */
+    /* Scrollbar for chat area */
+    div[data-testid="stAppViewBlockContainer"] {{
+        overflow-y: auto !important;
     }}
 
-    /* Custom Scrollbar Styling */
-    .custom-search-bar::-webkit-scrollbar {{
-        width: 6px;
-    }}
-    .custom-search-bar::-webkit-scrollbar-thumb {{
-        background: #444;
-        border-radius: 10px;
-    }}
-    .custom-search-bar::-webkit-scrollbar-thumb:hover {{
-        background: #555;
-    }}
-
-    .custom-search-bar::placeholder {{
-        color: #888888;
-        opacity: 1;
-    }}
-
-    /* Fixed Grey Plus Symbol */
-    .fixed-plus {{
+    /* Fixed Grey Plus Overlay */
+    .plus-overlay {{
         position: absolute;
         bottom: 12px;
         left: 20px;
         color: #888888;
         font-size: 22px;
         font-weight: 400;
-        cursor: pointer;
-        user-select: none;
-        transition: 0.2s;
-    }}
-    .fixed-plus:hover {{
-        color: #60A5FA;
-    }}
-
-    /* Arrow Tab Design */
-    .arrow-tab {{
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 35px;
-        height: 35px;
-        background-color: #E0E0E0;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: 0.2s;
-        border: none;
-    }}
-    .arrow-tab:hover {{
-        background-color: #FFFFFF;
-    }}
-    .arrow-symbol {{
-        color: #1A1A1A;
-        font-size: 20px;
-        font-weight: 900;
-        margin-left: 2px;
+        pointer-events: none; /* Allows typing while being visible */
+        z-index: 100;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -197,21 +149,45 @@ with st.sidebar:
 # ==========================================
 if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
-    
-    # Custom Search Bar with Fixed Plus and Scroll
-    st.markdown("""
-        <div class="search-wrapper">
-            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
-            <div class="fixed-plus">+</div>
-            <div class="arrow-tab">
-                <span class="arrow-symbol">></span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 20px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-else:
+# Container for messages to ensure scrolling works
+message_container = st.container()
+
+with message_container:
     for message in st.session_state.sessions[st.session_state.current_chat]:
         avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
         with st.chat_message(message["role"], avatar=avatar_icon):
             st.markdown(message["content"])
+
+# ==========================================
+# 6. CHAT INPUT & AI LOGIC
+# ==========================================
+# We wrap the input to overlay the fixed plus symbol
+st.markdown('<div class="plus-overlay">+</div>', unsafe_allow_html=True)
+if prompt := st.chat_input("Ask me anything..."):
+    st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+    st.session_state.pending_generation = True
+    st.rerun()
+
+if st.session_state.pending_generation:
+    prompt = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+    with st.chat_message("assistant", avatar="logo.png"):
+        instructions = "You are 'AskMNIT', a professional AI assistant for MNIT students."
+        try:
+            def generate_response():
+                stream = client.chat.completions.create(
+                    messages=[{"role": "system", "content": instructions}, {"role": "user", "content": prompt}],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7,
+                    stream=True
+                )
+                for chunk in stream:
+                    if chunk.choices[0].delta.content is not None:
+                        yield chunk.choices[0].delta.content
+
+            response_text = st.write_stream(generate_response())
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+    st.session_state.pending_generation = False

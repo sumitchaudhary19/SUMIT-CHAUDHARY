@@ -23,13 +23,10 @@ if "sessions" not in st.session_state:
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session"
 
-if "pinned_sessions" not in st.session_state:
-    st.session_state.pinned_sessions = []
-
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS
+# 3. CSS (Custom UI for Search Bar & Plus Icon)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -51,24 +48,6 @@ st.markdown(f"""
         border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;
     }}
 
-    div[data-testid="stChatMessage"]:nth-child(odd) {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
-        width: fit-content !important;
-        max-width: 75% !important;
-        margin-left: auto !important;
-        margin-right: 0 !important;
-    }}
-
-    div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #212121 !important;
-        border: 1px solid #333 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin-right: auto !important;
-        margin-left: 0 !important;
-    }}
-
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
 
     .stButton>button {{
@@ -81,30 +60,59 @@ st.markdown(f"""
     .signature-box p {{ margin: 0; font-size: 0.75rem; color: #AAAAAA; text-transform: uppercase; letter-spacing: 1px; }}
     .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
 
-    /* Custom Search Bar Styling */
-    .search-container {{
-        display: flex;
-        justify-content: center;
-        margin-top: 25px;
+    /* --- Custom Search Bar Wrapper --- */
+    .search-wrapper {{
+        position: relative;
+        width: 650px; /* 2.3x approx of text length */
+        margin: 0 auto;
     }}
 
     .custom-search-bar {{
-        width: 650px; /* 2.3 times approx of the text length */
-        height: 100px; /* Sufficient for double-lined text */
+        width: 100%;
+        height: 110px; /* Double lined text height */
         background-color: #2C2C2C;
         border: 1px solid #444;
         border-radius: 15px;
         color: #E0E0E0;
-        padding: 15px;
+        padding: 15px 15px 45px 15px; /* Bottom padding for icon space */
         font-size: 1.1rem;
         outline: none;
-        resize: none; /* No manual resizing */
+        resize: none;
         font-family: 'Inter', sans-serif;
     }}
 
     .custom-search-bar:focus {{
         border-color: #60A5FA;
-        box-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+    }}
+
+    /* --- Plus Icon Styling --- */
+    .plus-icon-container {{
+        position: absolute;
+        bottom: 12px;
+        left: 18px;
+        color: #BBBBBB; /* Light Grey */
+        font-size: 24px;
+        font-weight: 300;
+        cursor: pointer;
+        transition: 0.3s;
+        pointer-events: none; /* Let clicks pass through to uploader */
+        z-index: 5;
+    }}
+
+    /* Overlaying uploader to make icon clickable */
+    div[data-testid="stFileUploader"] {{
+        position: absolute;
+        bottom: 5px;
+        left: 10px;
+        width: 40px;
+        height: 40px;
+        opacity: 0; /* Hidden but functional */
+        z-index: 10;
+        cursor: pointer;
+    }}
+
+    div[data-testid="stFileUploader"] section {{
+        padding: 0 !important;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -127,47 +135,38 @@ with st.sidebar:
         st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>AskMNIT</h3>", unsafe_allow_html=True)
 
     if st.button("➕ New Session"):
-        chat_id = f"Session {len(st.session_state.sessions) + 1}"
-        st.session_state.sessions[chat_id] = []
-        st.session_state.current_chat = chat_id
+        st.session_state.sessions[f"Session {len(st.session_state.sessions) + 1}"] = []
         st.rerun()
-
-    st.markdown("<p style='color: #BBBBBB; font-size: 0.8rem; font-weight: 600; margin-top: 10px;'>Chat History</p>", unsafe_allow_html=True)
-
-    for chat_name in reversed(list(st.session_state.sessions.keys())):
-        col1, col2 = st.columns([85, 15])
-        with col1:
-            if st.button(f"💬 {chat_name}", key=f"btn_{chat_name}", use_container_width=True):
-                st.session_state.current_chat = chat_name
-                st.rerun()
-        with col2:
-            if st.button("🗑️", key=f"del_{chat_name}"):
-                del st.session_state.sessions[chat_name]
-                st.rerun()
 
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""
-        <div class="signature-box">
-            <p>Architected by</p>
-            <h3>SUMIT CHAUDHARY</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT LOGIC (DISPLAY ONLY)
 # ==========================================
 if is_chat_empty:
-    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 15vh;'>AskMNIT</h1>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 20px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
     
-    # Custom Search Bar added here
-    st.markdown("""
-        <div class="search-container">
-            <textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>
-        </div>
-    """, unsafe_allow_html=True)
+    # Custom UI Search Box with Plus Icon
+    st.markdown('<div class="search-wrapper">', unsafe_allow_html=True)
+    
+    # The Textarea
+    st.markdown('<textarea class="custom-search-bar" placeholder="Ask me anything..."></textarea>', unsafe_allow_html=True)
+    
+    # The Visual Plus Icon
+    st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
+    
+    # Hidden File Uploader Overlay
+    uploaded_file = st.file_uploader("", type=["pdf", "txt", "png", "jpg"], key="file_input", label_visibility="collapsed")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Toast or Success message when file is attached
+    if uploaded_file:
+        st.toast(f"📎 Attached: {uploaded_file.name}")
 
 else:
     for message in st.session_state.sessions[st.session_state.current_chat]:

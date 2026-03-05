@@ -28,21 +28,26 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Custom Search Bar & Arrow Tab)
+# 3. CSS (Updated Colors)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
+    /* --- Poore Chat Section Ka Background Dark Grey --- */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
         font-family: 'Inter', sans-serif;
-        background-color: #1A1A1A !important;
+        background-color: #121212 !important; /* Base Deep Dark */
         color: #E0E0E0 !important;
     }}
-    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
-    [data-testid="stHeader"] {{ background-color: transparent !important; }}
+    
+    [data-testid="stMain"] {{
+        background-color: #1E1E1E !important; /* Chat Section Dark Grey */
+    }}
 
-    /* --- Chat History Styling --- */
+    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+
+    /* --- Chat Message Styling --- */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
@@ -52,21 +57,20 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #212121 !important;
+        background-color: #252525 !important;
         border: 1px solid #333 !important;
         border-radius: 12px;
     }}
 
-    /* --- Customizing st.chat_input to match your design --- */
+    /* --- Search Bar Interior Colour Grey --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
-        background-color: transparent !important;
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
+        background-color: #333333 !important; /* Interior Grey */
+        border: 1px solid #555 !important;
         border-radius: 15px !important;
         height: 120px !important;
         padding: 10px !important;
@@ -74,29 +78,22 @@ st.markdown(f"""
 
     div[data-testid="stChatInput"] textarea {{
         background-color: transparent !important;
-        color: #E0E0E0 !important;
+        color: #FFFFFF !important;
         font-size: 1.1rem !important;
         padding: 10px 60px 45px 10px !important;
         line-height: 1.5 !important;
-        overflow-y: auto !important;
     }}
 
-    /* The Arrow Tab (Submit Button) Design */
+    /* Arrow Tab Button */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
         right: 15px !important;
-        bottom: 42px !important; /* Centered vertically relative to height */
+        bottom: 42px !important;
         width: 35px !important;
         height: 35px !important;
-        border: none !important;
-    }}
-    
-    div[data-testid="stChatInput"] button:hover {{
-        background-color: #FFFFFF !important;
     }}
 
-    /* Custom Arrow Graphic (replacing default) */
     div[data-testid="stChatInput"] button::after {{
         content: ">";
         color: #1A1A1A;
@@ -107,27 +104,26 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* Fixed Plus Symbol Decoration */
+    /* Plus Icon Overlay */
     .fixed-plus-icon {{
         position: fixed;
         bottom: 35px;
         left: calc(50% - 310px);
-        color: #888888;
+        color: #BBBBBB;
         font-size: 24px;
         z-index: 1000;
         pointer-events: none;
-        font-weight: 400;
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
+    
     .stButton>button {{
         width: 100%; text-align: left; background-color: #D3D3D3 !important;
         border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
-        font-weight: 600; color: #000000 !important; transition: 0.2s;
+        color: #000000 !important;
     }}
     
     .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
-    .signature-box h3 {{ margin: 5px 0 0 0; font-size: 1.1rem; color: #E0E0E0; font-weight: 700; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -157,7 +153,7 @@ with st.sidebar:
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
-    st.markdown("""<div class="signature-box"><p>Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.75rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT DISPLAY
@@ -166,7 +162,7 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 20vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-# Display conversations
+# Container for messages
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
@@ -175,20 +171,16 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 6. CHAT INPUT & BACKEND LOGIC
 # ==========================================
-# Show the fixed plus icon only when chat is empty or at the bottom
 if is_chat_empty:
     st.markdown('<div class="fixed-plus-icon">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
-    # Append user question
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
     st.rerun()
 
-# Generation Process
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
-    
     with st.chat_message("assistant", avatar="logo.png"):
         try:
             def generate_response():
@@ -207,8 +199,6 @@ if st.session_state.pending_generation:
 
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-            
         except Exception as e:
-            st.error(f"Groq API Error: {str(e)}")
-    
+            st.error(f"API Error: {str(e)}")
     st.session_state.pending_generation = False

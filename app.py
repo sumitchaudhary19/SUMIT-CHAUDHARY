@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Shiny Violet Tabs & Dark Grey Plus)
+# 3. CSS (Updated with Dialog Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -58,7 +58,7 @@ st.markdown(f"""
         border-right: 1px solid #DDDDDD !important;
     }}
 
-    /* --- SHINY VIOLET SIDEBAR TABS --- */
+    /* --- SHINY VIOLET TABS (Sidebar & Dialog) --- */
     .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -81,7 +81,21 @@ st.markdown(f"""
         background: linear-gradient(135deg, #9D7CFF 0%, #7B52F2 100%) !important;
     }}
 
-    /* --- PURE WHITE SEARCH BAR --- */
+    /* --- DIALOG / POP-UP STYLING --- */
+    /* Targetting the Streamlit Dialog container to make it grey and square */
+    div[data-testid="stDialog"] div[role="dialog"] {{
+        background-color: #2C2C2C !important;
+        border-radius: 15px !important;
+        border: 1px solid #444 !important;
+        color: white !important;
+    }}
+    
+    div[data-testid="stDialog"] h2 {{
+        color: white !important;
+        text-align: center !important;
+    }}
+
+    /* --- SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -122,7 +136,7 @@ st.markdown(f"""
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }}
 
-    /* Arrow Tab Design */
+    /* Arrow Tab */
     div[data-testid="stChatInput"] button {{
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
@@ -137,7 +151,7 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Header Position */
+    /* Header Styling */
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     .main-title {{ color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem; }}
@@ -151,37 +165,41 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR (TOOLS SECTION)
+# 4. UNIVERSITY TOOLS DIALOG (POP-UP)
+# ==========================================
+@st.dialog("University Tools")
+def open_uni_tools():
+    st.write("Select a tool below to access MNIT portals:")
+    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
+    st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
+    st.markdown("<p style='text-align:center; font-size:0.8rem; color:#888;'>Quick access for students</p>", unsafe_allow_html=True)
+
+# ==========================================
+# 5. SIDEBAR (TOOLS SECTION)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 20px;'>Tools</h2>", unsafe_allow_html=True)
     
     # New Session Tab
     if st.button("➕ New Session"):
-        st.session_state.sessions["New Session"] = []
+        st.session_state.sessions = {"New Session": []}
         st.session_state.current_chat = "New Session"
         st.rerun()
 
     # Chat History Tab
     if st.button("Chat History 🕑"):
-        pass 
+        st.toast("Chat history coming soon!")
 
-    # University Tools Tab (NEW)
+    # University Tools Tab (Trigger for Pop-up)
     if st.button("University Tools ⚙️"):
-        pass
+        open_uni_tools()
     
     st.markdown("<div style='margin-top: 20px; border-top: 1px solid #DDD; padding-top: 20px;'></div>", unsafe_allow_html=True)
-    
-    # Class Schedule Tab
-    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
-    
-    # ERP Tab
-    st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
     
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT DISPLAY
+# 6. MAIN CHAT DISPLAY
 # ==========================================
 title_class = "title-container-empty" if is_chat_empty else "title-container-active"
 st.markdown(f"""
@@ -197,7 +215,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & PLUS UI
+# 7. CHAT INPUT & PLUS UI
 # ==========================================
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 
@@ -213,7 +231,7 @@ if st.session_state.pending_generation:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', a professional assistant for MNIT Jaipur students."},
+                        {"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",

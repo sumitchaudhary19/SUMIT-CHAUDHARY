@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Mic Tab, Centered Pills & Header logic)
+# 3. CSS (Buttons & Layout)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -39,11 +39,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
     }}
     
-    [data-testid="stMain"] {{
-        background-color: #FFFFFF !important;
-    }}
-
-    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     [data-testid="stHeader"] {{ display: none !important; }}
 
     /* --- SIDEBAR LOCK --- */
@@ -62,11 +58,8 @@ st.markdown(f"""
 
     /* --- CENTERED SUGGESTION PILLS --- */
     .pill-wrapper {{
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        margin-top: 150px; /* Positioned below the fixed header */
-        width: 100%;
+        display: flex; justify-content: center; gap: 12px;
+        margin-top: 150px; width: 100%;
     }}
 
     div.stButton > button[key^="pill_"] {{
@@ -76,91 +69,65 @@ st.markdown(f"""
         border-radius: 50px !important;
         padding: 10px 22px !important;
         font-size: 0.95rem !important;
-        font-weight: 500 !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-        width: auto !important;
-        min-width: unset !important;
-    }}
-
-    div.stButton > button[key^="pill_"]:hover {{
-        border-color: #8A63FF !important;
-        background-color: #F9F9F9 !important;
     }}
 
     /* --- CHAT AREA --- */
-    [data-testid="stChatMessageContainer"] {{
-        max-width: 800px !important;
-        margin: 140px auto 120px auto !important;
-    }}
+    [data-testid="stChatMessageContainer"] {{ max-width: 800px !important; margin: 140px auto 120px auto !important; }}
 
-    /* --- SIDEBAR TABS --- */
-    section[data-testid="stSidebar"] {{
-        background-color: #F0F2F6 !important;
-        border-right: 1px solid #DDDDDD !important;
-        width: 320px !important;
-    }}
+    /* --- SIDEBAR --- */
+    section[data-testid="stSidebar"] {{ background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; width: 320px !important; }}
+    .stButton>button {{ width: 100% !important; background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important; padding: 14px 20px !important; margin-bottom: 12px !important; }}
 
-    .stButton>button {{
-        width: 100% !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-        color: white !important;
-        border-radius: 10px !important;
-        padding: 14px 20px !important;
-        font-weight: 600 !important;
-        margin-bottom: 12px !important;
-    }}
+    /* --- SEARCH BAR --- */
+    div[data-testid="stChatInput"] {{ width: 650px !important; margin: 0 auto !important; position: fixed !important; bottom: 20px !important; left: 0; right: 0; z-index: 999; }}
+    div[data-testid="stChatInput"] > div {{ background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important; border-radius: 15px !important; height: 80px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }}
+    div[data-testid="stChatInput"] textarea {{ background-color: #FFFFFF !important; padding: 15px 60px 15px 95px !important; height: 80px !important; }}
 
-    /* --- SEARCH BAR (80PX) --- */
-    div[data-testid="stChatInput"] {{
-        width: 650px !important;
-        margin: 0 auto !important;
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 0; right: 0; z-index: 999;
+    /* --- INPUT BUTTONS --- */
+    .stButton > button[key^="input_"] {{
+        position: fixed; width: 32px !important; height: 32px !important;
+        background: #333333 !important; border-radius: 50% !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
+        z-index: 1001; bottom: 44px !important; padding: 0 !important;
+        min-width: 32px !important; border: none !important;
     }}
+    .plus-btn {{ left: calc(50% - 310px); }}
+    .mic-btn {{ left: calc(50% - 270px); }}
 
-    div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important;
-        border: 1px solid #DDDDDD !important;
-        border-radius: 15px !important;
-        height: 80px !important; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-    }}
-
-    div[data-testid="stChatInput"] textarea {{
-        background-color: #FFFFFF !important;
-        padding: 15px 60px 15px 95px !important; /* Adjusted for 2 buttons */
-        height: 80px !important;
-    }}
-
-    /* --- MIC & PLUS ICONS --- */
-    .input-btn-base {{
-        position: fixed; width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        z-index: 1001; bottom: 44px !important;
-    }}
-    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
-    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
-
-    div[data-testid="stChatInput"] button {{
-        bottom: 22px !important; background-color: #1A1A1A !important; border-radius: 50% !important;
-    }}
-    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
+    div[data-testid="stChatInput"] button {{ bottom: 22px !important; background-color: #1A1A1A !important; border-radius: 50% !important; }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
-
-    .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
+    
+    div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; color: white !important; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. DIALOGS
+# 4. FUNCTIONAL DIALOGS
 # ==========================================
-@st.dialog("University Tools")
-def open_uni_tools():
-    st.write("Access MNIT Student Portals:")
-    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
-    st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
+@st.dialog("Upload Documents 📄")
+def open_upload_dialog():
+    st.write("Upload your notes or PDF here:")
+    uploaded_file = st.file_uploader("Choose a file", type=['pdf', 'txt', 'docx'])
+    if uploaded_file:
+        st.success(f"Attached: {uploaded_file.name}")
+        if st.button("Process with AI"):
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": f"I have uploaded a file: {uploaded_file.name}. Please analyze it."})
+            st.session_state.pending_generation = True
+            st.rerun()
+
+@st.dialog("Voice Input 🎤")
+def open_mic_dialog():
+    st.write("Click and start speaking...")
+    audio_value = st.audio_input("Record your question")
+    if audio_value:
+        st.info("Audio received! (System will process this as a transcript in a real deployment)")
+        if st.button("Send Voice Message"):
+            # Placeholder for speech-to-text logic
+            transcript = "Audio question received." 
+            st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": transcript})
+            st.session_state.pending_generation = True
+            st.rerun()
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
@@ -170,6 +137,12 @@ def open_chat_history():
         if st.button(display_name, key=f"btn_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
+
+@st.dialog("University Tools")
+def open_uni_tools():
+    st.write("Access MNIT Portals:")
+    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
+    st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
 # 5. SIDEBAR
@@ -185,8 +158,6 @@ with st.sidebar:
         open_chat_history()
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-    st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
-    st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. HEADER
@@ -205,7 +176,6 @@ if is_chat_empty:
     st.markdown('<div class="pill-wrapper">', unsafe_allow_html=True)
     cols = st.columns([2, 1, 1, 1, 2])
     suggestions = ["Class schedule?", "Mineral Processing notes", "Metallurgy Syllabus"]
-    
     if cols[1].button(suggestions[0], key="pill_1"):
         st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[0]})
         st.session_state.pending_generation = True
@@ -226,10 +196,27 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & TABS UI
+# 8. FUNCTIONAL INPUT TABS
 # ==========================================
-st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
-st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
+# We use st.button with specific keys to match the CSS
+if st.button("+", key="input_plus", help="Upload File"):
+    open_upload_dialog()
+
+# Visual trick to keep the Mic button in place
+st.markdown('<div class="mic-btn-container">', unsafe_allow_html=True)
+if st.button("🎤", key="input_mic", help="Voice Search"):
+    open_mic_dialog()
+
+# Applying class names via hacky CSS
+st.markdown(f"""
+    <script>
+    var btns = window.parent.document.querySelectorAll('button');
+    btns.forEach(function(btn) {{
+        if(btn.innerText == '+') btn.classList.add('plus-btn');
+        if(btn.innerText == '🎤') btn.classList.add('mic-btn');
+    }});
+    </script>
+""", unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
@@ -245,8 +232,7 @@ if st.session_state.pending_generation:
                     messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
-                    temperature=0.7,
-                    stream=True
+                    temperature=0.7, stream=True
                 )
                 for chunk in stream:
                     if chunk.choices[0].delta.content is not None:

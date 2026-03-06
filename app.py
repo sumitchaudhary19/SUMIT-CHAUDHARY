@@ -27,16 +27,8 @@ if "pending_generation" not in st.session_state:
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
-# Dynamic positioning logic based on chat state
-if is_chat_empty:
-    chat_input_pos = "top: 45vh !important; transform: translateY(-50%) !important;"
-    plus_tab_pos = "top: calc(45vh + 32px) !important;"
-else:
-    chat_input_pos = "bottom: 20px !important;"
-    plus_tab_pos = "bottom: 32px !important;"
-
 # ==========================================
-# 3. CSS (Updated Placeholder Color)
+# 3. CSS (Locked Bottom Positioning)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -79,7 +71,7 @@ st.markdown(f"""
         border-radius: 12px;
     }}
 
-    /* --- DYNAMIC SEARCH BAR POSITIONING --- */
+    /* --- LOCKED BOTTOM SEARCH BAR --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -88,7 +80,7 @@ st.markdown(f"""
         left: 0;
         right: 0;
         z-index: 999;
-        {chat_input_pos}
+        bottom: 20px !important; /* Always at bottom */
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -109,9 +101,8 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* --- Light Grey Placeholder Text --- */
     div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #A0A0A0 !important; /* Light Grey Color */
+        color: #A0A0A0 !important;
         opacity: 1 !important;
     }}
 
@@ -137,7 +128,7 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* --- Fixed Plus Tab Visual --- */
+    /* --- Fixed Plus Tab Visual (Locked at Bottom) --- */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
@@ -152,9 +143,8 @@ st.markdown(f"""
         font-size: 20px;
         font-weight: 400;
         z-index: 1001;
-        transition: 0.3s ease-in-out;
+        bottom: 32px !important; /* Locked position */
         pointer-events: none;
-        {plus_tab_pos}
     }}
 
     /* --- Hidden Real Uploader Overlay --- */
@@ -165,7 +155,7 @@ st.markdown(f"""
         height: 32px !important;
         z-index: 1002 !important;
         opacity: 0 !important;
-        {plus_tab_pos}
+        bottom: 32px !important; /* Locked position */
     }}
     div[data-testid="stFileUploader"] section {{
         padding: 0 !important;
@@ -214,7 +204,7 @@ with st.sidebar:
 # 5. MAIN CHAT DISPLAY
 # ==========================================
 if is_chat_empty:
-    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 10vh;'>AskMNIT</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 15vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
@@ -226,15 +216,16 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # 6. CHAT INPUT & FILE UPLOAD LOGIC
 # ==========================================
 
-# Visual Plus Tab
+# Visual Plus Tab (Always at bottom)
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 
-# Functional (Hidden) Uploader
+# Functional (Hidden) Uploader (Always at bottom)
 uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
 
 if uploaded_file:
     st.toast(f"📎 File '{uploaded_file.name}' attached successfully!")
 
+# Chat Input (Always at bottom)
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True

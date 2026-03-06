@@ -162,16 +162,18 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
 
-    # Chat History Tab (NEW)
+    # Chat History Tab
     if st.button("Chat History 🕑"):
-        pass # Logic will be added later
+        pass 
+
+    # University Tools Tab (NEW)
+    if st.button("University Tools ⚙️"):
+        pass
     
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 20px; border-top: 1px solid #DDD; padding-top: 20px;'></div>", unsafe_allow_html=True)
     
     # Class Schedule Tab
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
-    
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
     
     # ERP Tab
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)

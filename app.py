@@ -256,3 +256,4 @@ if st.session_state.pending_generation:
         except Exception as e:
             st.error(f"Error: {str(e)}")
     st.session_state.pending_generation = False
+

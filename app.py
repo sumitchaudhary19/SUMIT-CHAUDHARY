@@ -28,13 +28,12 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Sticky Header & Scroll Control)
+# 3. CSS (Fixed Search Bar Height & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    /* Body & Main Container */
     html, body, [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
@@ -47,11 +46,11 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- FIXED STICKY HEADER (AskMNIT) --- */
+    /* --- FIXED STICKY HEADER --- */
     .sticky-header-container {{
         position: fixed;
         top: 0;
-        left: 320px; /* Sidebar width */
+        left: 320px;
         right: 0;
         height: 140px;
         background-color: #FFFFFF;
@@ -62,42 +61,25 @@ st.markdown(f"""
         align-items: center;
     }}
     
-    /* Responsive adjustment for mobile/collapsed sidebar */
     @media (max-width: 768px) {{
         .sticky-header-container {{ left: 0; }}
     }}
 
-    .main-title {{
-        color: #1A1A1A;
-        font-weight: 800;
-        font-size: 3.5rem;
-        margin: 0;
-    }}
+    .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
+    .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    .title-subtext {{
-        color: #666666;
-        font-size: 1.1rem;
-        margin-top: -5px;
-    }}
-
-    /* --- CHAT AREA POSITIONING --- */
-    /* Chats will start below the fixed header */
+    /* --- CHAT AREA --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
-        margin: 150px auto 120px auto !important; /* Top margin for header, Bottom for search bar */
+        margin: 150px auto 120px auto !important;
         padding-top: 0 !important;
     }}
 
-    div[data-testid="stChatMessage"] {{
-        border-radius: 12px;
-        margin-bottom: 1rem !important;
-        border: 1px solid #EEEEEE !important;
-    }}
-
-    /* --- SIDEBAR TABS --- */
+    /* --- SIDEBAR TABS (Shiny Violet) --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
+        width: 320px !important;
     }}
 
     .stButton>button, [data-testid="stLinkButton"] > a {{
@@ -108,11 +90,13 @@ st.markdown(f"""
         border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         margin-bottom: 12px !important;
+        text-decoration: none !important;
+        display: block !important;
+        text-align: center !important;
     }}
 
-    /* --- BOTTOM SEARCH BAR --- */
+    /* --- SEARCH BAR (RESTORED HEIGHT) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -126,23 +110,34 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important;
+        height: 80px !important; /* FIXED HEIGHT */
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* --- PLUS & MIC TABS --- */
+    div[data-testid="stChatInput"] textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important;
+        padding: 15px 60px 15px 95px !important; 
+        line-height: 1.4 !important;
+        border: none !important;
+        height: 80px !important;
+    }}
+
+    /* --- ICONS POSITIONING --- */
     .input-btn-base {{
         position: fixed;
         width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        z-index: 1001; bottom: 44px !important;
+        z-index: 1001; 
+        bottom: 44px !important; /* Centered in 80px height */
     }}
-    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; }}
-    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; }}
+    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
+    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
 
-    /* Arrow button adjustments */
+    /* Arrow Tab */
     div[data-testid="stChatInput"] button {{
         bottom: 22px !important;
         background-color: #1A1A1A !important;
@@ -151,10 +146,7 @@ st.markdown(f"""
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    .signature-box {{ 
-        margin-top: 40px; padding: 15px; border-radius: 8px; 
-        background: #EAECEF; border: 1px solid #CCC; text-align: center; 
-    }}
+    .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -168,7 +160,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR (TOOLS SECTION)
+# 5. SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -177,16 +169,15 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("Chat history feature coming soon!")
+        st.toast("Feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. FIXED HEADER RENDER
+# 6. FIXED HEADER
 # ==========================================
-# This div stays fixed at the top and hides chats scrolling underneath
 st.markdown(f"""
     <div class="sticky-header-container">
         <h1 class="main-title">AskMNIT</h1>
@@ -195,16 +186,15 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 7. CHAT DISPLAY AREA
+# 7. CHAT DISPLAY
 # ==========================================
-# Chat messages are inside the container defined in CSS with top margin
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & TABS UI
+# 8. CHAT INPUT & TABS
 # ==========================================
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
@@ -220,7 +210,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur students."} , 
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

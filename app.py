@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Font & Minimalist User Chat)
+# 3. CSS (Fixed Search Bar Height & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -68,37 +68,14 @@ st.markdown(f"""
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA & FONT SIZE --- */
+    /* --- CHAT AREA --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
         padding-top: 0 !important;
     }}
 
-    /* Sabhi chat text ka size badhaya */
-    [data-testid="stChatMessage"] p {{
-        font-size: 1.15rem !important;
-        line-height: 1.6 !important;
-        color: #1A1A1A !important;
-    }}
-
-    /* USER MESSAGE: No Box, No Border */
-    div[data-testid="stChatMessage"]:nth-child(odd) {{
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding-left: 0 !important;
-    }}
-
-    /* AI MESSAGE: Subtle separation */
-    div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #FFFFFF !important;
-        border: 1px solid #F0F0F0 !important;
-        border-radius: 12px;
-        margin-bottom: 1.5rem !important;
-    }}
-
-    /* --- SIDEBAR TABS --- */
+    /* --- SIDEBAR TABS (Shiny Violet) --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
@@ -119,7 +96,7 @@ st.markdown(f"""
         text-align: center !important;
     }}
 
-    /* --- SEARCH BAR --- */
+    /* --- SEARCH BAR (RESTORED HEIGHT) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -133,21 +110,41 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important;
+        height: 80px !important; /* FIXED HEIGHT */
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* --- ICONS --- */
+    div[data-testid="stChatInput"] textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important;
+        padding: 15px 60px 15px 95px !important; 
+        line-height: 1.4 !important;
+        border: none !important;
+        height: 80px !important;
+    }}
+
+    /* --- ICONS POSITIONING --- */
     .input-btn-base {{
         position: fixed;
         width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        z-index: 1001; bottom: 44px !important;
+        z-index: 1001; 
+        bottom: 44px !important; /* Centered in 80px height */
     }}
     .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
+
+    /* Arrow Tab */
+    div[data-testid="stChatInput"] button {{
+        bottom: 22px !important;
+        background-color: #1A1A1A !important;
+        border-radius: 50% !important;
+    }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
@@ -213,7 +210,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

@@ -1,4 +1,4 @@
-    import streamlit as st
+import streamlit as st
 import urllib.parse
 import time
 import base64

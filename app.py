@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Fixed Search Bar Height & Sticky Header)
+# 3. CSS (Purple Arrow, Sticky Header & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -46,11 +46,23 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
+    /* --- PURPLE SIDEBAR ARROW BUTTON --- */
+    button[data-testid="sidebar-button-container"] svg {{
+        fill: #8A63FF !important; /* Purple color */
+        color: #8A63FF !important;
+        transform: scale(1.2); /* Slightly larger for visibility */
+    }}
+    
+    button[data-testid="sidebar-button-container"] {{
+        background-color: transparent !important;
+    }}
+
     /* --- FIXED STICKY HEADER --- */
+    /* Dynamic width based on sidebar state */
     .sticky-header-container {{
         position: fixed;
         top: 0;
-        left: 320px;
+        left: 0;
         right: 0;
         height: 140px;
         background-color: #FFFFFF;
@@ -59,27 +71,41 @@ st.markdown(f"""
         flex-direction: column;
         justify-content: center;
         align-items: center;
-    }}
-    
-    @media (max-width: 768px) {{
-        .sticky-header-container {{ left: 0; }}
+        border-bottom: 1px solid transparent;
     }}
 
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA --- */
+    /* --- CHAT AREA & FONT --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
         padding-top: 0 !important;
     }}
 
-    /* --- SIDEBAR TABS (Shiny Violet) --- */
+    [data-testid="stChatMessage"] p {{
+        font-size: 1.15rem !important;
+        line-height: 1.6 !important;
+        color: #1A1A1A !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(odd) {{
+        background-color: transparent !important;
+        border: none !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(even) {{
+        background-color: #FFFFFF !important;
+        border: 1px solid #F0F0F0 !important;
+        border-radius: 12px;
+        margin-bottom: 1.5rem !important;
+    }}
+
+    /* --- SIDEBAR TABS --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
-        width: 320px !important;
     }}
 
     .stButton>button, [data-testid="stLinkButton"] > a {{
@@ -91,16 +117,15 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         margin-bottom: 12px !important;
+        text-align: center !important;
         text-decoration: none !important;
         display: block !important;
-        text-align: center !important;
     }}
 
-    /* --- SEARCH BAR (RESTORED HEIGHT) --- */
+    /* --- SEARCH BAR (80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
-        background-color: transparent !important;
         position: fixed !important;
         bottom: 20px !important;
         left: 0; right: 0; z-index: 999;
@@ -110,7 +135,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important; /* FIXED HEIGHT */
+        height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
@@ -124,7 +149,7 @@ st.markdown(f"""
         height: 80px !important;
     }}
 
-    /* --- ICONS POSITIONING --- */
+    /* --- ICONS --- */
     .input-btn-base {{
         position: fixed;
         width: 32px; height: 32px;
@@ -132,12 +157,11 @@ st.markdown(f"""
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         z-index: 1001; 
-        bottom: 44px !important; /* Centered in 80px height */
+        bottom: 44px !important;
     }}
     .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
 
-    /* Arrow Tab */
     div[data-testid="stChatInput"] button {{
         bottom: 22px !important;
         background-color: #1A1A1A !important;
@@ -160,7 +184,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR
+# 5. SIDEBAR (TOOLS SECTION)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -169,7 +193,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("Feature coming soon!")
+        st.toast("History feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
@@ -194,7 +218,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & TABS
+# 8. CHAT INPUT & TABS UI
 # ==========================================
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
@@ -210,7 +234,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

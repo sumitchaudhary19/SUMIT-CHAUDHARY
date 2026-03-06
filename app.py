@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Fixed Search Bar Size & Sticky Header)
+# 3. CSS (Sticky Header, Dark Grey Arrow, & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -45,6 +45,12 @@ st.markdown(f"""
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
+
+    /* --- SIDEBAR ARROW COLOR (DARK GREY) --- */
+    button[data-testid="sidebar-button-container"] svg {{
+        fill: #333333 !important;
+        color: #333333 !important;
+    }}
 
     /* --- FIXED STICKY HEADER --- */
     .sticky-header-container {{
@@ -81,11 +87,13 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
 
+    /* USER MESSAGE: Transparent */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: transparent !important;
         border: none !important;
     }}
 
+    /* AI MESSAGE: White Box */
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0F0F0 !important;
@@ -93,7 +101,7 @@ st.markdown(f"""
         margin-bottom: 1.5rem !important;
     }}
 
-    /* --- SIDEBAR --- */
+    /* --- SIDEBAR TABS --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
@@ -110,13 +118,14 @@ st.markdown(f"""
         font-weight: 600 !important;
         margin-bottom: 12px !important;
         text-align: center !important;
+        text-decoration: none !important;
+        display: block !important;
     }}
 
-    /* --- SEARCH BAR (LOCKING HEIGHT AT 80PX) --- */
+    /* --- SEARCH BAR (80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
-        background-color: transparent !important;
         position: fixed !important;
         bottom: 20px !important;
         left: 0; right: 0; z-index: 999;
@@ -126,7 +135,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important; /* HEIGHT LOCKED */
+        height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
@@ -148,7 +157,7 @@ st.markdown(f"""
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         z-index: 1001; 
-        bottom: 44px !important; /* Centered in search bar */
+        bottom: 44px !important;
     }}
     .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
@@ -184,7 +193,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("History coming soon!")
+        st.toast("History feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

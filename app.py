@@ -19,16 +19,16 @@ else:
 # 2. SESSION STATE SETUP
 # ==========================================
 if "sessions" not in st.session_state:
-    st.session_state.sessions = {"New Session": []}
+    st.session_state.sessions = {"Session 1": []}
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "New Session"
+    st.session_state.current_chat = "Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Balanced Search Bar Height & Styling)
+# 3. CSS (Popups, Buttons & Layout)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -59,8 +59,8 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* --- SHINY VIOLET TABS (Longer & Symmetric) --- */
-    .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
+    /* --- SHINY VIOLET TABS --- */
+    .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -72,25 +72,30 @@ st.markdown(f"""
         text-align: center !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
-        text-decoration: none !important;
         display: block !important;
         margin-bottom: 12px !important;
     }}
 
-    .stButton>button:hover, [data-testid="stLinkButton"] > a:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(138, 99, 255, 0.5) !important;
-        background: linear-gradient(135deg, #9D7CFF 0%, #7B52F2 100%) !important;
-    }}
-
-    /* DIALOG STYLING */
+    /* DIALOG / POPUP STYLING (Grey & Square) */
     div[data-testid="stDialog"] div[role="dialog"] {{
         background-color: #2C2C2C !important;
         border-radius: 15px !important;
         border: 1px solid #444 !important;
     }}
+    
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p, div[data-testid="stDialog"] label {{
+        color: white !important;
+    }}
 
-    /* --- SEARCH BAR STYLING (HEIGHT BALANCED AT 80PX) --- */
+    /* History Session Buttons (Inside Popup) */
+    .history-btn > button {{
+        background: rgba(255,255,255,0.1) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        color: white !important;
+        margin-bottom: 8px !important;
+    }}
+
+    /* SEARCH BAR STYLING */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -104,21 +109,17 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important; /* Balanced Height */
+        height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
     div[data-testid="stChatInput"] textarea {{
         background-color: #FFFFFF !important;
         color: #1A1A1A !important;
-        font-size: 1.1rem !important;
         padding: 15px 60px 15px 15px !important; 
-        line-height: 1.4 !important;
-        border: none !important;
-        height: 80px !important; /* Matches parent */
+        height: 80px !important;
     }}
 
-    /* DARK GREY PLUS TAB */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
@@ -127,26 +128,22 @@ st.markdown(f"""
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
-        font-size: 20px; font-weight: 400;
-        z-index: 1001; bottom: 44px !important; /* Adjusted for 80px height */
+        z-index: 1001; bottom: 44px !important;
     }}
 
-    /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important;
-        bottom: 22px !important; /* Adjusted for 80px height */
+        bottom: 22px !important; 
         width: 35px !important; height: 35px !important;
     }}
 
     div[data-testid="stChatInput"] button::after {{
-        content: ">";
-        color: #FFFFFF; font-weight: 900; font-size: 1.2rem;
+        content: ">"; color: white; font-weight: 900; font-size: 1.2rem;
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Header Positioning */
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     
@@ -158,13 +155,23 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. UNIVERSITY TOOLS DIALOG
+# 4. DIALOGS (UNIVERSITY TOOLS & CHAT HISTORY)
 # ==========================================
 @st.dialog("University Tools")
 def open_uni_tools():
-    st.write("Access MNIT Student Portals:")
+    st.write("Access MNIT Portals:")
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
+
+@st.dialog("Chat History 🕑")
+def open_chat_history():
+    st.write("Select a previous session to continue:")
+    for session_name in st.session_state.sessions.keys():
+        # Highlighting the current active session
+        label = f"● {session_name}" if session_name == st.session_state.current_chat else session_name
+        if st.button(label, key=f"hist_{session_name}", use_container_width=True):
+            st.session_state.current_chat = session_name
+            st.rerun()
 
 # ==========================================
 # 5. SIDEBAR (TOOLS SECTION)
@@ -173,12 +180,13 @@ with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
     
     if st.button("➕ New Session"):
-        st.session_state.sessions = {"New Session": []}
-        st.session_state.current_chat = "New Session"
+        new_id = f"Session {len(st.session_state.sessions) + 1}"
+        st.session_state.sessions[new_id] = []
+        st.session_state.current_chat = new_id
         st.rerun()
 
     if st.button("Chat History 🕑"):
-        st.toast("Chat history feature coming soon!")
+        open_chat_history()
 
     if st.button("University Tools ⚙️"):
         open_uni_tools()
@@ -218,7 +226,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

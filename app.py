@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Mic Tab, Centered Pills & Header logic)
+# 3. CSS (Buttons, Pills & Animations)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -39,14 +39,11 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
     }}
     
-    [data-testid="stMain"] {{
-        background-color: #FFFFFF !important;
-    }}
-
+    [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- SIDEBAR LOCK --- */
+    /* --- SIDEBAR --- */
     button[data-testid="sidebar-button-container"] {{ display: none !important; }}
     [data-testid="collapsedControl"] {{ display: none !important; }}
 
@@ -62,11 +59,8 @@ st.markdown(f"""
 
     /* --- CENTERED SUGGESTION PILLS --- */
     .pill-wrapper {{
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        margin-top: 150px; /* Positioned below the fixed header */
-        width: 100%;
+        display: flex; justify-content: center; gap: 12px;
+        margin-top: 150px; width: 100%;
     }}
 
     div.stButton > button[key^="pill_"] {{
@@ -76,15 +70,7 @@ st.markdown(f"""
         border-radius: 50px !important;
         padding: 10px 22px !important;
         font-size: 0.95rem !important;
-        font-weight: 500 !important;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-        width: auto !important;
-        min-width: unset !important;
-    }}
-
-    div.stButton > button[key^="pill_"]:hover {{
-        border-color: #8A63FF !important;
-        background-color: #F9F9F9 !important;
     }}
 
     /* --- CHAT AREA --- */
@@ -105,12 +91,10 @@ st.markdown(f"""
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
         border-radius: 10px !important;
-        padding: 14px 20px !important;
         font-weight: 600 !important;
-        margin-bottom: 12px !important;
     }}
 
-    /* --- SEARCH BAR --- */
+    /* --- SEARCH BAR (80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -129,33 +113,54 @@ st.markdown(f"""
 
     div[data-testid="stChatInput"] textarea {{
         background-color: #FFFFFF !important;
-        padding: 15px 60px 15px 95px !important; /* Adjusted for 2 buttons */
+        padding: 15px 60px 15px 95px !important;
         height: 80px !important;
     }}
 
-    .plus-tab-ui {{
-        position: fixed; width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        z-index: 1001; bottom: 44px !important;
-        left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px;
+    /* --- CLICKABLE ICONS (Now using st.button logic) --- */
+    .icon-click-zone {{
+        position: fixed;
+        z-index: 1002;
+        bottom: 44px !important;
     }}
-    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
 
-    div[data-testid="stChatInput"] button {{
-        bottom: 22px !important; background-color: #1A1A1A !important; border-radius: 50% !important;
-        right: 15px !important;
+    /* Floating Dialog for Voice */
+    .voice-pulse {{
+        width: 60px; height: 60px;
+        background: #8A63FF;
+        border-radius: 50%;
+        margin: 20px auto;
+        animation: pulse 1.5s infinite;
     }}
-    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
-    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
+    @keyframes pulse {{
+        0% {{ transform: scale(0.9); opacity: 0.7; }}
+        50% {{ transform: scale(1.1); opacity: 1; }}
+        100% {{ transform: scale(0.9); opacity: 0.7; }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. DIALOGS
+# 4. DIALOGS (File Upload & Voice)
 # ==========================================
+@st.dialog("Upload Documents 📄")
+def open_upload_dialog():
+    st.write("Upload your notes or images for analysis:")
+    uploaded_file = st.file_uploader("Choose a file", type=['pdf', 'png', 'jpg', 'jpeg'])
+    if uploaded_file:
+        st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+        if st.button("Analyze with AI"):
+            st.toast("Feature coming soon: Image/PDF analysis!")
+
+@st.dialog("Voice Search 🎤")
+def open_voice_dialog():
+    st.markdown('<div class="voice-pulse"></div>', unsafe_allow_html=True)
+    st.write("Listening to your voice...")
+    st.info("Tip: Speak clearly about MNIT academics or campus.")
+    if st.button("Stop Recording"):
+        st.rerun()
+
 @st.dialog("University Tools")
 def open_uni_tools():
     st.write("Access MNIT Student Portals:")
@@ -186,7 +191,7 @@ with st.sidebar:
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
-    st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div style="text-align:center; margin-top:20px; color:#666;">Architected by<br><b>SUMIT CHAUDHARY</b></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. HEADER
@@ -205,32 +210,38 @@ if is_chat_empty:
     st.markdown('<div class="pill-wrapper">', unsafe_allow_html=True)
     cols = st.columns([2, 1, 1, 1, 2])
     suggestions = ["Class schedule?", "Mineral Processing notes", "Metallurgy Syllabus"]
-    
     if cols[1].button(suggestions[0], key="pill_1"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[0]})
-        st.session_state.pending_generation = True
-        st.rerun()
+        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[0]}); st.session_state.pending_generation = True; st.rerun()
     if cols[2].button(suggestions[1], key="pill_2"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[1]})
-        st.session_state.pending_generation = True
-        st.rerun()
+        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[1]}); st.session_state.pending_generation = True; st.rerun()
     if cols[3].button(suggestions[2], key="pill_3"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[2]})
-        st.session_state.pending_generation = True
-        st.rerun()
+        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[2]}); st.session_state.pending_generation = True; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    avatar_icon = "👤" if message["role"] == "user" else "🤖"
-    with st.chat_message(message["role"], avatar=avatar_icon):
+    with st.chat_message(message["role"], avatar="👤" if message["role"] == "user" else "🤖"):
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & TABS UI
+# 8. CHAT INPUT & CLICKABLE ICONS
 # ==========================================
-# Mice icon rendering fix
-st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
-st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
+# Fixed Position Buttons that trigger Dialogs
+col_plus, col_mic = st.columns([1, 1])
+with st.container():
+    # Render invisible buttons over the UI icons
+    st.markdown(f"""
+        <div class="icon-click-zone" style="left: calc(50% - 310px);">
+    """, unsafe_allow_html=True)
+    if st.button("+", key="plus_click", help="Upload Files"):
+        open_upload_dialog()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div class="icon-click-zone" style="left: calc(50% - 270px);">
+    """, unsafe_allow_html=True)
+    if st.button("🎤", key="mic_click", help="Voice Search"):
+        open_voice_dialog()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
@@ -240,25 +251,14 @@ if prompt := st.chat_input("Ask me anything..."):
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     with st.chat_message("assistant", avatar="🤖"):
-        try:
-            def generate_response():
-                stream = client.chat.completions.create(
-                    messages=[
-                        # --- UPDATED SYSTEM PROMPT FOR CLARIFICATION ---
-                        {"role": "system", "content": """You are 'AskMNIT', an AI assistant for MNIT Jaipur students. 
-You can generate text responses and detailed text descriptions for images (prompts), but you CANNOT create or display actual images/photos yourself. 
-If a user asks for an image, clarify that you cannot make it, but you will provide a detailed text description they can use with other AI image generators."""},
-                        {"role": "user", "content": user_query}
-                    ],
-                    model="llama-3.3-70b-versatile",
-                    temperature=0.7,
-                    stream=True
-                )
-                for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
-                        yield chunk.choices[0].delta.content
-            response_text = st.write_stream(generate_response())
-            st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+        def generate_response():
+            stream = client.chat.completions.create(
+                messages=[{"role": "system", "content": "You are AskMNIT Jaipur Assistant."},
+                          {"role": "user", "content": user_query}],
+                model="llama-3.3-70b-versatile", stream=True
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
+        response_text = st.write_stream(generate_response())
+        st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
     st.session_state.pending_generation = False

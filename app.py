@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Balanced Search Bar Height & Styling)
+# 3. CSS (Updated with Mic Tab)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -59,7 +59,7 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* --- SHINY VIOLET TABS (Longer & Symmetric) --- */
+    /* SHINY VIOLET TABS */
     .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
@@ -72,25 +72,10 @@ st.markdown(f"""
         text-align: center !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
-        text-decoration: none !important;
-        display: block !important;
         margin-bottom: 12px !important;
     }}
 
-    .stButton>button:hover, [data-testid="stLinkButton"] > a:hover {{
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(138, 99, 255, 0.5) !important;
-        background: linear-gradient(135deg, #9D7CFF 0%, #7B52F2 100%) !important;
-    }}
-
-    /* DIALOG STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {{
-        background-color: #2C2C2C !important;
-        border-radius: 15px !important;
-        border: 1px solid #444 !important;
-    }}
-
-    /* --- SEARCH BAR STYLING (HEIGHT BALANCED AT 80PX) --- */
+    /* SEARCH BAR STYLING */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -104,7 +89,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important; /* Balanced Height */
+        height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
@@ -112,23 +97,34 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         color: #1A1A1A !important;
         font-size: 1.1rem !important;
-        padding: 15px 60px 15px 15px !important; 
+        padding: 15px 60px 15px 95px !important; /* Padding adjusted for two buttons */
         line-height: 1.4 !important;
         border: none !important;
-        height: 80px !important; /* Matches parent */
+        height: 80px !important;
     }}
 
-    /* DARK GREY PLUS TAB */
-    .plus-tab-ui {{
+    /* DARK GREY BUTTONS BASE */
+    .input-btn-base {{
         position: fixed;
-        left: calc(50% - 310px);
         width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
+        z-index: 1001; bottom: 44px !important;
+    }}
+
+    /* PLUS TAB */
+    .plus-tab-ui {{
+        left: calc(50% - 310px);
         color: #FFFFFF !important;
         font-size: 20px; font-weight: 400;
-        z-index: 1001; bottom: 44px !important; /* Adjusted for 80px height */
+    }}
+
+    /* MIC TAB */
+    .mic-tab-ui {{
+        left: calc(50% - 270px); /* Positioned right of plus button */
+        color: #A0A0A0 !important; /* Light Grey Symbol */
+        font-size: 18px;
     }}
 
     /* Arrow Tab Design */
@@ -136,7 +132,7 @@ st.markdown(f"""
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important;
-        bottom: 22px !important; /* Adjusted for 80px height */
+        bottom: 22px !important;
         width: 35px !important; height: 35px !important;
     }}
 
@@ -203,9 +199,11 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT & PLUS UI
+# 7. CHAT INPUT & TABS UI
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+# Rendering Plus and Mic Tabs inside the search bar visually
+st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
+st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

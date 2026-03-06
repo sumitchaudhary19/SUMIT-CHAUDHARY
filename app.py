@@ -36,7 +36,7 @@ else:
     plus_tab_pos = "bottom: 32px !important;"
 
 # ==========================================
-# 3. CSS (Updated with Hidden File Uploader Overlay)
+# 3. CSS (Updated Placeholder Color)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -109,6 +109,12 @@ st.markdown(f"""
         border: none !important;
     }}
 
+    /* --- Light Grey Placeholder Text --- */
+    div[data-testid="stChatInput"] textarea::placeholder {{
+        color: #A0A0A0 !important; /* Light Grey Color */
+        opacity: 1 !important;
+    }}
+
     /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
@@ -147,7 +153,7 @@ st.markdown(f"""
         font-weight: 400;
         z-index: 1001;
         transition: 0.3s ease-in-out;
-        pointer-events: none; /* Click falls through to the real uploader */
+        pointer-events: none;
         {plus_tab_pos}
     }}
 
@@ -158,7 +164,7 @@ st.markdown(f"""
         width: 32px !important;
         height: 32px !important;
         z-index: 1002 !important;
-        opacity: 0 !important; /* Fully invisible but clickable */
+        opacity: 0 !important;
         {plus_tab_pos}
     }}
     div[data-testid="stFileUploader"] section {{
@@ -223,7 +229,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # Visual Plus Tab
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 
-# Functional (Hidden) Uploader - Exact overlay on the + tab
+# Functional (Hidden) Uploader
 uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
 
 if uploaded_file:
@@ -241,7 +247,7 @@ if st.session_state.pending_generation:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
+                        {"role": "system", "content": "You are 'AskMNIT', a professional AI assistant for MNIT Jaipur students."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",

@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Fixed Search Bar Size & Sticky Header)
+# 3. CSS (Increased Font & Minimalist User Chat)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -68,24 +68,29 @@ st.markdown(f"""
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA --- */
+    /* --- CHAT AREA & FONT SIZE --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
         padding-top: 0 !important;
     }}
 
+    /* Sabhi chat text ka size badhaya */
     [data-testid="stChatMessage"] p {{
         font-size: 1.15rem !important;
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
 
+    /* USER MESSAGE: No Box, No Border */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: transparent !important;
         border: none !important;
+        box-shadow: none !important;
+        padding-left: 0 !important;
     }}
 
+    /* AI MESSAGE: Subtle separation */
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0F0F0 !important;
@@ -93,7 +98,7 @@ st.markdown(f"""
         margin-bottom: 1.5rem !important;
     }}
 
-    /* --- SIDEBAR --- */
+    /* --- SIDEBAR TABS --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
@@ -109,10 +114,12 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         margin-bottom: 12px !important;
+        text-decoration: none !important;
+        display: block !important;
         text-align: center !important;
     }}
 
-    /* --- SEARCH BAR (LOCKING HEIGHT AT 80PX) --- */
+    /* --- SEARCH BAR --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -126,18 +133,8 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important; /* HEIGHT LOCKED */
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-    }}
-
-    div[data-testid="stChatInput"] textarea {{
-        background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
-        font-size: 1.1rem !important;
-        padding: 15px 60px 15px 95px !important; 
-        line-height: 1.4 !important;
-        border: none !important;
         height: 80px !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
     /* --- ICONS --- */
@@ -147,19 +144,10 @@ st.markdown(f"""
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        z-index: 1001; 
-        bottom: 44px !important; /* Centered in search bar */
+        z-index: 1001; bottom: 44px !important;
     }}
     .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
-
-    div[data-testid="stChatInput"] button {{
-        bottom: 22px !important;
-        background-color: #1A1A1A !important;
-        border-radius: 50% !important;
-    }}
-    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
-    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
@@ -184,7 +172,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("History coming soon!")
+        st.toast("Feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
@@ -209,7 +197,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & TABS UI
+# 8. CHAT INPUT & TABS
 # ==========================================
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)

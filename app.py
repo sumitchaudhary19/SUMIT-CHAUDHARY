@@ -5,7 +5,7 @@ import base64
 from groq import Groq
 
 # ==========================================
-# 1. PAGE CONFIG (Sidebar Always Expanded)
+# 1. PAGE CONFIG
 # ==========================================
 st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Locked Sidebar & No Arrow)
+# 3. CSS (The Final Fix for Layout & Overlap)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -46,52 +46,53 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- REMOVING SIDEBAR ARROW (LOCKED OPEN) --- */
-    button[data-testid="sidebar-button-container"] {{
-        display: none !important;
-    }}
-    
-    /* Disabling sidebar collapse control on small screens too */
-    [data-testid="collapsedControl"] {{
-        display: none !important;
-    }}
+    /* --- SIDEBAR ARROW REMOVAL (Locked Open) --- */
+    button[data-testid="sidebar-button-container"] {{ display: none !important; }}
+    [data-testid="collapsedControl"] {{ display: none !important; }}
 
-    /* --- FIXED STICKY HEADER --- */
-    .sticky-header-container {{
+    /* --- STICKY HEADER (Fixed within Main Content Only) --- */
+    .sticky-header {{
         position: fixed;
         top: 0;
-        left: 320px; /* Aligned with sidebar width */
         right: 0;
+        left: 320px; /* Aligned exactly with sidebar width */
         height: 140px;
         background-color: #FFFFFF;
-        z-index: 1000;
+        z-index: 999;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        border-bottom: 1px solid transparent;
+    }}
+    
+    @media (max-width: 768px) {{
+        .sticky-header {{ left: 0; }}
     }}
 
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA --- */
+    /* --- CHAT CONTAINER --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
-        margin: 150px auto 120px auto !important;
-        padding-top: 0 !important;
+        margin: 140px auto 120px auto !important; /* Starts below header, ends before search bar */
+        padding-top: 20px !important;
     }}
 
+    /* Sabhi chat text ka size */
     [data-testid="stChatMessage"] p {{
         font-size: 1.15rem !important;
         line-height: 1.6 !important;
-        color: #1A1A1A !important;
     }}
 
+    /* User Message: No Box */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: transparent !important;
         border: none !important;
     }}
 
+    /* AI Message: Subtle Border */
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0F0F0 !important;
@@ -103,7 +104,8 @@ st.markdown(f"""
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
-        width: 320px !important; /* Fixed width */
+        width: 320px !important;
+        z-index: 1000 !important; /* Higher than sticky header */
     }}
 
     .stButton>button, [data-testid="stLinkButton"] > a {{
@@ -117,16 +119,16 @@ st.markdown(f"""
         margin-bottom: 12px !important;
         text-align: center !important;
         display: block !important;
-        text-decoration: none !important;
     }}
 
-    /* --- SEARCH BAR (80PX) --- */
+    /* --- SEARCH BAR (Locked 80px) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
         position: fixed !important;
         bottom: 20px !important;
-        left: 0; right: 0; z-index: 999;
+        left: 0; right: 0; 
+        z-index: 998;
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -182,7 +184,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR (PERMANENTLY VISIBLE)
+# 5. SIDEBAR (STAYS LOCKED)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -198,10 +200,10 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. FIXED HEADER
+# 6. FIXED HEADER (MAIN AREA ONLY)
 # ==========================================
 st.markdown(f"""
-    <div class="sticky-header-container">
+    <div class="sticky-header">
         <h1 class="main-title">AskMNIT</h1>
         <p class="title-subtext">Your Professional AI Assistant</p>
     </div>
@@ -232,7 +234,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

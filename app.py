@@ -30,13 +30,13 @@ is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) ==
 # Dynamic positioning logic based on chat state
 if is_chat_empty:
     chat_input_pos = "top: 45vh !important; transform: translateY(-50%) !important;"
-    plus_tab_pos = "top: calc(45vh + 35px) !important;"
+    plus_tab_pos = "top: calc(45vh + 32px) !important;"
 else:
     chat_input_pos = "bottom: 20px !important;"
-    plus_tab_pos = "bottom: 35px !important;"
+    plus_tab_pos = "bottom: 32px !important;"
 
 # ==========================================
-# 3. CSS (Updated Positioning Logic)
+# 3. CSS (Updated with Hidden File Uploader Overlay)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -109,11 +109,6 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #BBBBBB !important;
-        opacity: 1 !important;
-    }}
-
     /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
@@ -136,8 +131,8 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* Fixed Plus Tab Dynamic Position */
-    .plus-tab {{
+    /* --- Fixed Plus Tab Visual --- */
+    .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
         width: 32px;
@@ -152,7 +147,22 @@ st.markdown(f"""
         font-weight: 400;
         z-index: 1001;
         transition: 0.3s ease-in-out;
+        pointer-events: none; /* Click falls through to the real uploader */
         {plus_tab_pos}
+    }}
+
+    /* --- Hidden Real Uploader Overlay --- */
+    div[data-testid="stFileUploader"] {{
+        position: fixed !important;
+        left: calc(50% - 310px) !important;
+        width: 32px !important;
+        height: 32px !important;
+        z-index: 1002 !important;
+        opacity: 0 !important; /* Fully invisible but clickable */
+        {plus_tab_pos}
+    }}
+    div[data-testid="stFileUploader"] section {{
+        padding: 0 !important;
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -201,18 +211,23 @@ if is_chat_empty:
     st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 10vh;'>AskMNIT</h1>", unsafe_allow_html=True)
     st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
 
-# Display conversations
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & BACKEND LOGIC
+# 6. CHAT INPUT & FILE UPLOAD LOGIC
 # ==========================================
 
-# Plus Tab
-st.markdown('<div class="plus-tab">+</div>', unsafe_allow_html=True)
+# Visual Plus Tab
+st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+
+# Functional (Hidden) Uploader - Exact overlay on the + tab
+uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
+
+if uploaded_file:
+    st.toast(f"📎 File '{uploaded_file.name}' attached successfully!")
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

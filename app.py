@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Locked Bottom Positioning)
+# 3. CSS (Centered Chat Bars & Consistent Length)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -56,19 +56,29 @@ st.markdown(f"""
         background-color: transparent !important;
     }}
 
-    /* --- Chat Message Styling --- */
+    /* --- Chat Layout Centralization --- */
+    /* Isse poora chat container middle mein align hoga */
+    [data-testid="stChatMessageContainer"] {{
+        max-width: 800px !important;
+        margin: 0 auto !important;
+        padding-top: 2rem !important;
+    }}
+
+    /* --- Chat Message Styling (Centered & Same Length) --- */
+    div[data-testid="stChatMessage"] {{
+        border-radius: 12px;
+        margin-bottom: 1.5rem !important;
+        width: 100% !important; /* Bars keep their relative length within the 800px container */
+    }}
+
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: #2C2C2C !important;
         border: 1px solid #444 !important;
-        border-radius: 12px;
-        max-width: 75% !important;
-        margin-left: auto !important;
     }}
 
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #212121 !important;
         border: 1px solid #333 !important;
-        border-radius: 12px;
     }}
 
     /* --- LOCKED BOTTOM SEARCH BAR --- */
@@ -80,7 +90,7 @@ st.markdown(f"""
         left: 0;
         right: 0;
         z-index: 999;
-        bottom: 20px !important; /* Always at bottom */
+        bottom: 20px !important;
     }}
 
     div[data-testid="stChatInput"] > div {{
@@ -128,7 +138,7 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    /* --- Fixed Plus Tab Visual (Locked at Bottom) --- */
+    /* Fixed Plus Tab Visual */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
@@ -143,11 +153,11 @@ st.markdown(f"""
         font-size: 20px;
         font-weight: 400;
         z-index: 1001;
-        bottom: 32px !important; /* Locked position */
+        bottom: 32px !important;
         pointer-events: none;
     }}
 
-    /* --- Hidden Real Uploader Overlay --- */
+    /* Hidden Real Uploader Overlay */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         left: calc(50% - 310px) !important;
@@ -155,10 +165,7 @@ st.markdown(f"""
         height: 32px !important;
         z-index: 1002 !important;
         opacity: 0 !important;
-        bottom: 32px !important; /* Locked position */
-    }}
-    div[data-testid="stFileUploader"] section {{
-        padding: 0 !important;
+        bottom: 32px !important;
     }}
 
     section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
@@ -216,16 +223,12 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # 6. CHAT INPUT & FILE UPLOAD LOGIC
 # ==========================================
 
-# Visual Plus Tab (Always at bottom)
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
-
-# Functional (Hidden) Uploader (Always at bottom)
 uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
 
 if uploaded_file:
     st.toast(f"📎 File '{uploaded_file.name}' attached successfully!")
 
-# Chat Input (Always at bottom)
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True

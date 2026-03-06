@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated Tab Length & Dialog Styling)
+# 3. CSS (Restored Search Bar Height & Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -56,18 +56,18 @@ st.markdown(f"""
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
-        width: 320px !important; /* Sidebar width adjusted for longer tabs */
+        width: 320px !important;
     }}
 
     /* --- SHINY VIOLET TABS (Longer & Symmetric) --- */
     .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
-        width: 100% !important; /* Spans full sidebar width */
-        min-width: 250px !important; /* Minimum length increased */
+        width: 100% !important;
+        min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 14px 20px !important; /* Slightly more padding for size */
+        padding: 14px 20px !important;
         font-weight: 600 !important;
         text-align: center !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
@@ -90,7 +90,7 @@ st.markdown(f"""
         border: 1px solid #444 !important;
     }}
 
-    /* SEARCH BAR STYLING */
+    /* --- SEARCH BAR STYLING (HEIGHT RESTORED) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -104,8 +104,18 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 120px !important;
+        height: 120px !important; /* Height restored to 120px */
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    }}
+
+    div[data-testid="stChatInput"] textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important;
+        padding: 10px 60px 50px 15px !important; 
+        line-height: 1.5 !important;
+        border: none !important;
+        height: 120px !important; /* Matches parent height */
     }}
 
     /* DARK GREY PLUS TAB */
@@ -120,6 +130,21 @@ st.markdown(f"""
         font-size: 22px; font-weight: 400;
         z-index: 1001; bottom: 32px !important;
     }}
+
+    /* Arrow Tab Design */
+    div[data-testid="stChatInput"] button {{
+        background-color: #1A1A1A !important;
+        border-radius: 50% !important;
+        right: 15px !important;
+        bottom: 42px !important; 
+        width: 35px !important;
+    }}
+
+    div[data-testid="stChatInput"] button::after {{
+        content: ">";
+        color: #FFFFFF; font-weight: 900; font-size: 1.2rem;
+    }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     /* Header Positioning */
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
@@ -147,7 +172,6 @@ def open_uni_tools():
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
     
-    # Symmetric Sidebar Tabs
     if st.button("➕ New Session"):
         st.session_state.sessions = {"New Session": []}
         st.session_state.current_chat = "New Session"
@@ -194,7 +218,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

@@ -110,7 +110,7 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- SEARCH BAR (80PX) --- */
+    /* --- SEARCH BAR --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -133,18 +133,18 @@ st.markdown(f"""
         height: 80px !important;
     }}
 
-    /* --- MIC & PLUS ICONS --- */
-    .input-btn-base {{
+    .plus-tab-ui {{
         position: fixed; width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%; display: flex; align-items: center; justify-content: center;
         z-index: 1001; bottom: 44px !important;
+        left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px;
     }}
-    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
 
     div[data-testid="stChatInput"] button {{
         bottom: 22px !important; background-color: #1A1A1A !important; border-radius: 50% !important;
+        right: 15px !important;
     }}
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
@@ -228,6 +228,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 8. CHAT INPUT & TABS UI
 # ==========================================
+# Mice icon rendering fix
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
@@ -242,8 +243,13 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
-                              {"role": "user", "content": user_query}],
+                    messages=[
+                        # --- UPDATED SYSTEM PROMPT FOR CLARIFICATION ---
+                        {"role": "system", "content": """You are 'AskMNIT', an AI assistant for MNIT Jaipur students. 
+You can generate text responses and detailed text descriptions for images (prompts), but you CANNOT create or display actual images/photos yourself. 
+If a user asks for an image, clarify that you cannot make it, but you will provide a detailed text description they can use with other AI image generators."""},
+                        {"role": "user", "content": user_query}
+                    ],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,
                     stream=True

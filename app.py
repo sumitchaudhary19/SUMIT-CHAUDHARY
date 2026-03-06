@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Sticky Header, Dark Grey Arrow & UI Fixes)
+# 3. CSS (Locked Sidebar, No Arrow & UI Fixes)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -46,10 +46,14 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- SIDEBAR ARROW COLOR (DARK GREY) --- */
-    button[data-testid="sidebar-button-container"] svg {{
-        fill: #333333 !important;
-        color: #333333 !important;
+    /* --- REMOVE SIDEBAR ARROW BUTTON (Locking Sidebar Open) --- */
+    button[data-testid="sidebar-button-container"] {{
+        display: none !important;
+    }}
+    
+    /* Disabling the ability to collapse via small screen icons */
+    [data-testid="collapsedControl"] {{
+        display: none !important;
     }}
 
     /* --- FIXED STICKY HEADER --- */
@@ -74,7 +78,7 @@ st.markdown(f"""
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA & FONT --- */
+    /* --- CHAT AREA --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
@@ -87,13 +91,11 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
 
-    /* USER MESSAGE: No Box */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: transparent !important;
         border: none !important;
     }}
 
-    /* AI MESSAGE: White Box */
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0F0F0 !important;
@@ -101,7 +103,7 @@ st.markdown(f"""
         margin-bottom: 1.5rem !important;
     }}
 
-    /* --- SIDEBAR TABS --- */
+    /* --- SIDEBAR --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
@@ -117,8 +119,6 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         margin-bottom: 12px !important;
-        text-decoration: none !important;
-        display: block !important;
         text-align: center !important;
     }}
 
@@ -184,7 +184,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR
+# 5. SIDEBAR (PERMANENT TOOLS SECTION)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -193,7 +193,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("Feature coming soon!")
+        st.toast("History feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

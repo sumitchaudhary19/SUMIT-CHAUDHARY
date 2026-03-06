@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Restored Search Bar Height & Styling)
+# 3. CSS (Balanced Search Bar Height & Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -90,7 +90,7 @@ st.markdown(f"""
         border: 1px solid #444 !important;
     }}
 
-    /* --- SEARCH BAR STYLING (HEIGHT RESTORED) --- */
+    /* --- SEARCH BAR STYLING (HEIGHT BALANCED AT 80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -104,7 +104,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 120px !important; /* Height restored to 120px */
+        height: 80px !important; /* Balanced Height */
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
@@ -112,23 +112,23 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         color: #1A1A1A !important;
         font-size: 1.1rem !important;
-        padding: 10px 60px 50px 15px !important; 
-        line-height: 1.5 !important;
+        padding: 15px 60px 15px 15px !important; 
+        line-height: 1.4 !important;
         border: none !important;
-        height: 120px !important; /* Matches parent height */
+        height: 80px !important; /* Matches parent */
     }}
 
     /* DARK GREY PLUS TAB */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
-        width: 34px; height: 34px;
+        width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
-        font-size: 22px; font-weight: 400;
-        z-index: 1001; bottom: 32px !important;
+        font-size: 20px; font-weight: 400;
+        z-index: 1001; bottom: 44px !important; /* Adjusted for 80px height */
     }}
 
     /* Arrow Tab Design */
@@ -136,8 +136,8 @@ st.markdown(f"""
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important;
-        bottom: 42px !important; 
-        width: 35px !important;
+        bottom: 22px !important; /* Adjusted for 80px height */
+        width: 35px !important; height: 35px !important;
     }}
 
     div[data-testid="stChatInput"] button::after {{

@@ -5,7 +5,7 @@ import base64
 from groq import Groq
 
 # ==========================================
-# 1. PAGE CONFIG & SECRETS VALIDATION
+# 1. PAGE CONFIG (Sidebar Always Expanded)
 # ==========================================
 st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Purple Arrow, Sticky Header & UI)
+# 3. CSS (Locked Sidebar & No Arrow)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -46,23 +46,21 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- PURPLE SIDEBAR ARROW BUTTON --- */
-    button[data-testid="sidebar-button-container"] svg {{
-        fill: #8A63FF !important; /* Purple color */
-        color: #8A63FF !important;
-        transform: scale(1.2); /* Slightly larger for visibility */
+    /* --- REMOVING SIDEBAR ARROW (LOCKED OPEN) --- */
+    button[data-testid="sidebar-button-container"] {{
+        display: none !important;
     }}
     
-    button[data-testid="sidebar-button-container"] {{
-        background-color: transparent !important;
+    /* Disabling sidebar collapse control on small screens too */
+    [data-testid="collapsedControl"] {{
+        display: none !important;
     }}
 
     /* --- FIXED STICKY HEADER --- */
-    /* Dynamic width based on sidebar state */
     .sticky-header-container {{
         position: fixed;
         top: 0;
-        left: 0;
+        left: 320px; /* Aligned with sidebar width */
         right: 0;
         height: 140px;
         background-color: #FFFFFF;
@@ -71,13 +69,12 @@ st.markdown(f"""
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        border-bottom: 1px solid transparent;
     }}
 
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA & FONT --- */
+    /* --- CHAT AREA --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
@@ -106,6 +103,7 @@ st.markdown(f"""
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
+        width: 320px !important; /* Fixed width */
     }}
 
     .stButton>button, [data-testid="stLinkButton"] > a {{
@@ -118,8 +116,8 @@ st.markdown(f"""
         font-weight: 600 !important;
         margin-bottom: 12px !important;
         text-align: center !important;
-        text-decoration: none !important;
         display: block !important;
+        text-decoration: none !important;
     }}
 
     /* --- SEARCH BAR (80PX) --- */
@@ -184,7 +182,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR (TOOLS SECTION)
+# 5. SIDEBAR (PERMANENTLY VISIBLE)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)

@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Clean White Theme - No Lines)
+# 3. CSS (Shiny Violet Tabs & Dark Grey Plus)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -47,14 +47,9 @@ st.markdown(f"""
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
 
-    /* --- Removing Horizontal Line from Bottom Area --- */
     [data-testid="stBottom"] {{
         background-color: #FFFFFF !important;
-        border-top: none !important; /* Line removed */
-    }}
-    
-    [data-testid="stBottom"] > div {{
-        background-color: transparent !important;
+        border-top: none !important;
     }}
 
     /* Sidebar Styling */
@@ -63,25 +58,27 @@ st.markdown(f"""
         border-right: 1px solid #DDDDDD !important;
     }}
 
-    /* Chat Messages Container */
-    [data-testid="stChatMessageContainer"] {{
-        max-width: 800px !important;
-        margin: 0 auto !important;
+    /* --- SHINY VIOLET SIDEBAR TABS --- */
+    /* Button color inspired by the uploaded image */
+    .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
+        width: 100% !important;
+        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 12px 20px !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
+        transition: 0.3s all ease !important;
+        text-decoration: none !important;
+        display: block !important;
     }}
 
-    div[data-testid="stChatMessage"] {{
-        border-radius: 12px;
-        margin-bottom: 1.5rem !important;
-    }}
-
-    div[data-testid="stChatMessage"]:nth-child(odd) {{
-        background-color: #F8F9FA !important;
-        border: 1px solid #EEEEEE !important;
-    }}
-
-    div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #FFFFFF !important;
-        border: 1px solid #F0F0F0 !important;
+    .stButton>button:hover, [data-testid="stLinkButton"] > a:hover {{
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(138, 99, 255, 0.5) !important;
+        background: linear-gradient(135deg, #9D7CFF 0%, #7B52F2 100%) !important;
     }}
 
     /* --- PURE WHITE SEARCH BAR --- */
@@ -95,20 +92,34 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; /* White Background */
+        background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 120px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        background-color: #FFFFFF !important; /* White Interior */
+        background-color: #FFFFFF !important;
         color: #1A1A1A !important;
         font-size: 1.1rem !important;
         padding: 10px 60px 50px 15px !important; 
         line-height: 1.5 !important;
         border: none !important;
+    }}
+
+    /* --- DARK GREY PLUS TAB --- */
+    .plus-tab-ui {{
+        position: fixed;
+        left: calc(50% - 310px);
+        width: 34px; height: 34px;
+        background-color: #333333 !important; /* Dark Grey */
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #FFFFFF !important;
+        font-size: 22px; font-weight: 400;
+        z-index: 1001; bottom: 32px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }}
 
     /* Arrow Tab Design */
@@ -126,25 +137,12 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Placeholder Text */
-    div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #999999 !important;
-    }}
-
-    /* Dynamic Header Position */
-    .title-container-empty {{ margin-top: 25vh; transition: 0.5s; }}
-    .title-container-active {{ margin-top: 2vh; scale: 0.8; transition: 0.5s; }}
-
+    /* Header Position */
+    .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
+    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     .main-title {{ color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem; }}
     .title-subtext {{ text-align: center; color: #666666; font-size: 1.2rem; }}
 
-    /* Sidebar Buttons */
-    .stButton>button {{
-        width: 100%; background-color: #FFFFFF !important;
-        border: 1px solid #CCC !important; color: #1A1A1A !important;
-        border-radius: 8px; font-weight: 600;
-    }}
-    
     .signature-box {{ 
         margin-top: 40px; padding: 15px; border-radius: 8px; 
         background: #EAECEF; border: 1px solid #CCC; text-align: center; 
@@ -156,17 +154,20 @@ st.markdown(f"""
 # 4. SIDEBAR (TOOLS SECTION)
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tools</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 20px;'>Tools</h2>", unsafe_allow_html=True)
     
     if st.button("➕ New Session"):
         st.session_state.sessions["New Session"] = []
         st.session_state.current_chat = "New Session"
         st.rerun()
 
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
+    
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
     
-    st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CHAT DISPLAY
@@ -185,8 +186,11 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT
+# 6. CHAT INPUT & PLUS UI
 # ==========================================
+# Visual Plus Tab (Dark Grey Circular)
+st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True

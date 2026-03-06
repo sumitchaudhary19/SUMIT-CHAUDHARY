@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Sticky Header, Dark Grey Arrow, & UI)
+# 3. CSS (Sticky Header, Dark Grey Arrow & UI Fixes)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -74,7 +74,7 @@ st.markdown(f"""
     .main-title {{ color: #1A1A1A; font-weight: 800; font-size: 3.5rem; margin: 0; }}
     .title-subtext {{ color: #666666; font-size: 1.1rem; margin-top: -5px; }}
 
-    /* --- CHAT AREA --- */
+    /* --- CHAT AREA & FONT --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 150px auto 120px auto !important;
@@ -87,7 +87,7 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
 
-    /* USER MESSAGE: Transparent */
+    /* USER MESSAGE: No Box */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: transparent !important;
         border: none !important;
@@ -117,9 +117,9 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         margin-bottom: 12px !important;
-        text-align: center !important;
         text-decoration: none !important;
         display: block !important;
+        text-align: center !important;
     }}
 
     /* --- SEARCH BAR (80PX) --- */
@@ -193,7 +193,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("History feature coming soon!")
+        st.toast("Feature coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

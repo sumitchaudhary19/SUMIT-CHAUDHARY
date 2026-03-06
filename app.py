@@ -59,7 +59,6 @@ st.markdown(f"""
     }}
 
     /* --- SHINY VIOLET SIDEBAR TABS --- */
-    /* Button color inspired by the uploaded image */
     .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -73,6 +72,7 @@ st.markdown(f"""
         transition: 0.3s all ease !important;
         text-decoration: none !important;
         display: block !important;
+        margin-bottom: 10px !important;
     }}
 
     .stButton>button:hover, [data-testid="stLinkButton"] > a:hover {{
@@ -113,7 +113,7 @@ st.markdown(f"""
         position: fixed;
         left: calc(50% - 310px);
         width: 34px; height: 34px;
-        background-color: #333333 !important; /* Dark Grey */
+        background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
@@ -156,15 +156,24 @@ st.markdown(f"""
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 20px;'>Tools</h2>", unsafe_allow_html=True)
     
+    # New Session Tab
     if st.button("➕ New Session"):
         st.session_state.sessions["New Session"] = []
         st.session_state.current_chat = "New Session"
         st.rerun()
 
+    # Chat History Tab (NEW)
+    if st.button("Chat History 🕑"):
+        pass # Logic will be added later
+    
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+    
+    # Class Schedule Tab
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+    
+    # ERP Tab
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
     
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
@@ -188,7 +197,6 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 6. CHAT INPUT & PLUS UI
 # ==========================================
-# Visual Plus Tab (Dark Grey Circular)
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):

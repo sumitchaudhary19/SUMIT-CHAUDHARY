@@ -28,173 +28,134 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Header & Layout)
+# 3. CSS (White Chat Section & Grey Sidebar)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
+    /* --- Poora Chat Section aur Main Body White --- */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
         font-family: 'Inter', sans-serif;
-        background-color: #1A1A1A !important;
-        color: #E0E0E0 !important;
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
     }}
     
     [data-testid="stMain"] {{
-        background-color: #1E1E1E !important;
+        background-color: #FFFFFF !important;
     }}
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
-    [data-testid="stHeader"] {{ background-color: transparent !important; }}
 
+    /* --- Bottom Area ko bhi White karde --- */
     [data-testid="stBottom"] {{
-        background-color: #1E1E1E !important;
-        border-top: none !important;
+        background-color: #FFFFFF !important;
+        border-top: 1px solid #EEEEEE !important;
     }}
     
     [data-testid="stBottom"] > div {{
         background-color: transparent !important;
     }}
 
-    /* --- Dynamic Main Title Styling --- */
-    .main-title {{
-        color: #FFFFFF;
-        font-weight: 800;
-        text-align: center;
-        font-size: 3.5rem;
-        transition: all 0.5s ease-in-out;
-        width: 100%;
+    /* --- Tools/Sidebar Section Grey --- */
+    section[data-testid="stSidebar"] {{
+        background-color: #F0F2F6 !important; /* Grey Background */
+        border-right: 1px solid #DDDDDD !important;
     }}
 
-    .title-subtext {{
-        text-align: center;
-        color: #BBBBBB;
-        font-weight: 500;
-        font-size: 1.2rem;
-        transition: all 0.5s ease-in-out;
-    }}
-
-    /* Title Position Logic */
-    .title-container-empty {{ margin-top: 30vh; }}
-    .title-container-active {{ margin-top: 2vh; margin-bottom: 20px; scale: 0.7; }}
-
-    /* --- Chat Layout Centralization --- */
+    /* --- Chat Message Styling (Adjusted for White Theme) --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 0 auto !important;
-        padding-top: 1rem !important;
     }}
 
     div[data-testid="stChatMessage"] {{
         border-radius: 12px;
         margin-bottom: 1.5rem !important;
-        width: 100% !important;
     }}
 
+    /* User Message - Light Grey in White Theme */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
+        background-color: #F8F9FA !important;
+        border: 1px solid #EEEEEE !important;
+        color: #1A1A1A !important;
     }}
 
+    /* AI Message - Soft Tint */
     div[data-testid="stChatMessage"]:nth-child(even) {{
-        background-color: #212121 !important;
-        border: 1px solid #333 !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #F0F0F0 !important;
+        color: #1A1A1A !important;
     }}
 
-    /* --- LOCKED BOTTOM SEARCH BAR --- */
+    /* --- Search Bar Styling --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
         background-color: transparent !important;
         position: fixed !important;
-        left: 0; right: 0; z-index: 999;
         bottom: 20px !important;
+        left: 0; right: 0; z-index: 999;
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #2C2C2C !important;
-        border: 1px solid #444 !important;
+        background-color: #F8F9FA !important;
+        border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 120px !important;
-        padding: 10px !important;
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        background-color: #2C2C2C !important;
-        color: #FFFFFF !important;
+        background-color: transparent !important;
+        color: #1A1A1A !important;
         font-size: 1.1rem !important;
         padding: 10px 60px 50px 15px !important; 
         line-height: 1.5 !important;
         border: none !important;
     }}
 
-    div[data-testid="stChatInput"] textarea::placeholder {{
-        color: #A0A0A0 !important;
-    }}
-
-    /* Arrow Design */
+    /* Arrow Tab Design (Dark for White Theme) */
     div[data-testid="stChatInput"] button {{
-        background-color: #E0E0E0 !important;
+        background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important;
         bottom: 42px !important; 
-        width: 35px !important; height: 35px !important;
+        width: 35px !important;
     }}
 
     div[data-testid="stChatInput"] button::after {{
         content: ">";
-        color: #1A1A1A; font-weight: 900; font-size: 1.2rem;
+        color: #FFFFFF; font-weight: 900; font-size: 1.2rem;
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Plus Tab */
-    .plus-tab-ui {{
-        position: fixed;
-        left: calc(50% - 310px);
-        width: 32px; height: 32px;
-        background-color: #444444; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #BBBBBB; font-size: 20px;
-        z-index: 1001; bottom: 32px !important;
-    }}
+    /* Dynamic Header Position */
+    .title-container-empty {{ margin-top: 25vh; transition: 0.5s; }}
+    .title-container-active {{ margin-top: 2vh; scale: 0.8; transition: 0.5s; }}
 
-    /* Hidden Uploader */
-    div[data-testid="stFileUploader"] {{
-        position: fixed !important;
-        left: calc(50% - 310px) !important;
-        width: 32px !important; height: 32px !important;
-        z-index: 1002 !important; opacity: 0 !important;
-        bottom: 32px !important;
-    }}
+    .main-title {{ color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem; }}
+    .title-subtext {{ text-align: center; color: #666666; font-size: 1.2rem; }}
 
-    section[data-testid="stSidebar"] {{ background-color: #111111 !important; border-right: 1px solid #333 !important; }}
+    /* Sidebar Buttons (White on Grey) */
     .stButton>button {{
-        width: 100%; text-align: left; background-color: #D3D3D3 !important;
-        border: 1px solid #999 !important; padding: 10px 15px; border-radius: 8px;
-        font-weight: 600; color: #000000 !important;
+        width: 100%; background-color: #FFFFFF !important;
+        border: 1px solid #CCC !important; color: #1A1A1A !important;
+        border-radius: 8px; font-weight: 600;
     }}
     
-    .signature-box {{ margin-top: 40px; margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #2C2C2C; border: 1px solid #444; text-align: center; }}
+    .signature-box {{ 
+        margin-top: 40px; padding: 15px; border-radius: 8px; 
+        background: #EAECEF; border: 1px solid #CCC; text-align: center; 
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR & BRANDING
+# 4. SIDEBAR (TOOLS SECTION) - GREY THEME
 # ==========================================
 with st.sidebar:
-    try:
-        with open("logo.png", "rb") as image_file:
-            logo_base64 = base64.b64encode(image_file.read()).decode()
-        logo_html = f"""
-        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 25px; padding-top: 10px;">
-            <img src="data:image/png;base64,{logo_base64}" style="width: 50px; margin-right: 12px;">
-            <span style="font-family: 'Inter', sans-serif; font-size: 2.2rem; font-weight: 800; color: #60A5FA; letter-spacing: 1.5px;">AskMNIT</span>
-        </div>
-        """
-        st.markdown(logo_html, unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>AskMNIT</h3>", unsafe_allow_html=True)
-
+    st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tools</h2>", unsafe_allow_html=True)
+    
     if st.button("➕ New Session"):
         st.session_state.sessions["New Session"] = []
         st.session_state.current_chat = "New Session"
@@ -202,12 +163,12 @@ with st.sidebar:
 
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
-    st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.75rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    
+    st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. DYNAMIC HEADER DISPLAY
+# 5. MAIN CHAT DISPLAY (WHITE THEME)
 # ==========================================
-# Header humesha dikhega, bas position badlegi
 title_class = "title-container-empty" if is_chat_empty else "title-container-active"
 st.markdown(f"""
     <div class="{title_class}">
@@ -216,21 +177,16 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Display conversations
+# Conversations
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
+    # Custom avatars for better contrast on white
+    avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 6. CHAT INPUT & FILE UPLOAD LOGIC
+# 6. CHAT INPUT
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
-uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
-
-if uploaded_file:
-    st.toast(f"📎 File '{uploaded_file.name}' attached successfully!")
-
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True
@@ -238,12 +194,12 @@ if prompt := st.chat_input("Ask me anything..."):
 
 if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
-    with st.chat_message("assistant", avatar="logo.png"):
+    with st.chat_message("assistant", avatar="🤖"):
         try:
             def generate_response():
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are 'AskMNIT', a professional AI assistant for MNIT Jaipur students."},
+                        {"role": "system", "content": "You are 'AskMNIT', a professional assistant for MNIT Jaipur students."},
                         {"role": "user", "content": user_query}
                     ],
                     model="llama-3.3-70b-versatile",

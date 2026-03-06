@@ -28,14 +28,14 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (White Chat Section & Grey Sidebar)
+# 3. CSS (Clean White Theme - No Lines)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    /* --- Poora Chat Section aur Main Body White --- */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    /* Body Background */
+    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
         color: #1A1A1A !important;
@@ -47,23 +47,23 @@ st.markdown(f"""
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
 
-    /* --- Bottom Area ko bhi White karde --- */
+    /* --- Removing Horizontal Line from Bottom Area --- */
     [data-testid="stBottom"] {{
         background-color: #FFFFFF !important;
-        border-top: 1px solid #EEEEEE !important;
+        border-top: none !important; /* Line removed */
     }}
     
     [data-testid="stBottom"] > div {{
         background-color: transparent !important;
     }}
 
-    /* --- Tools/Sidebar Section Grey --- */
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] {{
-        background-color: #F0F2F6 !important; /* Grey Background */
+        background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
     }}
 
-    /* --- Chat Message Styling (Adjusted for White Theme) --- */
+    /* Chat Messages Container */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 0 auto !important;
@@ -74,21 +74,17 @@ st.markdown(f"""
         margin-bottom: 1.5rem !important;
     }}
 
-    /* User Message - Light Grey in White Theme */
     div[data-testid="stChatMessage"]:nth-child(odd) {{
         background-color: #F8F9FA !important;
         border: 1px solid #EEEEEE !important;
-        color: #1A1A1A !important;
     }}
 
-    /* AI Message - Soft Tint */
     div[data-testid="stChatMessage"]:nth-child(even) {{
         background-color: #FFFFFF !important;
         border: 1px solid #F0F0F0 !important;
-        color: #1A1A1A !important;
     }}
 
-    /* --- Search Bar Styling --- */
+    /* --- PURE WHITE SEARCH BAR --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -99,14 +95,15 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #F8F9FA !important;
+        background-color: #FFFFFF !important; /* White Background */
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 120px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
     }}
 
     div[data-testid="stChatInput"] textarea {{
-        background-color: transparent !important;
+        background-color: #FFFFFF !important; /* White Interior */
         color: #1A1A1A !important;
         font-size: 1.1rem !important;
         padding: 10px 60px 50px 15px !important; 
@@ -114,7 +111,7 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* Arrow Tab Design (Dark for White Theme) */
+    /* Arrow Tab Design */
     div[data-testid="stChatInput"] button {{
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
@@ -129,6 +126,11 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
+    /* Placeholder Text */
+    div[data-testid="stChatInput"] textarea::placeholder {{
+        color: #999999 !important;
+    }}
+
     /* Dynamic Header Position */
     .title-container-empty {{ margin-top: 25vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.8; transition: 0.5s; }}
@@ -136,7 +138,7 @@ st.markdown(f"""
     .main-title {{ color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem; }}
     .title-subtext {{ text-align: center; color: #666666; font-size: 1.2rem; }}
 
-    /* Sidebar Buttons (White on Grey) */
+    /* Sidebar Buttons */
     .stButton>button {{
         width: 100%; background-color: #FFFFFF !important;
         border: 1px solid #CCC !important; color: #1A1A1A !important;
@@ -151,7 +153,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR (TOOLS SECTION) - GREY THEME
+# 4. SIDEBAR (TOOLS SECTION)
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tools</h2>", unsafe_allow_html=True)
@@ -167,7 +169,7 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT DISPLAY (WHITE THEME)
+# 5. MAIN CHAT DISPLAY
 # ==========================================
 title_class = "title-container-empty" if is_chat_empty else "title-container-active"
 st.markdown(f"""
@@ -177,9 +179,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Conversations
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    # Custom avatars for better contrast on white
     avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])

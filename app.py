@@ -28,17 +28,16 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Updated with Mic Tab)
+# 3. CSS (Sticky Header & Scroll Control)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    /* Body Background */
-    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    /* Body & Main Container */
+    html, body, [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
     }}
     
     [data-testid="stMain"] {{
@@ -46,36 +45,74 @@ st.markdown(f"""
     }}
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    [data-testid="stHeader"] {{ display: none !important; }}
 
-    [data-testid="stBottom"] {{
-        background-color: #FFFFFF !important;
-        border-top: none !important;
+    /* --- FIXED STICKY HEADER (AskMNIT) --- */
+    .sticky-header-container {{
+        position: fixed;
+        top: 0;
+        left: 320px; /* Sidebar width */
+        right: 0;
+        height: 140px;
+        background-color: #FFFFFF;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }}
+    
+    /* Responsive adjustment for mobile/collapsed sidebar */
+    @media (max-width: 768px) {{
+        .sticky-header-container {{ left: 0; }}
     }}
 
-    /* Sidebar Styling */
+    .main-title {{
+        color: #1A1A1A;
+        font-weight: 800;
+        font-size: 3.5rem;
+        margin: 0;
+    }}
+
+    .title-subtext {{
+        color: #666666;
+        font-size: 1.1rem;
+        margin-top: -5px;
+    }}
+
+    /* --- CHAT AREA POSITIONING --- */
+    /* Chats will start below the fixed header */
+    [data-testid="stChatMessageContainer"] {{
+        max-width: 800px !important;
+        margin: 150px auto 120px auto !important; /* Top margin for header, Bottom for search bar */
+        padding-top: 0 !important;
+    }}
+
+    div[data-testid="stChatMessage"] {{
+        border-radius: 12px;
+        margin-bottom: 1rem !important;
+        border: 1px solid #EEEEEE !important;
+    }}
+
+    /* --- SIDEBAR TABS --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
-        width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS */
-    .stButton>button, .stDownloadButton>button, [data-testid="stLinkButton"] > a {{
+    .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
-        min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        text-align: center !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        transition: 0.3s all ease !important;
         margin-bottom: 12px !important;
     }}
 
-    /* SEARCH BAR STYLING */
+    /* --- BOTTOM SEARCH BAR --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -93,17 +130,7 @@ st.markdown(f"""
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    div[data-testid="stChatInput"] textarea {{
-        background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
-        font-size: 1.1rem !important;
-        padding: 15px 60px 15px 95px !important; /* Padding adjusted for two buttons */
-        line-height: 1.4 !important;
-        border: none !important;
-        height: 80px !important;
-    }}
-
-    /* DARK GREY BUTTONS BASE */
+    /* --- PLUS & MIC TABS --- */
     .input-btn-base {{
         position: fixed;
         width: 32px; height: 32px;
@@ -112,40 +139,18 @@ st.markdown(f"""
         display: flex; align-items: center; justify-content: center;
         z-index: 1001; bottom: 44px !important;
     }}
+    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; }}
+    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; }}
 
-    /* PLUS TAB */
-    .plus-tab-ui {{
-        left: calc(50% - 310px);
-        color: #FFFFFF !important;
-        font-size: 20px; font-weight: 400;
-    }}
-
-    /* MIC TAB */
-    .mic-tab-ui {{
-        left: calc(50% - 270px); /* Positioned right of plus button */
-        color: #A0A0A0 !important; /* Light Grey Symbol */
-        font-size: 18px;
-    }}
-
-    /* Arrow Tab Design */
+    /* Arrow button adjustments */
     div[data-testid="stChatInput"] button {{
+        bottom: 22px !important;
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
-        right: 15px !important;
-        bottom: 22px !important;
-        width: 35px !important; height: 35px !important;
     }}
-
-    div[data-testid="stChatInput"] button::after {{
-        content: ">";
-        color: #FFFFFF; font-weight: 900; font-size: 1.2rem;
-    }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Header Positioning */
-    .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
-    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
-    
     .signature-box {{ 
         margin-top: 40px; padding: 15px; border-radius: 8px; 
         background: #EAECEF; border: 1px solid #CCC; text-align: center; 
@@ -167,41 +172,40 @@ def open_uni_tools():
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
-    
     if st.button("➕ New Session"):
         st.session_state.sessions = {"New Session": []}
         st.session_state.current_chat = "New Session"
         st.rerun()
-
     if st.button("Chat History 🕑"):
         st.toast("Chat history feature coming soon!")
-
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-    
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CHAT DISPLAY
+# 6. FIXED HEADER RENDER
 # ==========================================
-title_class = "title-container-empty" if is_chat_empty else "title-container-active"
+# This div stays fixed at the top and hides chats scrolling underneath
 st.markdown(f"""
-    <div class="{title_class}">
-        <div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div>
-        <div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div>
+    <div class="sticky-header-container">
+        <h1 class="main-title">AskMNIT</h1>
+        <p class="title-subtext">Your Professional AI Assistant</p>
     </div>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# 7. CHAT DISPLAY AREA
+# ==========================================
+# Chat messages are inside the container defined in CSS with top margin
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT & TABS UI
+# 8. CHAT INPUT & TABS UI
 # ==========================================
-# Rendering Plus and Mic Tabs inside the search bar visually
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
@@ -216,7 +220,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur students."} , 
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

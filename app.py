@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Mic Tab, Centered Pills & Header logic)
+# 3. CSS (Restored Search Bar, Mic Tab & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -46,51 +46,52 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
 
-    /* --- SIDEBAR LOCK --- */
+    /* --- SIDEBAR LOCK & ARROW REMOVAL --- */
     button[data-testid="sidebar-button-container"] {{ display: none !important; }}
     [data-testid="collapsedControl"] {{ display: none !important; }}
 
     /* --- FIXED STICKY HEADER --- */
     .sticky-header-container {{
         position: fixed;
-        top: 0; left: 320px; right: 0;
+        top: 0;
+        left: 320px;
+        right: 0;
         height: 140px;
         background-color: #FFFFFF;
         z-index: 1000;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-    }}
-
-    /* --- CENTERED SUGGESTION PILLS --- */
-    .pill-wrapper {{
         display: flex;
+        flex-direction: column;
         justify-content: center;
-        gap: 12px;
-        margin-top: 150px; /* Positioned below the fixed header */
-        width: 100%;
+        align-items: center;
+    }}
+    
+    @media (max-width: 768px) {{
+        .sticky-header-container {{ left: 0; }}
     }}
 
-    div.stButton > button[key^="pill_"] {{
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #E0E0E0 !important;
-        border-radius: 50px !important;
-        padding: 10px 22px !important;
-        font-size: 0.95rem !important;
-        font-weight: 500 !important;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
-        width: auto !important;
-        min-width: unset !important;
-    }}
-
-    div.stButton > button[key^="pill_"]:hover {{
-        border-color: #8A63FF !important;
-        background-color: #F9F9F9 !important;
-    }}
-
-    /* --- CHAT AREA --- */
+    /* --- CHAT AREA & FONT --- */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
-        margin: 140px auto 120px auto !important;
+        margin: 150px auto 120px auto !important;
+        padding-top: 0 !important;
+    }}
+
+    [data-testid="stChatMessage"] p {{
+        font-size: 1.15rem !important;
+        line-height: 1.6 !important;
+        color: #1A1A1A !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(odd) {{
+        background-color: transparent !important;
+        border: none !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(even) {{
+        background-color: #FFFFFF !important;
+        border: 1px solid #F0F0F0 !important;
+        border-radius: 12px;
+        margin-bottom: 1.5rem !important;
     }}
 
     /* --- SIDEBAR TABS --- */
@@ -104,6 +105,7 @@ st.markdown(f"""
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
+        border: none !important;
         border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
@@ -129,25 +131,56 @@ st.markdown(f"""
 
     div[data-testid="stChatInput"] textarea {{
         background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important;
         padding: 15px 60px 15px 95px !important; /* Adjusted for 2 buttons */
+        line-height: 1.4 !important;
+        border: none !important;
         height: 80px !important;
     }}
 
-    /* --- MIC & PLUS ICONS --- */
+    /* --- INPUT BUTTONS BASE --- */
     .input-btn-base {{
-        position: fixed; width: 32px; height: 32px;
+        position: fixed;
+        width: 32px; height: 32px;
         background-color: #333333 !important;
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        z-index: 1001; bottom: 44px !important;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 1001; 
+        bottom: 44px !important;
     }}
-    .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
-    .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
 
+    /* PLUS TAB */
+    .plus-tab-ui {{
+        left: calc(50% - 310px);
+        color: #FFFFFF !important;
+        font-size: 20px;
+    }}
+
+    /* MIC TAB */
+    .mic-tab-ui {{
+        left: calc(50% - 270px);
+        color: #A0A0A0 !important;
+        font-size: 18px;
+    }}
+
+    /* --- SEND BUTTON --- */
     div[data-testid="stChatInput"] button {{
-        bottom: 22px !important; background-color: #1A1A1A !important; border-radius: 50% !important;
+        bottom: 22px !important;
+        background-color: #1A1A1A !important;
+        border-radius: 50% !important;
+        right: 15px !important;
     }}
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
+
+    /* Dialog styling */
+    div[data-testid="stDialog"] div[role="dialog"] {{
+        background-color: #2C2C2C !important;
+        border-radius: 15px !important;
+        border: 1px solid #444 !important;
+    }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
@@ -164,10 +197,15 @@ def open_uni_tools():
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
-    st.write("Pick a session:")
+    st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        display_name = messages[0]["content"][:30] + "..." if messages else session_key
-        if st.button(display_name, key=f"btn_{session_key}", use_container_width=True):
+        display_name = session_key
+        if len(messages) > 0:
+            first_msg = messages[0]["content"]
+            display_name = (first_msg[:35] + '...') if len(first_msg) > 35 else first_msg
+        
+        icon = "🟢" if session_key == st.session_state.current_chat else "💬"
+        if st.button(f"{icon} {display_name}", key=f"btn_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
 
@@ -189,7 +227,7 @@ with st.sidebar:
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. HEADER
+# 6. FIXED HEADER
 # ==========================================
 st.markdown(f"""
     <div class="sticky-header-container">
@@ -199,27 +237,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 7. CHAT DISPLAY & SUGGESTIONS
+# 7. CHAT DISPLAY
 # ==========================================
-if is_chat_empty:
-    st.markdown('<div class="pill-wrapper">', unsafe_allow_html=True)
-    cols = st.columns([2, 1, 1, 1, 2])
-    suggestions = ["Class schedule?", "Mineral Processing notes", "Metallurgy Syllabus"]
-    
-    if cols[1].button(suggestions[0], key="pill_1"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[0]})
-        st.session_state.pending_generation = True
-        st.rerun()
-    if cols[2].button(suggestions[1], key="pill_2"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[1]})
-        st.session_state.pending_generation = True
-        st.rerun()
-    if cols[3].button(suggestions[2], key="pill_3"):
-        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": suggestions[2]})
-        st.session_state.pending_generation = True
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
@@ -228,6 +247,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 8. CHAT INPUT & TABS UI
 # ==========================================
+# Rendering Plus and Mic Tabs side-by-side inside the search bar
 st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
@@ -242,7 +262,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,
@@ -256,4 +276,3 @@ if st.session_state.pending_generation:
         except Exception as e:
             st.error(f"Error: {str(e)}")
     st.session_state.pending_generation = False
-

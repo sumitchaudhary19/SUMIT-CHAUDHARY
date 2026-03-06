@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Centered Chat Bars & Consistent Length)
+# 3. CSS (Dynamic Header & Layout)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -56,19 +56,39 @@ st.markdown(f"""
         background-color: transparent !important;
     }}
 
+    /* --- Dynamic Main Title Styling --- */
+    .main-title {{
+        color: #FFFFFF;
+        font-weight: 800;
+        text-align: center;
+        font-size: 3.5rem;
+        transition: all 0.5s ease-in-out;
+        width: 100%;
+    }}
+
+    .title-subtext {{
+        text-align: center;
+        color: #BBBBBB;
+        font-weight: 500;
+        font-size: 1.2rem;
+        transition: all 0.5s ease-in-out;
+    }}
+
+    /* Title Position Logic */
+    .title-container-empty {{ margin-top: 30vh; }}
+    .title-container-active {{ margin-top: 2vh; margin-bottom: 20px; scale: 0.7; }}
+
     /* --- Chat Layout Centralization --- */
-    /* Isse poora chat container middle mein align hoga */
     [data-testid="stChatMessageContainer"] {{
         max-width: 800px !important;
         margin: 0 auto !important;
-        padding-top: 2rem !important;
+        padding-top: 1rem !important;
     }}
 
-    /* --- Chat Message Styling (Centered & Same Length) --- */
     div[data-testid="stChatMessage"] {{
         border-radius: 12px;
         margin-bottom: 1.5rem !important;
-        width: 100% !important; /* Bars keep their relative length within the 800px container */
+        width: 100% !important;
     }}
 
     div[data-testid="stChatMessage"]:nth-child(odd) {{
@@ -87,9 +107,7 @@ st.markdown(f"""
         margin: 0 auto !important;
         background-color: transparent !important;
         position: fixed !important;
-        left: 0;
-        right: 0;
-        z-index: 999;
+        left: 0; right: 0; z-index: 999;
         bottom: 20px !important;
     }}
 
@@ -107,64 +125,45 @@ st.markdown(f"""
         font-size: 1.1rem !important;
         padding: 10px 60px 50px 15px !important; 
         line-height: 1.5 !important;
-        overflow-y: auto !important;
         border: none !important;
     }}
 
     div[data-testid="stChatInput"] textarea::placeholder {{
         color: #A0A0A0 !important;
-        opacity: 1 !important;
     }}
 
-    /* Arrow Tab Design */
+    /* Arrow Design */
     div[data-testid="stChatInput"] button {{
         background-color: #E0E0E0 !important;
         border-radius: 50% !important;
         right: 15px !important;
         bottom: 42px !important; 
-        width: 35px !important;
-        height: 35px !important;
-        border: none !important;
-        z-index: 102;
+        width: 35px !important; height: 35px !important;
     }}
 
     div[data-testid="stChatInput"] button::after {{
         content: ">";
-        color: #1A1A1A;
-        font-weight: 900;
-        font-size: 1.2rem;
+        color: #1A1A1A; font-weight: 900; font-size: 1.2rem;
     }}
-    div[data-testid="stChatInput"] button svg {{
-        display: none !important;
-    }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Fixed Plus Tab Visual */
+    /* Plus Tab */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
-        width: 32px;
-        height: 32px;
-        background-color: #444444; 
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #BBBBBB;
-        font-size: 20px;
-        font-weight: 400;
-        z-index: 1001;
-        bottom: 32px !important;
-        pointer-events: none;
+        width: 32px; height: 32px;
+        background-color: #444444; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #BBBBBB; font-size: 20px;
+        z-index: 1001; bottom: 32px !important;
     }}
 
-    /* Hidden Real Uploader Overlay */
+    /* Hidden Uploader */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         left: calc(50% - 310px) !important;
-        width: 32px !important;
-        height: 32px !important;
-        z-index: 1002 !important;
-        opacity: 0 !important;
+        width: 32px !important; height: 32px !important;
+        z-index: 1002 !important; opacity: 0 !important;
         bottom: 32px !important;
     }}
 
@@ -197,23 +196,27 @@ with st.sidebar:
         st.markdown("<h3 style='color: #60A5FA; font-weight: 800; text-align: center;'>AskMNIT</h3>", unsafe_allow_html=True)
 
     if st.button("➕ New Session"):
-        chat_id = f"Session {len(st.session_state.sessions) + 1}"
-        st.session_state.sessions[chat_id] = []
-        st.session_state.current_chat = chat_id
+        st.session_state.sessions["New Session"] = []
+        st.session_state.current_chat = "New Session"
         st.rerun()
 
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
-
     st.markdown("""<div class="signature-box"><p style="color:#AAA; font-size:0.75rem; margin:0;">Architected by</p><h3>SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CHAT DISPLAY
+# 5. DYNAMIC HEADER DISPLAY
 # ==========================================
-if is_chat_empty:
-    st.markdown("<h1 style='color: #FFFFFF; font-weight: 800; text-align: center; font-size: 3rem; margin-top: 15vh;'>AskMNIT</h1>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #BBBBBB; font-weight: 500; font-size: 1.2rem; margin-bottom: 50px;'>Your Professional AI Assistant</div>", unsafe_allow_html=True)
+# Header humesha dikhega, bas position badlegi
+title_class = "title-container-empty" if is_chat_empty else "title-container-active"
+st.markdown(f"""
+    <div class="{title_class}">
+        <div class="main-title">AskMNIT</div>
+        <div class="title-subtext">Your Professional AI Assistant</div>
+    </div>
+""", unsafe_allow_html=True)
 
+# Display conversations
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "user.png" if message["role"] == "user" else "logo.png"
     with st.chat_message(message["role"], avatar=avatar_icon):
@@ -222,7 +225,6 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 6. CHAT INPUT & FILE UPLOAD LOGIC
 # ==========================================
-
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 uploaded_file = st.file_uploader("", type=["pdf", "txt", "docx", "png", "jpg"], label_visibility="collapsed")
 

@@ -28,16 +28,15 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Sleek UI with Auto-updating History)
+# 3. CSS (Restored Search Bar & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    html, body, [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
     }}
     
     [data-testid="stMain"] {{
@@ -45,37 +44,75 @@ st.markdown(f"""
     }}
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
-    [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
+    [data-testid="stHeader"] {{ display: none !important; }}
 
+    /* --- SIDEBAR LOCK & ARROW REMOVAL --- */
+    button[data-testid="sidebar-button-container"] {{ display: none !important; }}
+    [data-testid="collapsedControl"] {{ display: none !important; }}
+
+    /* --- FIXED STICKY HEADER --- */
+    .sticky-header-container {{
+        position: fixed;
+        top: 0;
+        left: 320px;
+        right: 0;
+        height: 140px;
+        background-color: #FFFFFF;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }}
+    
+    @media (max-width: 768px) {{
+        .sticky-header-container {{ left: 0; }}
+    }}
+
+    /* --- CHAT AREA & FONT --- */
+    [data-testid="stChatMessageContainer"] {{
+        max-width: 800px !important;
+        margin: 150px auto 120px auto !important;
+        padding-top: 0 !important;
+    }}
+
+    [data-testid="stChatMessage"] p {{
+        font-size: 1.15rem !important;
+        line-height: 1.6 !important;
+        color: #1A1A1A !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(odd) {{
+        background-color: transparent !important;
+        border: none !important;
+    }}
+
+    div[data-testid="stChatMessage"]:nth-child(even) {{
+        background-color: #FFFFFF !important;
+        border: 1px solid #F0F0F0 !important;
+        border-radius: 12px;
+        margin-bottom: 1.5rem !important;
+    }}
+
+    /* --- SIDEBAR TABS --- */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
         width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS */
-    .stButton>button, [data-testid="stLinkButton"] > a {{
+    .stButton>button {{
         width: 100% !important;
-        min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         margin-bottom: 12px !important;
     }}
 
-    /* POPUP STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {{
-        background-color: #2C2C2C !important;
-        border-radius: 15px !important;
-        border: 1px solid #444 !important;
-    }}
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
-
-    /* SEARCH BAR */
+    /* --- RESTORED SEARCH BAR (80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -88,12 +125,21 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important;
+        height: 80px !important; 
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    div[data-testid="stChatInput"] textarea {{ height: 80px !important; }}
+    div[data-testid="stChatInput"] textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important;
+        padding: 15px 60px 15px 60px !important; /* Standard Padding Restored */
+        line-height: 1.4 !important;
+        border: none !important;
+        height: 80px !important;
+    }}
 
+    /* --- RESTORED PLUS ICON --- */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
@@ -102,12 +148,29 @@ st.markdown(f"""
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
-        z-index: 1001; bottom: 44px !important;
+        z-index: 1001; 
+        bottom: 44px !important;
+        font-size: 20px;
     }}
 
-    .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
-    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
-    
+    /* --- RESTORED ARROW BUTTON --- */
+    div[data-testid="stChatInput"] button {{
+        bottom: 22px !important;
+        background-color: #1A1A1A !important;
+        border-radius: 50% !important;
+        right: 15px !important;
+    }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
+
+    /* Popup Logic */
+    div[data-testid="stDialog"] div[role="dialog"] {{
+        background-color: #2C2C2C !important;
+        border-radius: 15px !important;
+        border: 1px solid #444 !important;
+    }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
+
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
 """, unsafe_allow_html=True)
@@ -117,7 +180,7 @@ st.markdown(f"""
 # ==========================================
 @st.dialog("University Tools")
 def open_uni_tools():
-    st.write("Access MNIT Portals:")
+    st.write("Access MNIT Student Portals:")
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
@@ -125,7 +188,6 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
@@ -141,40 +203,38 @@ def open_chat_history():
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
-    
     if st.button("➕ New Session"):
         new_id = f"Session {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[new_id] = []
         st.session_state.current_chat = new_id
         st.rerun()
-
     if st.button("Chat History 🕑"):
         open_chat_history()
-
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-    
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CHAT DISPLAY
+# 6. FIXED HEADER
 # ==========================================
-title_class = "title-container-empty" if is_chat_empty else "title-container-active"
 st.markdown(f"""
-    <div class="{title_class}">
-        <div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div>
-        <div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div>
+    <div class="sticky-header-container">
+        <div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div>
+        <div style="color: #666666; font-size: 1.1rem; margin-top: -5px;">Your Professional AI Assistant</div>
     </div>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# 7. CHAT DISPLAY
+# ==========================================
 for message in st.session_state.sessions[st.session_state.current_chat]:
     avatar_icon = "👤" if message["role"] == "user" else "🤖"
     with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT
+# 8. CHAT INPUT & PLUS UI
 # ==========================================
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 

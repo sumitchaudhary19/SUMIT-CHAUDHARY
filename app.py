@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Locked Sidebar, No Arrow & UI Fixes)
+# 3. CSS (Fixed Search Bar Size & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -45,16 +45,6 @@ st.markdown(f"""
 
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stHeader"] {{ display: none !important; }}
-
-    /* --- REMOVE SIDEBAR ARROW BUTTON (Locking Sidebar Open) --- */
-    button[data-testid="sidebar-button-container"] {{
-        display: none !important;
-    }}
-    
-    /* Disabling the ability to collapse via small screen icons */
-    [data-testid="collapsedControl"] {{
-        display: none !important;
-    }}
 
     /* --- FIXED STICKY HEADER --- */
     .sticky-header-container {{
@@ -122,10 +112,11 @@ st.markdown(f"""
         text-align: center !important;
     }}
 
-    /* --- SEARCH BAR (80PX) --- */
+    /* --- SEARCH BAR (LOCKING HEIGHT AT 80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
+        background-color: transparent !important;
         position: fixed !important;
         bottom: 20px !important;
         left: 0; right: 0; z-index: 999;
@@ -135,7 +126,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
-        height: 80px !important;
+        height: 80px !important; /* HEIGHT LOCKED */
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
@@ -157,7 +148,7 @@ st.markdown(f"""
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         z-index: 1001; 
-        bottom: 44px !important;
+        bottom: 44px !important; /* Centered in search bar */
     }}
     .plus-tab-ui {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px; }}
     .mic-tab-ui {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px; }}
@@ -184,7 +175,7 @@ def open_uni_tools():
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
 # ==========================================
-# 5. SIDEBAR (PERMANENT TOOLS SECTION)
+# 5. SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -193,7 +184,7 @@ with st.sidebar:
         st.session_state.current_chat = "New Session"
         st.rerun()
     if st.button("Chat History 🕑"):
-        st.toast("History feature coming soon!")
+        st.toast("History coming soon!")
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

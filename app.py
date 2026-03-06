@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Restored Search Bar & Sticky Header)
+# 3. CSS (Restored Search Bar, Mic Tab & Sticky Header)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -112,7 +112,7 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- RESTORED SEARCH BAR (80PX) --- */
+    /* --- SEARCH BAR (80PX) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -133,27 +133,38 @@ st.markdown(f"""
         background-color: #FFFFFF !important;
         color: #1A1A1A !important;
         font-size: 1.1rem !important;
-        padding: 15px 60px 15px 60px !important; /* Standard Padding Restored */
+        padding: 15px 60px 15px 95px !important; /* Adjusted for 2 buttons */
         line-height: 1.4 !important;
         border: none !important;
         height: 80px !important;
     }}
 
-    /* --- RESTORED PLUS ICON --- */
-    .plus-tab-ui {{
+    /* --- INPUT BUTTONS BASE --- */
+    .input-btn-base {{
         position: fixed;
-        left: calc(50% - 310px);
         width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        color: #FFFFFF !important;
         z-index: 1001; 
         bottom: 44px !important;
+    }}
+
+    /* PLUS TAB */
+    .plus-tab-ui {{
+        left: calc(50% - 310px);
+        color: #FFFFFF !important;
         font-size: 20px;
     }}
 
-    /* --- RESTORED ARROW BUTTON --- */
+    /* MIC TAB */
+    .mic-tab-ui {{
+        left: calc(50% - 270px);
+        color: #A0A0A0 !important;
+        font-size: 18px;
+    }}
+
+    /* --- SEND BUTTON --- */
     div[data-testid="stChatInput"] button {{
         bottom: 22px !important;
         background-color: #1A1A1A !important;
@@ -163,7 +174,7 @@ st.markdown(f"""
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* Popup Logic */
+    /* Dialog styling */
     div[data-testid="stDialog"] div[role="dialog"] {{
         background-color: #2C2C2C !important;
         border-radius: 15px !important;
@@ -234,9 +245,11 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 8. CHAT INPUT & PLUS UI
+# 8. CHAT INPUT & TABS UI
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+# Rendering Plus and Mic Tabs side-by-side inside the search bar
+st.markdown('<div class="input-btn-base plus-tab-ui">+</div>', unsafe_allow_html=True)
+st.markdown('<div class="input-btn-base mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

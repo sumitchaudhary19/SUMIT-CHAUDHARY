@@ -32,7 +32,7 @@ if "show_plus_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Positioning)
+# 3. CSS (UI & Restored Circular Plus Design)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -91,37 +91,40 @@ st.markdown(f"""
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         font-size: 1.1rem !important; 
-        padding-left: 55px !important; /* Adjusted for Mic icon */
+        padding-left: 55px !important; 
         border: none !important;
     }}
 
-    /* FLOATING "+" BUTTON POSITIONED ABOVE SEARCH BAR */
+    /* --- CIRCULAR PLUS BUTTON ABOVE SEARCH BAR --- */
     .plus-container-floating {{
         position: fixed;
-        left: calc(50% - 325px); /* Aligned to left edge of 650px search bar */
-        bottom: 100px; /* Above the search bar */
+        left: calc(50% - 315px); /* Perfectly aligned to the left of 650px search bar */
+        bottom: 100px;
         z-index: 1001;
     }}
 
     div.stButton > button[key="plus_btn"] {{
-        width: 40px !important;
-        min-width: 40px !important;
-        height: 40px !important;
-        border-radius: 8px !important;
-        background: #F0F2F6 !important;
-        color: #333333 !important;
-        border: 1px solid #DDD !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+        width: 35px !important;
+        min-width: 35px !important;
+        height: 35px !important;
+        border-radius: 50% !important; /* Made Circular */
+        background-color: #1A1A1A !important; /* Dark Grey/Black */
+        color: #FFFFFF !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
         padding: 0 !important;
-        font-size: 20px !important;
+        font-size: 22px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
 
     /* MIC ICON INSIDE SEARCH BAR */
     .mic-tab-ui {{ position: fixed; left: calc(50% - 305px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
 
-    /* MINI POPUP MENU ABOVE "+" BUTTON */
+    /* MINI POPUP MENU ABOVE CIRCULAR BUTTON */
     .plus-menu-container {{
-        position: fixed; left: calc(50% - 325px); bottom: 150px;
+        position: fixed; left: calc(50% - 325px); bottom: 145px;
         width: 180px; background-color: #2C2C2C; border-radius: 12px;
         padding: 15px; z-index: 1005; color: white;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-bottom: 4px solid #1A1A1A;
@@ -138,7 +141,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR & DIALOGS
+# 4. SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
@@ -146,7 +149,6 @@ with st.sidebar:
         st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()
     if st.button("Chat History 🕑"):
-        # Placeholder for existing function
         st.toast("History clicked")
     if st.button("University Tools ⚙️"):
         st.toast("Tools clicked")
@@ -168,7 +170,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
     with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
         st.markdown(message["content"])
 
-# --- FLOATING PLUS BUTTON & MENU ---
+# --- FLOATING CIRCULAR PLUS BUTTON & MENU ---
 st.markdown('<div class="plus-container-floating">', unsafe_allow_html=True)
 if st.button("+", key="plus_btn"):
     st.session_state.show_plus_menu = not st.session_state.show_plus_menu
@@ -182,7 +184,7 @@ if st.session_state.show_plus_menu:
             <div class="plus-menu-item">Choose File 📁</div>
         </div>
     """, unsafe_allow_html=True)
-    if st.button("✖ Close", key="close_plus"):
+    if st.button("✖ Close Menu", key="close_plus", use_container_width=True):
         st.session_state.show_plus_menu = False
         st.rerun()
 

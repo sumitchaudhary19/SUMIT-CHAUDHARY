@@ -140,7 +140,7 @@ st.markdown(f"""
     /* --- SCROLLABLE LIST CONTAINER FOR SUBJECT BUTTONS --- */
     .scrollable-list {{
         max-height: 250px; overflow-y: auto; text-align: left;
-        padding: 10px; background-color: #2C2C2C; /* Dark Grey matching the popup */
+        padding: 10px; background-color: #2C2C2C;
         border-radius: 10px; border: 1px solid #444;
         margin-top: 10px;
     }}
@@ -150,24 +150,26 @@ st.markdown(f"""
     .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
 
     /* --- SUBJECT LIST BUTTONS --- */
-    /* Target buttons with 'subject_btn' in their help text to style them as a list */
+    /* DEFAULT DARK GREY COLOR ADDED HERE */
     div.stButton > button[title="subject_btn"] {{
-        background: #2C2C2C !important; /* Changed to Dark Grey */
+        background-color: #333333 !important; /* Default dark grey background */
         color: white !important;
-        border: none !important;
+        border: 1px solid #444444 !important; /* Subtle border for definition */
         box-shadow: none !important;
         text-align: left !important;
         justify-content: flex-start !important;
-        padding: 8px 15px !important; /* Slightly increased padding for better click area */
-        margin-bottom: 2px !important;
+        padding: 10px 15px !important;
+        margin-bottom: 5px !important; /* Small gap between subjects */
         font-size: 1.1rem !important;
-        border-radius: 5px !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease-in-out !important;
     }}
     
-    /* Hover effect for list items to turn Blue text & slightly lighter grey background */
+    /* Hover effect for list items */
     div.stButton > button[title="subject_btn"]:hover {{
-        color: #4DA8DA !important; /* Bright Blue */
-        background-color: #3A3A3A !important; /* Slightly lighter grey on hover */
+        color: #4DA8DA !important; /* Bright Blue text */
+        background-color: #3A3A3A !important; /* Slightly lighter grey background on hover */
+        border-color: #4DA8DA !important; /* Blue border on hover */
     }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
@@ -199,31 +201,31 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST DIALOG (With Dark Grey Clickable Items)
+# SCROLLABLE SYLLABUS LIST DIALOG
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
     st.markdown('<div class="scrollable-list">', unsafe_allow_html=True)
     
-    if st.button("• Data Structures", help="subject_btn", use_container_width=True):
+    if st.button("Data Structures", help="subject_btn", use_container_width=True):
         st.toast("Opening Data Structures PDF...")
         # Add your PDF logic/link here
         
-    if st.button("• Digital Electronics", help="subject_btn", use_container_width=True):
+    if st.button("Digital Electronics", help="subject_btn", use_container_width=True):
         st.toast("Digital Electronics selected")
         
-    if st.button("• Object Oriented Programming (C++ / Java)", help="subject_btn", use_container_width=True):
+    if st.button("Object Oriented Programming (C++ / Java)", help="subject_btn", use_container_width=True):
         st.toast("OOP selected")
         
-    if st.button("• Discrete Mathematics", help="subject_btn", use_container_width=True):
+    if st.button("Discrete Mathematics", help="subject_btn", use_container_width=True):
         st.toast("Discrete Math selected")
         
-    if st.button("• Computer Organization and Architecture", help="subject_btn", use_container_width=True):
+    if st.button("Computer Organization and Architecture", help="subject_btn", use_container_width=True):
         st.toast("COA selected")
         
-    if st.button("• Data Structures Lab", help="subject_btn", use_container_width=True):
+    if st.button("Data Structures Lab", help="subject_btn", use_container_width=True):
         st.toast("DS Lab selected")
         
-    if st.button("• OOP Lab", help="subject_btn", use_container_width=True):
+    if st.button("OOP Lab", help="subject_btn", use_container_width=True):
         st.toast("OOP Lab selected")
         
     st.markdown('</div>', unsafe_allow_html=True)

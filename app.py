@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Static Dark Grey Subject Tabs)
+# 3. CSS (UI & Static Dark Grey Dropdown Tabs)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -67,11 +67,28 @@ st.markdown(f"""
         transition: 0.3s all ease !important;
     }}
 
-    /* --- DARK GREY SUBJECT TABS --- */
-    /* Applied to Syllabus List for Fixed Color & No Hover */
+    /* --- DARK GREY DROPDOWN TABS (Academics Sub-menu) --- */
+    div.stButton > button[help="acad_sub_tab"] {{
+        background: #333333 !important; /* Pure Dark Grey */
+        background-color: #333333 !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 10px 20px !important;
+        min-height: 45px !important;
+        margin-top: -5px !important;
+        margin-bottom: 5px !important;
+        font-weight: 500 !important;
+    }}
+    
+    div.stButton > button[help="acad_sub_tab"]:hover {{
+        background: #444444 !important;
+        color: white !important;
+    }}
+
+    /* --- DARK GREY SUBJECT TABS (Syllabus List) --- */
     div.stButton > button[title="subject_tab"], div[data-testid="stLinkButton"] > a[title="subject_tab"] {{
         background-color: #333333 !important;
-        background: #333333 !important;
         color: white !important;
         border: none !important;
         text-align: left !important;
@@ -82,12 +99,6 @@ st.markdown(f"""
         width: 100% !important;
         box-shadow: none !important;
         transition: none !important;
-    }}
-
-    div.stButton > button[title="subject_tab"]:hover, 
-    div[data-testid="stLinkButton"] > a[title="subject_tab"]:hover {{
-        background-color: #333333 !important;
-        color: white !important;
     }}
 
     /* CHAT STYLING */
@@ -153,13 +164,20 @@ with st.sidebar:
         open_chat_history()
     if st.button("University Tools ⚙️"):
         open_uni_tools()
+    
+    # ACADEMICS SECTION
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
+        
     if st.session_state.show_acad_menu:
-        if st.button("Syllabus", use_container_width=True): open_syllabus_list()
-        if st.button("Notes", use_container_width=True): st.toast("Coming soon!")
-        if st.button("PYQs", use_container_width=True): st.toast("Coming soon!")
+        # These 3 use help="acad_sub_tab" to apply the Dark Grey CSS
+        if st.button("Syllabus", use_container_width=True, help="acad_sub_tab"): 
+            open_syllabus_list()
+        if st.button("Notes", use_container_width=True, help="acad_sub_tab"): 
+            st.toast("Coming soon!")
+        if st.button("PYQs", use_container_width=True, help="acad_sub_tab"): 
+            st.toast("Coming soon!")
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)

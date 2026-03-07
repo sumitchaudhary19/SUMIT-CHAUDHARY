@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Interactive Syllabus List)
+# 3. CSS (UI, Dropdown & Subject List Buttons)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -100,7 +100,6 @@ st.markdown(f"""
         bottom: 20px !important;
         left: 0; right: 0; z-index: 999;
     }}
-
     div[data-testid="stChatInput"] > div {{
         background-color: #FFFFFF !important; 
         border: 1px solid #DDDDDD !important;
@@ -108,7 +107,6 @@ st.markdown(f"""
         height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
-
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
@@ -135,41 +133,44 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         border-radius: 15px !important;
         border: 1px solid #444 !important;
-        text-align: center;
     }}
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; text-align: center; }}
 
-    /* --- SCROLLABLE LIST CONTAINER (With Hover Effect) --- */
+    /* --- SCROLLABLE LIST CONTAINER FOR SUBJECT BUTTONS --- */
     .scrollable-list {{
-        max-height: 200px; overflow-y: auto; text-align: left;
-        padding: 15px; background-color: #333333;
+        max-height: 250px; overflow-y: auto; text-align: left;
+        padding: 10px; background-color: #333333;
         border-radius: 10px; border: 1px solid #555;
         margin-top: 10px;
     }}
     
-    .scrollable-list ul {{
-        list-style-type: disc; padding-left: 20px;
-        color: white; margin: 0; font-size: 1.1rem; line-height: 1.8;
-    }}
-    
-    /* Interactive Hover effect for list items */
-    .scrollable-list li {{
-        transition: color 0.2s ease-in-out;
-        cursor: pointer;
-    }}
-    
-    .scrollable-list li:hover {{
-        color: #4DA8DA; /* Bright Blue color on hover */
-        font-weight: 500;
-    }}
-
     .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
     .scrollable-list::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 10px; }}
     .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
 
+    /* --- SUBJECT LIST BUTTONS --- */
+    /* Target buttons with 'subject_btn' in their help text to style them as a list */
+    div.stButton > button[title="subject_btn"] {{
+        background: transparent !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: none !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding: 5px 15px !important;
+        margin-bottom: 2px !important;
+        font-size: 1.1rem !important;
+        border-radius: 5px !important;
+    }}
+    
+    /* Hover effect for list items to turn Blue */
+    div.stButton > button[title="subject_btn"]:hover {{
+        color: #4DA8DA !important; /* Bright Blue */
+        background-color: #3A3A3A !important;
+    }}
+
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
-    
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
 """, unsafe_allow_html=True)
@@ -197,22 +198,36 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST DIALOG
+# SCROLLABLE SYLLABUS LIST DIALOG (With Clickable Items)
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
-    st.markdown("""
-        <div class="scrollable-list">
-            <ul>
-                <li>Data Structures</li>
-                <li>Digital Electronics</li>
-                <li>Object Oriented Programming (C++ / Java)</li>
-                <li>Discrete Mathematics</li>
-                <li>Computer Organization and Architecture</li>
-                <li>Data Structures Lab</li>
-                <li>OOP Lab</li>
-            </ul>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="scrollable-list">', unsafe_allow_html=True)
+    
+    # We use buttons styled as list items so they can be clicked
+    if st.button("• Data Structures", help="subject_btn", use_container_width=True):
+        st.toast("Opening Data Structures PDF... (Insert your PDF logic here)")
+        # Example of how you will link the PDF later:
+        # st.markdown("[Click here to view Data Structures PDF](YOUR_PDF_LINK_HERE)")
+        
+    if st.button("• Digital Electronics", help="subject_btn", use_container_width=True):
+        st.toast("Digital Electronics selected")
+        
+    if st.button("• Object Oriented Programming (C++ / Java)", help="subject_btn", use_container_width=True):
+        st.toast("OOP selected")
+        
+    if st.button("• Discrete Mathematics", help="subject_btn", use_container_width=True):
+        st.toast("Discrete Math selected")
+        
+    if st.button("• Computer Organization and Architecture", help="subject_btn", use_container_width=True):
+        st.toast("COA selected")
+        
+    if st.button("• Data Structures Lab", help="subject_btn", use_container_width=True):
+        st.toast("DS Lab selected")
+        
+    if st.button("• OOP Lab", help="subject_btn", use_container_width=True):
+        st.toast("OOP Lab selected")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 5. SIDEBAR

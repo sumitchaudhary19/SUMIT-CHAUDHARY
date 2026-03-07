@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Navigation)
+# 3. CSS (Dynamic Background & Soft Fonts)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -40,35 +40,40 @@ dashboard_bg = """
     }
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
-    
-    /* DASHBOARD TYPOGRAPHY */
-    .dash-welcome-text {
+
+    /* SOFT CUTE WELCOME TEXT */
+    .welcome-text {
         font-family: 'Inter', sans-serif;
-        font-weight: 800;
+        font-size: 8vw; /* Covers ~80% screen width */
+        font-weight: 900;
         color: white;
         text-align: center;
-        font-size: clamp(3rem, 8vw, 10rem); /* Dynamic large size */
-        width: 100%;
-        margin-top: 5vh;
         letter-spacing: -2px;
-        line-height: 1;
+        margin-top: 5vh;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 50px; /* Rounded corners for cuteness */
+        display: inline-block;
+        width: 90%;
+        margin-left: 5%;
     }
-    .dash-sub-text {
-        font-family: 'Inter', sans-serif;
-        color: rgba(255,255,255,0.7);
+
+    .sub-tagline {
+        color: #D1B3FF;
+        font-size: 1.2rem;
         text-align: center;
-        font-size: 1.1rem;
-        margin-top: 10px;
-        margin-bottom: 50px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
+        font-weight: 400;
+        letter-spacing: 2px;
+        margin-bottom: 40px;
     }
     </style>
 """
 
 chatbot_bg = """
     <style>
-    [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+    [data-testid="stAppViewContainer"] {
+        background-color: #FFFFFF !important;
+    }
     </style>
 """
 
@@ -83,47 +88,33 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* SIDEBAR STYLING */
-    section[data-testid="stSidebar"] {{ background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; }}
-
     /* SHINY VIOLET MAIN TABS */
     .stButton>button {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
-        border-radius: 10px !important;
+        border-radius: 15px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
         border: none !important;
     }}
 
-    /* DASHBOARD LARGE BUTTONS */
-    div.stButton > button[title="dash_tab_btn"] {{
+    /* DASHBOARD BUTTONS CUSTOM */
+    div.stButton > button[help="dash_tab_btn"] {{
         height: 180px !important;
-        font-size: 1.8rem !important;
-        font-weight: 900 !important;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
         border-radius: 25px !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        backdrop-filter: blur(10px);
-        transition: 0.4s all ease;
-    }}
-    div.stButton > button[title="dash_tab_btn"]:hover {{
-        background: rgba(255, 255, 255, 0.2) !important;
-        transform: translateY(-5px);
     }}
 
-    /* MINI MENU POPUP */
     .mini-menu-list {{
         background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
         position: absolute; left: 40px; top: 0px; z-index: 999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
 
-    /* SIGNATURE BOX */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
-    
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
@@ -171,9 +162,10 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown('<div class="dash-welcome-text">Welcome to AskMNIT</div>', unsafe_allow_html=True)
-    st.markdown('<div class="dash-sub-text">Your Journey to Excellence Starts Here — Select Your Destination</div>', unsafe_allow_html=True)
+    st.markdown('<div class="welcome-text">welcome to askmnit</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
+    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
     with c2:

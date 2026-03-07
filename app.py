@@ -32,7 +32,7 @@ if "show_plus_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI, Search Bar & Floating Plus Button)
+# 3. CSS (UI & Positioning)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -66,19 +66,10 @@ st.markdown(f"""
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
+        display: block !important;
     }}
 
-    /* --- SUB-TABS --- */
-    div.stButton > button[title="sub_tab"] {{
-        width: 85% !important;
-        min-width: 0 !important;
-        margin-left: 15% !important;
-        padding: 10px 15px !important;
-        font-size: 0.95rem !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-    }}
-
-    /* --- SEARCH BAR --- */
+    /* SEARCH BAR (PILL SHAPE) */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -100,93 +91,75 @@ st.markdown(f"""
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         font-size: 1.1rem !important; 
-        padding-left: 60px !important; 
+        padding-left: 55px !important; /* Adjusted for Mic icon */
         border: none !important;
     }}
 
-    /* MIC OVERLAY */
-    .mic-tab-ui {{ position: fixed; left: calc(50% - 300px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
+    /* FLOATING "+" BUTTON POSITIONED ABOVE SEARCH BAR */
+    .plus-container-floating {{
+        position: fixed;
+        left: calc(50% - 325px); /* Aligned to left edge of 650px search bar */
+        bottom: 100px; /* Above the search bar */
+        z-index: 1001;
+    }}
 
-    /* FLOATING PLUS BUTTON (Placed above search bar) */
-    div.stButton > button[title="floating_plus"] {{
-        position: fixed !important;
-        left: 45px !important;
-        bottom: 100px !important;
+    div.stButton > button[key="plus_btn"] {{
         width: 40px !important;
-        height: 40px !important;
         min-width: 40px !important;
+        height: 40px !important;
+        border-radius: 8px !important;
         background: #F0F2F6 !important;
         color: #333333 !important;
         border: 1px solid #DDD !important;
-        border-radius: 8px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
         padding: 0 !important;
-        font-size: 1.5rem !important;
-        z-index: 1002 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        font-size: 20px !important;
     }}
 
-    /* --- MINI PLUS POPUP MENU --- */
+    /* MIC ICON INSIDE SEARCH BAR */
+    .mic-tab-ui {{ position: fixed; left: calc(50% - 305px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
+
+    /* MINI POPUP MENU ABOVE "+" BUTTON */
     .plus-menu-container {{
-        position: fixed; left: 45px; bottom: 150px;
+        position: fixed; left: calc(50% - 325px); bottom: 150px;
         width: 180px; background-color: #2C2C2C; border-radius: 12px;
         padding: 15px; z-index: 1005; color: white;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-bottom: 4px solid #1A1A1A;
         text-align: left;
     }}
 
-    .plus-menu-item {{ padding: 8px 0; font-size: 1rem; border-bottom: 1px solid #444; display: flex; align-items: center; }}
+    .plus-menu-item {{ padding: 8px 0; font-size: 1rem; border-bottom: 1px solid #444; }}
     .plus-menu-item:last-child {{ border-bottom: none; }}
 
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
-
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. DIALOGS
-# ==========================================
-@st.dialog("University Tools")
-def open_uni_tools():
-    st.write("Access MNIT Portals:")
-    st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
-    st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
-
-@st.dialog("Chat History 🕑")
-def open_chat_history():
-    st.write("Recent Chats:")
-    for session_key, messages in st.session_state.sessions.items():
-        display_name = (messages[0]["content"][:30] + "...") if messages else session_key
-        if st.button(display_name, key=f"hist_{session_key}", use_container_width=True):
-            st.session_state.current_chat = session_key
-            st.rerun()
-
-# ==========================================
-# 5. SIDEBAR
+# 4. SIDEBAR & DIALOGS
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tools</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
         st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()
     if st.button("Chat History 🕑"):
-        open_chat_history()
+        # Placeholder for existing function
+        st.toast("History clicked")
     if st.button("University Tools ⚙️"):
-        open_uni_tools()
+        st.toast("Tools clicked")
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
-    if st.session_state.show_acad_menu:
-        for sub in ["Syllabus", "Notes", "PYQs"]:
-            if st.button(sub, help="sub_tab"): st.toast(f"{sub} clicked")
     if st.button("Admission - Fee 💸"):
-        st.toast("Admission and Fee clicked")
+        st.toast("Fee details clicked")
     
     st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CHAT DISPLAY
+# 5. MAIN CHAT DISPLAY
 # ==========================================
 title_class = "title-container-empty" if is_chat_empty else "title-container-active"
 st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
@@ -196,9 +169,11 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # --- FLOATING PLUS BUTTON & MENU ---
-if st.button("+", key="plus_float", title="floating_plus"):
+st.markdown('<div class="plus-container-floating">', unsafe_allow_html=True)
+if st.button("+", key="plus_btn"):
     st.session_state.show_plus_menu = not st.session_state.show_plus_menu
     st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.show_plus_menu:
     st.markdown("""
@@ -207,8 +182,11 @@ if st.session_state.show_plus_menu:
             <div class="plus-menu-item">Choose File 📁</div>
         </div>
     """, unsafe_allow_html=True)
+    if st.button("✖ Close", key="close_plus"):
+        st.session_state.show_plus_menu = False
+        st.rerun()
 
-# MIC ICON OVERLAY
+# Mic Icon overlay inside search bar
 st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
@@ -221,8 +199,7 @@ if st.session_state.pending_generation:
     with st.chat_message("assistant", avatar="🤖"):
         try:
             stream = client.chat.completions.create(
-                messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."}
-                ,{"role": "user", "content": user_query}],
+                messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},{"role": "user", "content": user_query}],
                 model="llama-3.3-70b-versatile", stream=True
             )
             def gen():
@@ -230,6 +207,5 @@ if st.session_state.pending_generation:
                     if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
             response_text = st.write_stream(gen())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+        except Exception as e: st.error(f"Error: {str(e)}")
     st.session_state.pending_generation = False

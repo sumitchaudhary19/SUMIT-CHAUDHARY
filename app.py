@@ -41,7 +41,7 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* SOFT CUTE WELCOME TEXT */
+    /* SOFT CUTE WELCOME TEXT - Container Box Removed */
     .welcome-text {
         font-family: 'Inter', sans-serif;
         font-size: 8vw; /* Covers ~80% screen width */
@@ -50,10 +50,11 @@ dashboard_bg = """
         text-align: center;
         letter-spacing: -2px;
         margin-top: 5vh;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 50px; /* Rounded corners for cuteness */
-        display: inline-block;
+        /* Box, padding, and rounded corners removed to just keep text */
+        background: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        display: block !important;
         width: 90%;
         margin-left: 5%;
     }
@@ -65,6 +66,7 @@ dashboard_bg = """
         font-weight: 400;
         letter-spacing: 2px;
         margin-bottom: 40px;
+        margin-top: 10px; /* Space from welcome text */
     }
     </style>
 """

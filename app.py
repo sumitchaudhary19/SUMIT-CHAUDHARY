@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Sub-Tabs Styling)
+# 3. CSS (UI & Equal Size Sub-Tabs Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -44,6 +44,7 @@ st.markdown(f"""
     
     [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    [data-testid="stHeader"] {{ display: none !important; }}
     [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
 
     section[data-testid="stSidebar"] {{
@@ -68,12 +69,13 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS (Dropdown Style) --- */
+    /* --- SUB-TABS (Equal Length Dropdown Style) --- */
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
-        min-width: 0 !important;
-        margin-left: 15% !important; /* Right shift logic for sub-menu */
-        padding: 10px 15px !important; /* Smaller size */
+        min-width: 85% !important; /* Ye dono tabs ko equal size deta hai */
+        max-width: 85% !important;
+        margin-left: 15% !important; /* Right shift for sub-menu feel */
+        padding: 10px 15px !important;
         font-size: 0.95rem !important;
         border-radius: 8px !important;
         margin-top: -5px !important;
@@ -228,12 +230,12 @@ with st.sidebar:
         st.rerun()
 
     if st.session_state.show_acad_menu:
-        # These 3 buttons have `help="sub_tab"` to trigger the smaller CSS style
-        if st.button("Syllabus", help="sub_tab"):
+        # use_container_width=True ensures Streamlit applies our full 85% exact CSS width
+        if st.button("Syllabus", help="sub_tab", use_container_width=True):
             open_syllabus_list()
-        if st.button("Notes", help="sub_tab"):
+        if st.button("Notes", help="sub_tab", use_container_width=True):
             st.toast("Notes feature coming soon!")
-        if st.button("PYQs", help="sub_tab"):
+        if st.button("PYQs", help="sub_tab", use_container_width=True):
             st.toast("PYQs feature coming soon!")
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

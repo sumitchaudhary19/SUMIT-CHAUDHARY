@@ -26,11 +26,13 @@ if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 if "show_acad_menu" not in st.session_state:
     st.session_state.show_acad_menu = False
+if "show_plus_menu" not in st.session_state:
+    st.session_state.show_plus_menu = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Restored Search Bar)
+# 3. CSS (UI & Floating Menus)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -65,7 +67,6 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
         display: block !important;
-        margin-bottom: 12px !important;
     }}
 
     /* --- SUB-TABS --- */
@@ -75,7 +76,6 @@ st.markdown(f"""
         margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
-        border-radius: 8px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
@@ -92,7 +92,7 @@ st.markdown(f"""
     div[data-testid="stChatInput"] > div {{
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
-        border-radius: 40px !important; /* Pill Shape */
+        border-radius: 40px !important;
         height: 70px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
@@ -105,16 +105,38 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* RESTORED PLUS & MIC ICONS */
-    .plus-tab-ui {{ position: fixed; left: calc(50% - 310px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFFFFF !important; z-index: 1001; bottom: 39px !important; }}
+    /* PLUS & MIC OVERLAY BUTTONS */
+    .plus-btn-overlay {{
+        position: fixed; left: calc(50% - 310px); width: 32px; height: 32px;
+        background-color: #333333; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #FFFFFF; z-index: 1002; bottom: 39px; cursor: pointer;
+        font-weight: bold; border: none;
+    }}
+
     .mic-tab-ui {{ position: fixed; left: calc(50% - 270px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
 
-    /* RESTORED SEND BUTTON */
+    /* SEND BUTTON */
     div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 17px !important; width: 35px !important; height: 35px !important; }}
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* --- SIGNATURE BOX 3D --- */
+    /* --- MINI PLUS POPUP MENU --- */
+    .plus-menu-container {{
+        position: fixed; left: calc(50% - 320px); bottom: 100px;
+        width: 180px; background-color: #2C2C2C; border-radius: 12px;
+        padding: 15px; z-index: 1005; color: white;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-bottom: 4px solid #1A1A1A;
+        text-align: left;
+    }}
+
+    .plus-menu-item {{
+        padding: 8px 0; font-size: 1rem; border-bottom: 1px solid #444;
+        display: flex; align-items: center;
+    }}
+    .plus-menu-item:last-child {{ border-bottom: none; }}
+
+    /* SIGNATURE BOX */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
 
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
@@ -146,9 +168,7 @@ def open_chat_history():
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
-        new_id = f"New Session {len(st.session_state.sessions) + 1}"
-        st.session_state.sessions[new_id] = []
-        st.session_state.current_chat = new_id
+        st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()
     if st.button("Chat History 🕑"):
         open_chat_history()
@@ -158,13 +178,12 @@ with st.sidebar:
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
     if st.session_state.show_acad_menu:
-        if st.button("Syllabus", help="sub_tab"): st.toast("Syllabus clicked")
-        if st.button("Notes", help="sub_tab"): st.toast("Notes clicked")
-        if st.button("PYQs", help="sub_tab"): st.toast("PYQs clicked")
+        for sub in ["Syllabus", "Notes", "PYQs"]:
+            if st.button(sub, help="sub_tab"): st.toast(f"{sub} clicked")
     if st.button("Admission - Fee 💸"):
-        st.toast("Admission and Fee clicked")
+        st.toast("Fee details clicked")
     
-    st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. MAIN CHAT DISPLAY
@@ -176,8 +195,27 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
     with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
         st.markdown(message["content"])
 
-# Restoration of UI overlay buttons
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+# --- FUNCTIONAL PLUS POPUP ---
+if st.session_state.show_plus_menu:
+    st.markdown("""
+        <div class="plus-menu-container">
+            <div class="plus-menu-item">Camera 📸</div>
+            <div class="plus-menu-item">Choose File 📁</div>
+        </div>
+    """, unsafe_allow_html=True)
+    # Background click to close logic
+    if st.button("Close Menu ✖", use_container_width=True):
+        st.session_state.show_plus_menu = False
+        st.rerun()
+
+# Restoration of UI overlay buttons with function
+col_btn1, col_btn2 = st.columns([1, 10])
+with col_btn1:
+    if st.button("+", key="main_plus_btn", help="Click for options"):
+        st.session_state.show_plus_menu = not st.session_state.show_plus_menu
+        st.rerun()
+
+# Visually positioning the original overlay icons
 st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
@@ -189,16 +227,14 @@ if st.session_state.pending_generation:
     user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
     with st.chat_message("assistant", avatar="🤖"):
         try:
-            def generate_response():
-                stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."}
-                    ,{"role": "user", "content": user_query}],
-                    model="llama-3.3-70b-versatile", stream=True
-                )
+            stream = client.chat.completions.create(
+                messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},{"role": "user", "content": user_query}],
+                model="llama-3.3-70b-versatile", stream=True
+            )
+            def gen():
                 for chunk in stream:
                     if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
-            response_text = st.write_stream(generate_response())
+            response_text = st.write_stream(gen())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+        except Exception as e: st.error(f"Error: {str(e)}")
     st.session_state.pending_generation = False

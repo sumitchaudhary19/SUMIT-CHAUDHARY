@@ -87,7 +87,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; /* White Container */
+        background-color: #FFFFFF !important; 
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -96,7 +96,7 @@ st.markdown(f"""
 
     /* INCREASED FONT SIZE HERE & RESET PADDING */
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; /* Pure White inside */
+        background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         font-size: 1.2rem !important; 
         line-height: 1.5 !important;
@@ -124,6 +124,7 @@ st.markdown(f"""
         background-color: #2C2C2C !important;
         border-radius: 15px !important;
         border: 1px solid #444 !important;
+        text-align: center; /* Center aligning dialog content */
     }}
     div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
@@ -157,16 +158,20 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# --- NEW ACADEMICS DIALOG ---
+# --- NEW ACADEMICS DIALOG (CENTERED TABS) ---
 @st.dialog("Academics 📚")
 def open_academics():
-    st.write("Select Resource:")
-    if st.button("Syllabus 📄"):
-        st.toast("Syllabus logic coming soon!")
-    if st.button("Notes 📝"):
-        st.toast("Notes logic coming soon!")
-    if st.button("PYQ ⏳"):
-        st.toast("PYQ logic coming soon!")
+    st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
+    
+    # Creating a column structure to force buttons into the center
+    col1, col2, col3 = st.columns([1, 4, 1]) 
+    with col2:
+        if st.button("Syllabus 📄"):
+            st.toast("Syllabus logic coming soon!")
+        if st.button("Notes 📝"):
+            st.toast("Notes logic coming soon!")
+        if st.button("PYQ ⏳"):
+            st.toast("PYQ logic coming soon!")
 
 # ==========================================
 # 5. SIDEBAR

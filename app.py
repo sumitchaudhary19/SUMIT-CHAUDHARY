@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Static Dark Grey Subject Tabs)
+# 3. CSS (UI & Static Light Grey Subject Tabs)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -63,9 +63,12 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
+        transition: 0.3s all ease !important;
+        display: block !important;
+        margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS (Dropdown Style) --- */
+    /* --- SUB-TABS (Academics Dropdown) --- */
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
         min-width: 85% !important;
@@ -75,10 +78,10 @@ st.markdown(f"""
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
-    /* --- DARK GREY SUBJECT TABS (Syllabus) --- */
+    /* --- LIGHT GREY SUBJECT TABS (Syllabus) --- */
     div.stButton > button[title="subject_tab"] {{
-        background-color: #333333 !important; /* Fixed Dark Grey */
-        color: white !important;
+        background-color: #D3D3D3 !important; /* Fixed Light Grey */
+        color: #1A1A1A !important; /* Dark text for contrast */
         border: none !important;
         text-align: left !important;
         justify-content: flex-start !important;
@@ -95,8 +98,8 @@ st.markdown(f"""
     div.stButton > button[title="subject_tab"]:hover, 
     div.stButton > button[title="subject_tab"]:active,
     div.stButton > button[title="subject_tab"]:focus {{
-        background-color: #333333 !important;
-        color: white !important;
+        background-color: #D3D3D3 !important;
+        color: #1A1A1A !important;
         border: none !important;
     }}
 
@@ -141,7 +144,7 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST WITH STATIC DARK GREY TABS
+# SCROLLABLE SYLLABUS LIST WITH STATIC LIGHT GREY TABS
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
     st.markdown('<div class="scrollable-list">', unsafe_allow_html=True)
@@ -152,7 +155,7 @@ def open_syllabus_list():
         "Data Structures Lab", "OOP Lab"
     ]
     for sub in subjects:
-        # title="subject_tab" ensures our CSS applies the fixed Dark Grey color
+        # title="subject_tab" ensures our CSS applies the fixed Light Grey color
         if st.button(sub, help="subject_tab", key=f"sub_{sub}"):
             st.toast(f"You clicked on {sub}")
     st.markdown('</div>', unsafe_allow_html=True)

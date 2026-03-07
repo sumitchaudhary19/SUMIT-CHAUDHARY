@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Chat Font Size & UI)
+# 3. CSS (Clean White Search Bar without Icons)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -71,7 +71,7 @@ st.markdown(f"""
 
     /* --- INCREASED CHAT TEXT FONT SIZE --- */
     [data-testid="stChatMessage"] p {{
-        font-size: 1.25rem !important; /* Font size thoda badha diya */
+        font-size: 1.25rem !important; 
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
@@ -87,44 +87,22 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; /* White Container */
+        background-color: #FFFFFF !important; 
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
+    /* INCREASED FONT SIZE HERE & RESET PADDING */
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; /* Pure White inside */
+        background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
+        font-size: 1.2rem !important; 
+        line-height: 1.5 !important;
         height: 80px !important; 
-        padding-left: 95px !important; 
+        padding: 15px 60px 15px 25px !important; /* Adjusted padding since icons are gone */
         border: none !important;
-    }}
-
-    /* PLUS ICON TAB */
-    .plus-tab-ui {{
-        position: fixed;
-        left: calc(50% - 310px);
-        width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #FFFFFF !important;
-        z-index: 1001; bottom: 44px !important;
-    }}
-
-    /* MIC ICON TAB */
-    .mic-tab-ui {{
-        position: fixed;
-        left: calc(50% - 270px);
-        width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #A0A0A0 !important;
-        z-index: 1001; bottom: 44px !important;
-        font-size: 18px;
     }}
 
     /* SEND BUTTON ARROW */
@@ -169,7 +147,6 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
@@ -218,11 +195,8 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT & DUAL UI BUTTONS
+# 7. CHAT INPUT LOGIC
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
-st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
-
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
     st.session_state.pending_generation = True

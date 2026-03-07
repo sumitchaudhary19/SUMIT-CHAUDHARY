@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Interactive Syllabus List)
+# 3. CSS (UI & Borderless Subject Tabs)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -44,7 +44,6 @@ st.markdown(f"""
     
     [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
-    [data-testid="stHeader"] {{ display: none !important; }}
     [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
 
     section[data-testid="stSidebar"] {{
@@ -69,107 +68,55 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS (Dropdown Style) --- */
+    /* --- SUB-TABS (Academics Dropdown) --- */
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
         min-width: 85% !important;
-        max-width: 85% !important;
         margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
         border-radius: 8px !important;
-        margin-top: -5px !important;
-        margin-bottom: 8px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-        box-shadow: 0 2px 10px rgba(138, 99, 255, 0.2) !important;
     }}
 
-    /* --- CHAT TEXT FONT SIZE --- */
-    [data-testid="stChatMessage"] p {{
-        font-size: 1.25rem !important; 
-        line-height: 1.6 !important;
-        color: #1A1A1A !important;
-    }}
-
-    /* --- SEARCH BAR STYLING --- */
-    div[data-testid="stChatInput"] {{
-        width: 650px !important;
-        margin: 0 auto !important;
-        background-color: transparent !important;
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 0; right: 0; z-index: 999;
-    }}
-
-    div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; 
-        border: 1px solid #DDDDDD !important;
-        border-radius: 15px !important;
-        height: 80px !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
-    }}
-
-    div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; 
-        color: #1A1A1A !important;
-        font-size: 1.2rem !important; 
-        line-height: 1.5 !important;
-        height: 80px !important; 
-        padding: 15px 60px 15px 25px !important; 
+    /* --- BORDERLESS SUBJECT TABS (Syllabus List) --- */
+    div.stButton > button[title="subject_tab"] {{
+        background: transparent !important;
+        color: white !important;
         border: none !important;
+        box-shadow: none !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding: 8px 10px !important;
+        font-size: 1.1rem !important;
+        width: 100% !important;
+        transition: 0.2s all ease !important;
+    }}
+    
+    div.stButton > button[title="subject_tab"]:hover {{
+        color: #4DA8DA !important; /* Blue on hover */
+        background-color: rgba(255, 255, 255, 0.05) !important;
     }}
 
-    /* SEND BUTTON ARROW */
-    div[data-testid="stChatInput"] button {{
-        background-color: #1A1A1A !important;
-        border-radius: 50% !important;
-        right: 15px !important;
-        bottom: 22px !important; 
-        width: 35px !important; height: 35px !important;
-    }}
+    /* SEARCH BAR & CHAT STYLING */
+    [data-testid="stChatMessage"] p {{ font-size: 1.25rem !important; line-height: 1.6 !important; }}
+    div[data-testid="stChatInput"] {{ width: 650px !important; margin: 0 auto !important; position: fixed !important; bottom: 20px !important; left: 0; right: 0; z-index: 999; }}
+    div[data-testid="stChatInput"] > div {{ background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important; border-radius: 15px !important; height: 80px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }}
+    div[data-testid="stChatInput"] textarea {{ background-color: #FFFFFF !important; font-size: 1.2rem !important; height: 80px !important; padding: 15px 60px 15px 25px !important; }}
+    div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 22px !important; width: 35px !important; height: 35px !important; }}
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* DIALOG STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {{
-        background-color: #2C2C2C !important;
-        border-radius: 15px !important;
-        border: 1px solid #444 !important;
-        text-align: center;
-    }}
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
+    /* POPUP/DIALOG STYLING */
+    div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; border: 1px solid #444 !important; }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; text-align: center; }}
 
-    /* --- SCROLLABLE LIST CONTAINER (With Hover Effect) --- */
-    .scrollable-list {{
-        max-height: 200px; overflow-y: auto; text-align: left;
-        padding: 15px; background-color: #333333;
-        border-radius: 10px; border: 1px solid #555;
-        margin-top: 10px;
-    }}
-    
-    .scrollable-list ul {{
-        list-style-type: disc; padding-left: 20px;
-        color: white; margin: 0; font-size: 1.1rem; line-height: 1.8;
-    }}
-    
-    /* Interactive Hover effect for list items */
-    .scrollable-list li {{
-        transition: color 0.2s ease-in-out;
-        cursor: pointer;
-    }}
-    
-    .scrollable-list li:hover {{
-        color: #4DA8DA; /* Bright Blue color on hover */
-        font-weight: 500;
-    }}
-
-    .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
-    .scrollable-list::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 10px; }}
+    .scrollable-list {{ max-height: 250px; overflow-y: auto; text-align: left; padding: 10px; margin-top: 10px; }}
+    .scrollable-list::-webkit-scrollbar {{ width: 6px; }}
     .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
-    
     .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
 """, unsafe_allow_html=True)
@@ -185,58 +132,47 @@ def open_uni_tools():
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
-    st.write("Pick a session based on your first message:")
+    st.write("Pick a session:")
     for session_key, messages in st.session_state.sessions.items():
-        display_name = session_key
-        if len(messages) > 0:
-            first_msg = messages[0]["content"]
-            display_name = (first_msg[:35] + '...') if len(first_msg) > 35 else first_msg
-        
-        icon = "🟢" if session_key == st.session_state.current_chat else "💬"
-        if st.button(f"{icon} {display_name}", key=f"hist_{session_key}", use_container_width=True):
+        display_name = (messages[0]["content"][:35] + '...') if messages else session_key
+        if st.button(display_name, key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST DIALOG
+# --- SYLLABUS LIST WITH BORDERLESS CLICKABLE TABS ---
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
-    st.markdown("""
-        <div class="scrollable-list">
-            <ul>
-                <li>Data Structures</li>
-                <li>Digital Electronics</li>
-                <li>Object Oriented Programming (C++ / Java)</li>
-                <li>Discrete Mathematics</li>
-                <li>Computer Organization and Architecture</li>
-                <li>Data Structures Lab</li>
-                <li>OOP Lab</li>
-            </ul>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="scrollable-list">', unsafe_allow_html=True)
+    subjects = [
+        "Data Structures", "Digital Electronics", 
+        "Object Oriented Programming (C++ / Java)", 
+        "Discrete Mathematics", "Computer Organization and Architecture", 
+        "Data Structures Lab", "OOP Lab"
+    ]
+    for sub in subjects:
+        # Help text "subject_tab" triggers the CSS to remove borders
+        if st.button(f"• {sub}", help="subject_tab"):
+            st.toast(f"Subject '{sub}' tab triggered!")
+            # Future function logic goes here
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # 5. SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
-    
     if st.button("➕ New Session"):
         new_id = f"New Session {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[new_id] = []
         st.session_state.current_chat = new_id
         st.rerun()
-
     if st.button("Chat History 🕑"):
         open_chat_history()
-
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-
-    # ACADEMICS DROPDOWN LOGIC
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
-
     if st.session_state.show_acad_menu:
         if st.button("Syllabus", help="sub_tab", use_container_width=True):
             open_syllabus_list()
@@ -244,7 +180,6 @@ with st.sidebar:
             st.toast("Notes feature coming soon!")
         if st.button("PYQs", help="sub_tab", use_container_width=True):
             st.toast("PYQs feature coming soon!")
-    
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
@@ -265,7 +200,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT LOGIC
+# 7. CHAT INPUT
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
@@ -280,13 +215,10 @@ if st.session_state.pending_generation:
                 stream = client.chat.completions.create(
                     messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
-                    model="llama-3.3-70b-versatile",
-                    temperature=0.7,
-                    stream=True
+                    model="llama-3.3-70b-versatile", stream=True
                 )
                 for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
-                        yield chunk.choices[0].delta.content
+                    if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
         except Exception as e:

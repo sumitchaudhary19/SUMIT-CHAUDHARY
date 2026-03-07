@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Font Size in Search Bar)
+# 3. CSS (Increased Chat Font Size & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -69,6 +69,13 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
+    /* --- INCREASED CHAT TEXT FONT SIZE --- */
+    [data-testid="stChatMessage"] p {{
+        font-size: 1.25rem !important; /* Font size thoda badha diya */
+        line-height: 1.6 !important;
+        color: #1A1A1A !important;
+    }}
+
     /* --- PURE WHITE SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
@@ -87,12 +94,9 @@ st.markdown(f"""
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* INCREASED FONT SIZE HERE */
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important; /* Pure White inside */
         color: #1A1A1A !important;
-        font-size: 1.2rem !important; /* Thoda bada font */
-        line-height: 1.5 !important;
         height: 80px !important; 
         padding-left: 95px !important; 
         border: none !important;
@@ -165,6 +169,7 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
+        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]

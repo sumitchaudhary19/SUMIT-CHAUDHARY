@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Chat Font Size & UI)
+# 3. CSS (Styling & Scrollable List)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -40,10 +40,7 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
     
-    [data-testid="stMain"] {{
-        background-color: #FFFFFF !important;
-    }}
-
+    [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
     [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
 
@@ -53,7 +50,7 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS (For both Sidebar and Popups) */
+    /* SHINY VIOLET TABS */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
@@ -94,7 +91,6 @@ st.markdown(f"""
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* INCREASED FONT SIZE HERE & RESET PADDING */
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
@@ -138,6 +134,7 @@ st.markdown(f"""
         border-radius: 10px;
         border: 1px solid #555;
         margin-top: 10px;
+        margin-bottom: 15px;
     }}
     
     .scrollable-list ul {{
@@ -150,17 +147,9 @@ st.markdown(f"""
     }}
 
     /* Customizing Scrollbar */
-    .scrollable-list::-webkit-scrollbar {{
-        width: 8px;
-    }}
-    .scrollable-list::-webkit-scrollbar-track {{
-        background: #2C2C2C;
-        border-radius: 10px;
-    }}
-    .scrollable-list::-webkit-scrollbar-thumb {{
-        background-color: #8A63FF;
-        border-radius: 10px;
-    }}
+    .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
+    .scrollable-list::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 10px; }}
+    .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
@@ -192,36 +181,45 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# --- SCROLLABLE SYLLABUS LIST DIALOG ---
-@st.dialog("Syllabus Subjects 📖")
-def open_syllabus_list():
-    st.markdown("""
-        <div class="scrollable-list">
-            <ul>
-                <li>Data Structures</li>
-                <li>Digital Electronics</li>
-                <li>Object Oriented Programming (C++ / Java)</li>
-                <li>Discrete Mathematics</li>
-                <li>Computer Organization and Architecture</li>
-                <li>Data Structures Lab</li>
-                <li>OOP Lab</li>
-            </ul>
-        </div>
-    """, unsafe_allow_html=True)
-
-# --- MAIN ACADEMICS DIALOG ---
+# --- NEW ACADEMICS DIALOG (SMART VIEW SWITCHING) ---
 @st.dialog("Academics 📚")
 def open_academics():
-    st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 4, 1]) 
-    with col2:
-        if st.button("Syllabus 📄"):
-            open_syllabus_list()  # Opening the new scrollable dialog
+    # Setting default view if not initialized
+    if "acad_view" not in st.session_state:
+        st.session_state.acad_view = "menu"
+
+    if st.session_state.acad_view == "menu":
+        st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 4, 1]) 
+        with col2:
+            if st.button("Syllabus 📄"):
+                st.session_state.acad_view = "syllabus"  # Change view state
+                st.rerun()
+            if st.button("Notes 📝"):
+                st.toast("Notes logic coming soon!")
+            if st.button("PYQ ⏳"):
+                st.toast("PYQ logic coming soon!")
+                
+    elif st.session_state.acad_view == "syllabus":
+        st.markdown("<p style='text-align: center; font-weight: bold;'>Syllabus Subjects</p>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class="scrollable-list">
+                <ul>
+                    <li>Data Structures</li>
+                    <li>Digital Electronics</li>
+                    <li>Object Oriented Programming (C++ / Java)</li>
+                    <li>Discrete Mathematics</li>
+                    <li>Computer Organization and Architecture</li>
+                    <li>Data Structures Lab</li>
+                    <li>OOP Lab</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Back Button to return to Academics Menu
+        if st.button("⬅ Back to Menu"):
+            st.session_state.acad_view = "menu"
             st.rerun()
-        if st.button("Notes 📝"):
-            st.toast("Notes logic coming soon!")
-        if st.button("PYQ ⏳"):
-            st.toast("PYQ logic coming soon!")
 
 # ==========================================
 # 5. SIDEBAR
@@ -242,6 +240,8 @@ with st.sidebar:
         open_uni_tools()
 
     if st.button("Academics 📚"):
+        # Reset to main menu every time we open the popup
+        st.session_state.acad_view = "menu" 
         open_academics()
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)

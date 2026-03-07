@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Headers)
+# 3. CSS (Dynamic Background & Navigation)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,31 +41,34 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
     
-    /* DASHBOARD HEADERS */
-    .dash-welcome {
+    /* DASHBOARD TYPOGRAPHY */
+    .dash-welcome-text {
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
         color: white;
-        font-size: 4rem;
-        font-weight: 700;
         text-align: center;
-        margin-bottom: 0px;
-        font-family: 'Inter', sans-serif;
+        font-size: clamp(3rem, 8vw, 10rem); /* Dynamic large size */
+        width: 100%;
+        margin-top: 5vh;
+        letter-spacing: -2px;
+        line-height: 1;
     }
-    .dash-subtitle {
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 1.3rem;
-        text-align: center;
-        margin-bottom: 50px;
-        font-weight: 400;
+    .dash-sub-text {
         font-family: 'Inter', sans-serif;
+        color: rgba(255,255,255,0.7);
+        text-align: center;
+        font-size: 1.1rem;
+        margin-top: 10px;
+        margin-bottom: 50px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
     }
     </style>
 """
 
 chatbot_bg = """
     <style>
-    [data-testid="stAppViewContainer"] {
-        background-color: #FFFFFF !important;
-    }
+    [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
     </style>
 """
 
@@ -78,15 +81,10 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"] {{
-        font-family: 'Inter', sans-serif;
-    }}
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
     /* SIDEBAR STYLING */
-    section[data-testid="stSidebar"] {{
-        background-color: #F0F2F6 !important;
-        border-right: 1px solid #DDDDDD !important;
-    }}
+    section[data-testid="stSidebar"] {{ background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; }}
 
     /* SHINY VIOLET MAIN TABS */
     .stButton>button {{
@@ -100,17 +98,20 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* DASHBOARD LARGE BUTTONS - Target using help attribute */
-    div.stButton > button[help="dash_tab_btn"] {{
+    /* DASHBOARD LARGE BUTTONS */
+    div.stButton > button[title="dash_tab_btn"] {{
         height: 180px !important;
-        font-size: 2.2rem !important;
-        font-weight: 800 !important;
+        font-size: 1.8rem !important;
+        font-weight: 900 !important;
         border-radius: 25px !important;
-        transition: 0.3s all ease;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px);
+        transition: 0.4s all ease;
     }}
-    div.stButton > button[help="dash_tab_btn"]:hover {{
+    div.stButton > button[title="dash_tab_btn"]:hover {{
+        background: rgba(255, 255, 255, 0.2) !important;
         transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(138, 99, 255, 0.5) !important;
     }}
 
     /* MINI MENU POPUP */
@@ -129,7 +130,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR (Hidden in Dashboard)
+# 4. SIDEBAR LOGIC
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
@@ -170,11 +171,8 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown("<div style='height: 20vh;'></div>", unsafe_allow_html=True)
-    
-    # Welcome Text
-    st.markdown('<p class="dash-welcome">Welcome to AskMNIT</p>', unsafe_allow_html=True)
-    st.markdown('<p class="dash-subtitle">Your Academic Excellence Starts Here – Select Your Gateway.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="dash-welcome-text">Welcome to AskMNIT</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dash-sub-text">Your Journey to Excellence Starts Here — Select Your Destination</div>', unsafe_allow_html=True)
     
     c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
@@ -185,7 +183,7 @@ if st.session_state.page_view == "dashboard":
             
     with c3:
         if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Feature under construction!")
+            st.toast("Stay tuned!")
 
 # --- VIEW: CHATBOT ---
 else:

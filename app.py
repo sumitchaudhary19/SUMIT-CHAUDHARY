@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Chat Font Size & UI)
+# 3. CSS (UI, Dialogs & Scroller Logic)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -53,7 +53,7 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS (For both Sidebar and Popups) */
+    /* SHINY VIOLET TABS */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
@@ -76,7 +76,7 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
 
-    /* --- PURE WHITE SEARCH BAR STYLING --- */
+    /* --- SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -87,14 +87,13 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* INCREASED FONT SIZE HERE & RESET PADDING */
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
@@ -119,14 +118,35 @@ st.markdown(f"""
     }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* DIALOG STYLING */
+    /* DIALOG STYLING (Square Pill-ish Look) */
     div[data-testid="stDialog"] div[role="dialog"] {{
         background-color: #2C2C2C !important;
-        border-radius: 15px !important;
+        border-radius: 20px !important; /* Slightly more rounded for pill-like feel */
         border: 1px solid #444 !important;
-        text-align: center; /* Center aligning dialog content */
+        max-width: 400px !important; /* Mini Square size */
     }}
     div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
+
+    /* SCROLLABLE LIST CONTAINER */
+    .scrollable-list {{
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 10px;
+        margin-top: 10px;
+    }}
+    
+    /* Custom Scrollbar for the list */
+    .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
+    .scrollable-list::-webkit-scrollbar-track {{ background: #1A1A1A; border-radius: 10px; }}
+    .scrollable-list::-webkit-scrollbar-thumb {{ background: #8A63FF; border-radius: 10px; }}
+
+    .subject-item {{
+        color: #DDDDDD;
+        font-size: 1.1rem;
+        padding: 8px 0;
+        border-bottom: 1px solid #444;
+    }}
+    .subject-item:last-child {{ border-bottom: none; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
@@ -138,6 +158,32 @@ st.markdown(f"""
 # ==========================================
 # 4. DIALOGS
 # ==========================================
+@st.dialog("Syllabus Subjects 📖")
+def open_syllabus():
+    st.markdown("""
+        <div class="scrollable-list">
+            <div class="subject-item">• Data Structures</div>
+            <div class="subject-item">• Digital Electronics</div>
+            <div class="subject-item">• Object Oriented Programming (C++ / Java)</div>
+            <div class="subject-item">• Discrete Mathematics</div>
+            <div class="subject-item">• Computer Organization and Architecture</div>
+            <div class="subject-item">• Data Structures Lab</div>
+            <div class="subject-item">• OOP Lab</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+@st.dialog("Academics 📚")
+def open_academics():
+    st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 4, 1]) 
+    with col2:
+        if st.button("Syllabus 📄"):
+            open_syllabus() # Opens the new subject list dialog
+        if st.button("Notes 📝"):
+            st.toast("Notes section coming soon!")
+        if st.button("PYQ ⏳"):
+            st.toast("PYQ section coming soon!")
+
 @st.dialog("University Tools")
 def open_uni_tools():
     st.write("Access MNIT Portals:")
@@ -146,7 +192,7 @@ def open_uni_tools():
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
-    st.write("Pick a session based on your first message:")
+    st.write("Pick a session:")
     for session_key, messages in st.session_state.sessions.items():
         display_name = session_key
         if len(messages) > 0:
@@ -157,21 +203,6 @@ def open_chat_history():
         if st.button(f"{icon} {display_name}", key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
-
-# --- NEW ACADEMICS DIALOG (CENTERED TABS) ---
-@st.dialog("Academics 📚")
-def open_academics():
-    st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
-    
-    # Creating a column structure to force buttons into the center
-    col1, col2, col3 = st.columns([1, 4, 1]) 
-    with col2:
-        if st.button("Syllabus 📄"):
-            st.toast("Syllabus logic coming soon!")
-        if st.button("Notes 📝"):
-            st.toast("Notes logic coming soon!")
-        if st.button("PYQ ⏳"):
-            st.toast("PYQ logic coming soon!")
 
 # ==========================================
 # 5. SIDEBAR

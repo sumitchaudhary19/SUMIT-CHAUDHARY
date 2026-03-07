@@ -41,7 +41,7 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* SOFT CUTE WELCOME TEXT - Rounded Corners applied to text characters */
+    /* SOFT CUTE WELCOME TEXT - Container Box Removed */
     .welcome-text {
         font-family: 'Inter', sans-serif;
         font-size: 8vw; /* Covers ~80% screen width */
@@ -50,18 +50,13 @@ dashboard_bg = """
         text-align: center;
         letter-spacing: -2px;
         margin-top: 5vh;
+        /* Box, padding, and rounded corners removed to just keep text */
         background: none !important;
         padding: 0 !important;
         border-radius: 0 !important;
         display: block !important;
         width: 90%;
         margin-left: 5%;
-        
-        /* Apply rounded corners effect directly to text strokes */
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.04em white; /* Small stroke to facilitate rounding */
-        stroke-linecap: round;
-        stroke-linejoin: round;
     }
 
     .sub-tagline {

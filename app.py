@@ -72,8 +72,8 @@ st.markdown(f"""
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
         min-width: 0 !important;
-        margin-left: 15% !important; /* Right shift logic for sub-menu */
-        padding: 10px 15px !important; /* Smaller size */
+        margin-left: 15% !important;
+        padding: 10px 15px !important;
         font-size: 0.95rem !important;
         border-radius: 8px !important;
         margin-top: -5px !important;
@@ -228,13 +228,16 @@ with st.sidebar:
         st.rerun()
 
     if st.session_state.show_acad_menu:
-        # These 3 buttons have `help="sub_tab"` to trigger the smaller CSS style
         if st.button("Syllabus", help="sub_tab"):
             open_syllabus_list()
         if st.button("Notes", help="sub_tab"):
             st.toast("Notes feature coming soon!")
         if st.button("PYQs", help="sub_tab"):
             st.toast("PYQs feature coming soon!")
+            
+    # NEW ADMISSION - FEE TAB
+    if st.button("Admission - Fee 💸"):
+        st.toast("Admission and Fee details coming soon!")
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)

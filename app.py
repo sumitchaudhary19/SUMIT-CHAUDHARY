@@ -24,11 +24,13 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
+if "show_acad_menu" not in st.session_state:
+    st.session_state.show_acad_menu = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Styling & Scrollable List)
+# 3. CSS (UI & Sub-Tabs Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -50,7 +52,7 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS */
+    /* SHINY VIOLET MAIN TABS */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
@@ -64,6 +66,20 @@ st.markdown(f"""
         transition: 0.3s all ease !important;
         display: block !important;
         margin-bottom: 12px !important;
+    }}
+
+    /* --- SUB-TABS (Dropdown Style) --- */
+    div.stButton > button[title="sub_tab"] {{
+        width: 85% !important;
+        min-width: 0 !important;
+        margin-left: 15% !important; /* Right shift logic for sub-menu */
+        padding: 10px 15px !important; /* Smaller size */
+        font-size: 0.95rem !important;
+        border-radius: 8px !important;
+        margin-top: -5px !important;
+        margin-bottom: 8px !important;
+        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
+        box-shadow: 0 2px 10px rgba(138, 99, 255, 0.2) !important;
     }}
 
     /* --- INCREASED CHAT TEXT FONT SIZE --- */
@@ -126,27 +142,17 @@ st.markdown(f"""
 
     /* SCROLLABLE LIST CONTAINER FOR SYLLABUS */
     .scrollable-list {{
-        max-height: 200px;
-        overflow-y: auto;
-        text-align: left;
-        padding: 15px;
-        background-color: #333333;
-        border-radius: 10px;
-        border: 1px solid #555;
+        max-height: 200px; overflow-y: auto; text-align: left;
+        padding: 15px; background-color: #333333;
+        border-radius: 10px; border: 1px solid #555;
         margin-top: 10px;
-        margin-bottom: 15px;
     }}
     
     .scrollable-list ul {{
-        list-style-type: disc;
-        padding-left: 20px;
-        color: white;
-        margin: 0;
-        font-size: 1.1rem;
-        line-height: 1.8;
+        list-style-type: disc; padding-left: 20px;
+        color: white; margin: 0; font-size: 1.1rem; line-height: 1.8;
     }}
 
-    /* Customizing Scrollbar */
     .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
     .scrollable-list::-webkit-scrollbar-track {{ background: #2C2C2C; border-radius: 10px; }}
     .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
@@ -181,45 +187,22 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# --- NEW ACADEMICS DIALOG (SMART VIEW SWITCHING) ---
-@st.dialog("Academics 📚")
-def open_academics():
-    # Setting default view if not initialized
-    if "acad_view" not in st.session_state:
-        st.session_state.acad_view = "menu"
-
-    if st.session_state.acad_view == "menu":
-        st.markdown("<p style='text-align: center;'>Select Resource:</p>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 4, 1]) 
-        with col2:
-            if st.button("Syllabus 📄"):
-                st.session_state.acad_view = "syllabus"  # Change view state
-                st.rerun()
-            if st.button("Notes 📝"):
-                st.toast("Notes logic coming soon!")
-            if st.button("PYQ ⏳"):
-                st.toast("PYQ logic coming soon!")
-                
-    elif st.session_state.acad_view == "syllabus":
-        st.markdown("<p style='text-align: center; font-weight: bold;'>Syllabus Subjects</p>", unsafe_allow_html=True)
-        st.markdown("""
-            <div class="scrollable-list">
-                <ul>
-                    <li>Data Structures</li>
-                    <li>Digital Electronics</li>
-                    <li>Object Oriented Programming (C++ / Java)</li>
-                    <li>Discrete Mathematics</li>
-                    <li>Computer Organization and Architecture</li>
-                    <li>Data Structures Lab</li>
-                    <li>OOP Lab</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Back Button to return to Academics Menu
-        if st.button("⬅ Back to Menu"):
-            st.session_state.acad_view = "menu"
-            st.rerun()
+# SCROLLABLE SYLLABUS LIST DIALOG (Triggered from Sub-tab)
+@st.dialog("Syllabus Subjects 📖")
+def open_syllabus_list():
+    st.markdown("""
+        <div class="scrollable-list">
+            <ul>
+                <li>Data Structures</li>
+                <li>Digital Electronics</li>
+                <li>Object Oriented Programming (C++ / Java)</li>
+                <li>Discrete Mathematics</li>
+                <li>Computer Organization and Architecture</li>
+                <li>Data Structures Lab</li>
+                <li>OOP Lab</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ==========================================
 # 5. SIDEBAR
@@ -239,10 +222,19 @@ with st.sidebar:
     if st.button("University Tools ⚙️"):
         open_uni_tools()
 
+    # ACADEMICS DROPDOWN LOGIC
     if st.button("Academics 📚"):
-        # Reset to main menu every time we open the popup
-        st.session_state.acad_view = "menu" 
-        open_academics()
+        st.session_state.show_acad_menu = not st.session_state.show_acad_menu
+        st.rerun()
+
+    if st.session_state.show_acad_menu:
+        # These 3 buttons have `help="sub_tab"` to trigger the smaller CSS style
+        if st.button("Syllabus", help="sub_tab"):
+            open_syllabus_list()
+        if st.button("Notes", help="sub_tab"):
+            st.toast("Notes feature coming soon!")
+        if st.button("PYQs", help="sub_tab"):
+            st.toast("PYQs feature coming soon!")
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)

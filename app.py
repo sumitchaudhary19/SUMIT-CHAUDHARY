@@ -1,18 +1,15 @@
 import streamlit as st
-import urllib.parse
-import time
-import base64
 from groq import Groq
 
 # ==========================================
-# 1. PAGE CONFIG & SECRETS VALIDATION
+# 1. PAGE CONFIG & SECRETS
 # ==========================================
 st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 else:
-    st.error("🚨 System Error: GROQ_API_KEY is missing in Streamlit Secrets!")
+    st.error("🚨 System Error: GROQ_API_KEY is missing!")
     st.stop()
 
 # ==========================================
@@ -29,69 +26,58 @@ if "show_acad_menu" not in st.session_state:
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
-    st.session_state.page_view = "chatbot" 
+    st.session_state.page_view = "chatbot"
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (FIXED ERROR & UI STYLING)
+# 3. CSS (UI & Navigation Logic)
 # ==========================================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
     }}
     
-    [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
-    #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
-    [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
-
+    /* SIDEBAR STYLING */
     section[data-testid="stSidebar"] {{
         background-color: #F0F2F6 !important;
         border-right: 1px solid #DDDDDD !important;
-        width: 320px !important;
     }}
 
+    /* Hiding Sidebar specifically when in Dashboard view */
+    {"div[data-testid='stSidebarNav'] {display: none !important;} section[data-testid='stSidebar'] {display: none !important;}" if st.session_state.page_view == "dashboard" else ""}
+
     /* SHINY VIOLET MAIN TABS */
-    .stButton>button, [data-testid="stLinkButton"] > a {{
+    .stButton>button {{
         width: 100% !important;
-        min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
-        border: none !important;
         border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        transition: 0.3s all ease !important;
-        display: block !important;
     }}
 
-    /* --- MINI MENU LIST POPUP --- */
+    /* DASHBOARD LARGE BUTTONS */
+    div.stButton > button[title="dash_tab_btn"] {{
+        height: 180px !important;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        border-radius: 25px !important;
+    }}
+
+    /* MINI MENU POPUP */
     .mini-menu-list {{
         background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
         position: absolute; left: 40px; top: 0px; z-index: 999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
 
-    /* --- DASHBOARD LARGE TABS (Fixed Styling) --- */
-    div.stButton > button[title="dash_tab"] {{
-        height: 150px !important;
-        font-size: 1.8rem !important;
-        font-weight: 800 !important;
-        border-radius: 20px !important;
-        margin: 10px !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-    }}
-
-    /* SEARCH BAR */
-    div[data-testid="stChatInput"] > div {{ background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important; border-radius: 40px !important; height: 70px !important; }}
-
-    /* SIGNATURE BOX 3D */
+    /* SIGNATURE BOX */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
     
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
@@ -100,60 +86,61 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR LOGIC
+# 4. SIDEBAR (Only visible when NOT in Dashboard)
 # ==========================================
-with st.sidebar:
-    # 3-line symbol
-    if st.button("☰", key="hamburger_icon"):
-        st.session_state.show_mini_menu = not st.session_state.show_mini_menu
-        st.rerun()
-    
-    if st.session_state.show_mini_menu:
-        st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-        if st.button("📊 Dashboard", key="nav_dash", use_container_width=True):
-            st.session_state.page_view = "dashboard"
-            st.session_state.show_mini_menu = False
+if st.session_state.page_view != "dashboard":
+    with st.sidebar:
+        # Hamburger Menu
+        if st.button("☰", key="hamburger_icon"):
+            st.session_state.show_mini_menu = not st.session_state.show_mini_menu
             st.rerun()
-        if st.button("⚙️ Settings", key="nav_sett", use_container_width=True):
-            st.toast("Settings coming soon!")
-        st.markdown('</div>', unsafe_allow_html=True)
+        
+        if st.session_state.show_mini_menu:
+            st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
+            if st.button("📊 Dashboard", use_container_width=True):
+                st.session_state.page_view = "dashboard"
+                st.session_state.show_mini_menu = False
+                st.rerun()
+            if st.button("⚙️ Settings", use_container_width=True):
+                st.toast("Settings coming soon!")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
-    
-    if st.button("New Chat"):
-        st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
-        st.session_state.page_view = "chatbot"
-        st.rerun()
+        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
+        
+        if st.button("New Chat"):
+            st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
+            st.rerun()
 
-    if st.button("Chat History 🕑"): st.toast("History clicked")
-    if st.button("University Tools ⚙️"): st.toast("Tools clicked")
-    if st.button("Academics 📚"):
-        st.session_state.show_acad_menu = not st.session_state.show_acad_menu
-        st.rerun()
-    if st.button("Admission - Fee 💸"): st.toast("Fee clicked")
-    
-    st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+        st.button("Chat History 🕑")
+        st.button("University Tools ⚙️")
+        
+        if st.button("Academics 📚"):
+            st.session_state.show_acad_menu = not st.session_state.show_acad_menu
+            st.rerun()
+            
+        st.button("Admission - Fee 💸")
+        
+        st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 
-# --- VIEW 1: DASHBOARD INTERFACE (FIXED) ---
+# --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
-    col_left, col1, col2, col_right = st.columns([0.5, 2, 2, 0.5])
+    st.markdown("<div style='height: 35vh;'></div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
-    with col1:
-        # Note: help="dash_tab" is used instead of title to avoid the TypeError
-        if st.button("AskMNIT", help="dash_tab", key="btn_askmnit", use_container_width=True):
+    with c2:
+        # We use a unique key and CSS title selector for the big buttons
+        if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
             
-    with col2:
-        if st.button("Coming Soon", help="dash_tab", key="btn_soon", use_container_width=True):
-            st.toast("Feature coming soon!")
+    with c3:
+        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
 
-# --- VIEW 2: CHATBOT INTERFACE ---
+# --- VIEW: CHATBOT ---
 else:
     title_class = "title-container-empty" if is_chat_empty else "title-container-active"
     st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)

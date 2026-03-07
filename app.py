@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Dark Grey Subject Tabs)
+# 3. CSS (UI & Static Dark Grey Subject Tabs)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -63,9 +63,6 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        transition: 0.3s all ease !important;
-        display: block !important;
-        margin-bottom: 12px !important;
     }}
 
     /* --- SUB-TABS (Dropdown Style) --- */
@@ -75,37 +72,39 @@ st.markdown(f"""
         margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
-        border-radius: 8px !important;
-        margin-top: -5px !important;
-        margin-bottom: 8px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
-    /* --- DARK GREY SUBJECT TABS (Syllabus Pop-up) --- */
+    /* --- DARK GREY SUBJECT TABS (Syllabus) --- */
     div.stButton > button[title="subject_tab"] {{
-        background-color: #333333 !important; /* Dark Grey Color */
+        background-color: #333333 !important; /* Fixed Dark Grey */
         color: white !important;
-        border: 1px solid #444 !important;
+        border: none !important;
         text-align: left !important;
         justify-content: flex-start !important;
-        padding: 12px 20px !important;
-        font-size: 1.05rem !important;
-        margin-bottom: 8px !important;
+        padding: 12px 15px !important;
+        margin-bottom: 6px !important;
+        font-size: 1.1rem !important;
         border-radius: 8px !important;
         width: 100% !important;
         box-shadow: none !important;
-    }}
-    
-    div.stButton > button[title="subject_tab"]:hover {{
-        background-color: #3d3d3d !important; /* Slightly lighter on hover just for feedback */
-        border-color: #555 !important;
+        transition: none !important; /* Disables hover effects */
     }}
 
-    /* CHAT & INPUT STYLING */
+    /* Force No Hover Color Change */
+    div.stButton > button[title="subject_tab"]:hover, 
+    div.stButton > button[title="subject_tab"]:active,
+    div.stButton > button[title="subject_tab"]:focus {{
+        background-color: #333333 !important;
+        color: white !important;
+        border: none !important;
+    }}
+
+    /* SEARCH BAR & CHAT STYLING */
     [data-testid="stChatMessage"] p {{ font-size: 1.25rem !important; line-height: 1.6 !important; }}
     div[data-testid="stChatInput"] {{ width: 650px !important; margin: 0 auto !important; position: fixed !important; bottom: 20px !important; left: 0; right: 0; z-index: 999; }}
     div[data-testid="stChatInput"] > div {{ background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important; border-radius: 15px !important; height: 80px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }}
-    div[data-testid="stChatInput"] textarea {{ background-color: #FFFFFF !important; font-size: 1.2rem !important; height: 80px !important; padding: 15px 60px 15px 25px !important; }}
+    div[data-testid="stChatInput"] textarea {{ background-color: #FFFFFF !important; font-size: 1.2rem; height: 80px !important; padding: 15px 60px 15px 25px !important; }}
     div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 22px !important; width: 35px !important; height: 35px !important; }}
     div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
@@ -114,8 +113,8 @@ st.markdown(f"""
     div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; border: 1px solid #444 !important; text-align: center; }}
     div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
-    .scrollable-list {{ max-height: 300px; overflow-y: auto; padding: 5px; margin-top: 10px; }}
-    .scrollable-list::-webkit-scrollbar {{ width: 6px; }}
+    .scrollable-list {{ max-height: 300px; overflow-y: auto; text-align: left; padding: 10px; margin-top: 10px; }}
+    .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
     .scrollable-list::-webkit-scrollbar-thumb {{ background-color: #8A63FF; border-radius: 10px; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
@@ -142,7 +141,7 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST DIALOG (WITH DARK GREY TABS)
+# SCROLLABLE SYLLABUS LIST WITH STATIC DARK GREY TABS
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
     st.markdown('<div class="scrollable-list">', unsafe_allow_html=True)
@@ -153,10 +152,9 @@ def open_syllabus_list():
         "Data Structures Lab", "OOP Lab"
     ]
     for sub in subjects:
-        # 'subject_tab' help triggers the custom Dark Grey CSS
-        if st.button(sub, help="subject_tab", use_container_width=True):
-            st.toast(f"Opening details for {sub}...")
-            # Logic for specific functions can be added here
+        # title="subject_tab" ensures our CSS applies the fixed Dark Grey color
+        if st.button(sub, help="subject_tab", key=f"sub_{sub}"):
+            st.toast(f"You clicked on {sub}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -173,20 +171,16 @@ with st.sidebar:
         open_chat_history()
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-    
-    # ACADEMICS DROPDOWN
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
-
     if st.session_state.show_acad_menu:
         if st.button("Syllabus", help="sub_tab", use_container_width=True):
             open_syllabus_list()
         if st.button("Notes", help="sub_tab", use_container_width=True):
-            st.toast("Notes coming soon!")
+            st.toast("Coming soon!")
         if st.button("PYQs", help="sub_tab", use_container_width=True):
-            st.toast("PYQs coming soon!")
-    
+            st.toast("Coming soon!")
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
@@ -202,8 +196,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    avatar = "👤" if message["role"] == "user" else "🤖"
-    with st.chat_message(message["role"], avatar=avatar):
+    avatar_icon = "👤" if message["role"] == "user" else "🤖"
+    with st.chat_message(message["role"], avatar=avatar_icon):
         st.markdown(message["content"])
 
 # ==========================================

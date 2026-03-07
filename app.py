@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI with Dual Buttons in Search Bar)
+# 3. CSS (Pure White Search Bar & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -64,20 +64,23 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
+        transition: 0.3s all ease !important;
+        display: block !important;
         margin-bottom: 12px !important;
     }}
 
-    /* SEARCH BAR & DUAL BUTTONS */
+    /* --- PURE WHITE SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
+        background-color: transparent !important;
         position: fixed !important;
         bottom: 20px !important;
         left: 0; right: 0; z-index: 999;
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important;
+        background-color: #FFFFFF !important; /* White Container */
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -85,8 +88,11 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{ 
+        background-color: #FFFFFF !important; /* Pure White inside */
+        color: #1A1A1A !important;
         height: 80px !important; 
-        padding-left: 95px !important; /* Made space for two icons */
+        padding-left: 95px !important; 
+        border: none !important;
     }}
 
     /* PLUS ICON TAB */
@@ -104,15 +110,29 @@ st.markdown(f"""
     /* MIC ICON TAB */
     .mic-tab-ui {{
         position: fixed;
-        left: calc(50% - 270px); /* Positioned right side of plus icon */
+        left: calc(50% - 270px);
         width: 32px; height: 32px;
         background-color: #333333 !important;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        color: #A0A0A0 !important; /* Light grey symbol */
+        color: #A0A0A0 !important;
         z-index: 1001; bottom: 44px !important;
         font-size: 18px;
     }}
+
+    /* SEND BUTTON ARROW */
+    div[data-testid="stChatInput"] button {{
+        background-color: #1A1A1A !important;
+        border-radius: 50% !important;
+        right: 15px !important;
+        bottom: 22px !important; 
+        width: 35px !important; height: 35px !important;
+    }}
+
+    div[data-testid="stChatInput"] button::after {{
+        content: ">"; color: white; font-weight: 900; font-size: 1.2rem;
+    }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     /* DIALOG STYLING */
     div[data-testid="stDialog"] div[role="dialog"] {{

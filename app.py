@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Fixing Dual Buttons & Layout)
+# 3. CSS (Fixing Positions & Original Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -37,6 +37,7 @@ st.markdown(f"""
     html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
         font-family: 'Inter', sans-serif;
         background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
     }}
     
     [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
@@ -49,7 +50,7 @@ st.markdown(f"""
         border-right: 1px solid #DDDDDD !important;
     }}
 
-    /* SHINY VIOLET TABS */
+    /* SHINY VIOLET SIDEBAR TABS */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -61,7 +62,7 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
     }}
 
-    /* SEARCH BAR */
+    /* --- SEARCH BAR AREA --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -81,39 +82,47 @@ st.markdown(f"""
 
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important;
-        padding-left: 95px !important; /* Space for both buttons */
+        padding-left: 95px !important; 
         height: 80px !important; 
+        border: none !important;
     }}
 
-    /* --- FIXED BUTTONS POSITIONING --- */
+    /* --- SEARCH BAR BUTTONS STYLING --- */
     div.stButton > button[key="plus_btn"], div.stButton > button[key="mic_btn"] {{
         position: fixed;
         bottom: 44px !important;
         width: 32px !important;
         height: 32px !important;
-        background: #333333 !important;
-        color: white !important;
+        background-color: #333333 !important;
         border-radius: 50% !important;
         z-index: 1002;
         padding: 0 !important;
         display: flex; align-items: center; justify-content: center;
+        border: none !important;
         box-shadow: none !important;
+        transition: 0.3s;
     }}
 
-    div.stButton > button[key="plus_btn"] {{ left: calc(50% - 310px); font-size: 20px !important; }}
-    div.stButton > button[key="mic_btn"] {{ left: calc(50% - 270px); font-size: 18px !important; color: #A0A0A0 !important; }}
+    div.stButton > button[key="plus_btn"] {{ left: calc(50% - 310px); color: #FFFFFF !important; font-size: 20px !important; }}
+    div.stButton > button[key="mic_btn"] {{ left: calc(50% - 270px); color: #A0A0A0 !important; font-size: 18px !important; }}
 
-    /* SEND ARROW */
+    div.stButton > button[key="plus_btn"]:hover, div.stButton > button[key="mic_btn"]:hover {{
+        background-color: #444444 !important;
+        transform: scale(1.05);
+    }}
+
+    /* --- SEND ARROW BUTTON --- */
     div[data-testid="stChatInput"] button {{
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important; bottom: 22px !important; 
+        width: 35px !important; height: 35px !important;
     }}
-    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    /* DIALOGS */
-    div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; }}
+    /* POPUP/DIALOG STYLING */
+    div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; border: 1px solid #444 !important; }}
     div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
     /* STICKY HEADER */
@@ -133,27 +142,28 @@ st.markdown(f"""
 # ==========================================
 @st.dialog("Attach Documents 📄")
 def open_attachment_dialog():
-    st.write("Upload PDF or Image:")
-    uploaded_file = st.file_uploader("Select file", type=['pdf', 'png', 'jpg', 'jpeg'])
+    st.write("Upload PDF or Image for analysis:")
+    uploaded_file = st.file_uploader("Choose file", type=['pdf', 'png', 'jpg', 'jpeg'])
     if uploaded_file:
         st.success(f"Attached: {uploaded_file.name}")
-        if st.button("Submit"):
-            st.info("Bhai, processing features jald hi aayenge!")
+        if st.button("Submit to AI"):
+            st.info("Wait! Processing logic coming soon.")
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
-    st.write("Sessions:")
+    st.write("Previous Conversations:")
     for session_key, messages in st.session_state.sessions.items():
         display_name = session_key
         if messages:
-            display_name = (messages[0]["content"][:30] + '...') if len(messages[0]["content"]) > 30 else messages[0]["content"]
+            content = messages[0]["content"]
+            display_name = (content[:30] + '...') if len(content) > 30 else content
         if st.button(display_name, key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
 
 @st.dialog("University Tools")
 def open_uni_tools():
-    st.write("MNIT Portals:")
+    st.write("MNIT Academic Portals:")
     st.link_button("Class Schedule 📅", "https://www.mnit.ac.in/TimeTable/", use_container_width=True)
     st.link_button("ERP Portal 🌐", "https://mniterp.org/mniterp/", use_container_width=True)
 
@@ -172,7 +182,7 @@ with st.sidebar:
     if st.button("University Tools ⚙️"):
         open_uni_tools()
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
-    st.markdown(f"""<div style="text-align:center; margin-top:20px; color:#666;">Architected by<br><b>SUMIT CHAUDHARY</b></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div style="text-align:center; margin-top:20px; color:#666; font-size:0.8rem;">Architected by<br><b style="color:#1A1A1A; font-size:1rem;">SUMIT CHAUDHARY</b></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. HEADER
@@ -191,21 +201,22 @@ st.markdown(f"""
 # 7. CHAT DISPLAY
 # ==========================================
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    avatar_icon = "👤" if message["role"] == "user" else "🤖"
-    with st.chat_message(message["role"], avatar=avatar_icon):
+    role = message["role"]
+    with st.chat_message(role, avatar="👤" if role == "user" else "🤖"):
         st.markdown(message["content"])
 
 # ==========================================
-# 8. FUNCTIONAL BUTTONS OVER SEARCH BAR
+# 8. FUNCTIONAL SEARCH BAR BUTTONS
 # ==========================================
+# Positioning Streamlit buttons as icons over the search bar
 if st.button("+", key="plus_btn"):
     open_attachment_dialog()
 
 if st.button("🎤", key="mic_btn"):
-    st.toast("Mice is listening... (Experimental)")
+    st.toast("🎤 Mic is ready (Feature testing...)")
 
 # ==========================================
-# 9. CHAT INPUT
+# 9. CHAT INPUT LOGIC
 # ==========================================
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
@@ -218,12 +229,13 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an AI assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an intelligent AI assistant for MNIT Jaipur students."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile", temperature=0.7, stream=True
                 )
                 for chunk in stream:
-                    if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
             response_text = st.write_stream(generate_response())
             st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
         except Exception as e:

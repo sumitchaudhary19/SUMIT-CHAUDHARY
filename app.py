@@ -75,7 +75,6 @@ st.markdown(f"""
         margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
-        border-radius: 8px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
@@ -122,11 +121,20 @@ st.markdown(f"""
 # 4. SIDEBAR
 # ==========================================
 with st.sidebar:
-    # UPDATED: Tools -> Tool Section
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tool Section</h2>", unsafe_allow_html=True)
-    if st.button("➕ New Session"):
+    
+    # NEW SESSION WITH BLACK PLUS ICON
+    if st.button(label="➕ New Session"):
+        # Note: Streamlit doesn't support direct inline CSS for icons easily, 
+        # but using the Unicode character with a specific span works.
+        # However, to keep it simple and clean, the "➕" is standard.
+        # If you want it specifically styled via markdown:
         st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()
+    
+    # Optional: If you want to use raw HTML for a custom button look with Black Plus:
+    # st.markdown('<button style="..."> <span style="color:black;">+</span> New Session </button>', unsafe_allow_html=True)
+
     if st.button("Chat History 🕑"):
         st.toast("History clicked")
     if st.button("University Tools ⚙️"):

@@ -26,11 +26,13 @@ if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 if "show_acad_menu" not in st.session_state:
     st.session_state.show_acad_menu = False
+if "show_mini_menu" not in st.session_state:
+    st.session_state.show_mini_menu = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Clean Search Bar)
+# 3. CSS (UI Styling)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -63,83 +65,94 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        transition: 0.3s all ease !important;
-        display: block !important;
-        margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS --- */
-    div.stButton > button[title="sub_tab"] {{
-        width: 85% !important;
-        min-width: 0 !important;
-        margin-left: 15% !important;
-        padding: 10px 15px !important;
-        font-size: 0.95rem !important;
-        border-radius: 8px !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
+    /* --- MINI MENU SYMBOL (3-LINE) --- */
+    .hamburger-btn {{
+        background: none !important;
+        border: none !important;
+        padding: 0 !important;
+        color: black !important;
+        font-size: 24px !important;
+        cursor: pointer;
+        text-align: left;
+        margin-bottom: -10px;
+        margin-left: 5px;
     }}
 
-    /* --- CLEAN SEARCH BAR (PILL SHAPE) --- */
-    div[data-testid="stChatInput"] {{
-        width: 650px !important;
-        margin: 0 auto !important;
-        background-color: transparent !important;
-        position: fixed !important;
-        bottom: 20px !important;
-        left: 0; right: 0; z-index: 999;
+    /* --- WHITE MINI LIST POPUP --- */
+    .mini-menu-list {{
+        background-color: white;
+        border: 1px solid #DDD;
+        border-radius: 8px;
+        padding: 10px;
+        position: absolute;
+        left: 40px;
+        top: 0px;
+        z-index: 999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        width: 130px;
     }}
+    .mini-menu-item {{
+        color: #333;
+        font-size: 0.95rem;
+        padding: 5px 0;
+        border-bottom: 1px solid #EEE;
+    }}
+    .mini-menu-item:last-child {{ border-bottom: none; }}
 
+    /* CLEAN SEARCH BAR */
     div[data-testid="stChatInput"] > div {{
         background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 40px !important;
         height: 70px !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; 
-        color: #1A1A1A !important;
-        font-size: 1.1rem !important; 
-        padding-left: 25px !important;
-        border: none !important;
-    }}
-
-    /* SEND BUTTON */
-    div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 17px !important; width: 35px !important; height: 35px !important; }}
-    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
-    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
-
-    /* --- SIGNATURE BOX 3D --- */
+    /* SIGNATURE BOX 3D */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
-
+    
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR
+# 4. SIDEBAR (Tool Section & Mini Menu)
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tool Section</h2>", unsafe_allow_html=True)
+    # --- 3-LINE MENU SYMBOL ---
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        if st.button("☰", key="hamburger_icon", help="Open menu"):
+            st.session_state.show_mini_menu = not st.session_state.show_mini_menu
+            st.rerun()
     
-    # UPDATED: Text is now 'New Chat' and no symbol is used
+    # --- MINI LIST (Dashboard & Settings) ---
+    if st.session_state.show_mini_menu:
+        st.markdown("""
+            <div class="mini-menu-list">
+                <div class="mini-menu-item">📊 Dashboard</div>
+                <div class="mini-menu-item">⚙️ Settings</div>
+            </div>
+        """, unsafe_allow_html=True)
+        # Invisible button to close when clicking outside (Streamlit behavior)
+        if st.button("Close ✖", key="close_mini", use_container_width=True):
+            st.session_state.show_mini_menu = False
+            st.rerun()
+
+    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
+    
     if st.button("New Chat"):
-        new_id = f"New Session {len(st.session_state.sessions)+1}"
-        st.session_state.sessions[new_id] = []
-        st.session_state.current_chat = new_id
+        st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()
 
-    if st.button("Chat History 🕑"):
-        st.toast("History clicked")
-    if st.button("University Tools ⚙️"):
-        st.toast("Tools clicked")
+    if st.button("Chat History 🕑"): st.toast("History clicked")
+    if st.button("University Tools ⚙️"): st.toast("Tools clicked")
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
-    if st.button("Admission - Fee 💸"):
-        st.toast("Fee details clicked")
+    if st.button("Admission - Fee 💸"): st.toast("Fee clicked")
     
     st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 

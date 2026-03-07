@@ -71,7 +71,7 @@ st.markdown(f"""
 
     /* --- INCREASED CHAT TEXT FONT SIZE --- */
     [data-testid="stChatMessage"] p {{
-        font-size: 1.25rem !important; /* Font size thoda badha diya */
+        font-size: 1.25rem !important;
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
@@ -87,7 +87,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; /* White Container */
+        background-color: #FFFFFF !important; 
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -95,23 +95,28 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; /* Pure White inside */
+        background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         height: 80px !important; 
         padding-left: 95px !important; 
         border: none !important;
     }}
 
-    /* PLUS ICON TAB */
-    .plus-tab-ui {{
+    /* --- ICONS POSITIONING (Using st.button for Plus) --- */
+    div.stButton > button[key="plus_btn"] {{
         position: fixed;
         left: calc(50% - 310px);
-        width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%;
+        width: 32px !important; 
+        height: 32px !important;
+        background: #333333 !important;
+        border-radius: 50% !important;
         display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
-        z-index: 1001; bottom: 44px !important;
+        z-index: 1002; bottom: 44px !important;
+        font-size: 20px !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        min-width: unset !important;
     }}
 
     /* MIC ICON TAB */
@@ -159,6 +164,18 @@ st.markdown(f"""
 # ==========================================
 # 4. DIALOGS
 # ==========================================
+@st.dialog("Attach File 📄")
+def open_file_upload_dialog():
+    st.write("Upload a PDF or Image to search its content:")
+    uploaded_file = st.file_uploader("Choose file", type=['pdf', 'png', 'jpg', 'jpeg'], label_visibility="collapsed")
+    if uploaded_file:
+        st.success(f"File selected: {uploaded_file.name}")
+        if st.button("Use in Search"):
+            st.toast(f"'{uploaded_file.name}' is ready for analysis!")
+            # Logic for reading the file will go here later
+            time.sleep(1)
+            st.rerun()
+
 @st.dialog("University Tools")
 def open_uni_tools():
     st.write("Access MNIT Portals:")
@@ -169,14 +186,13 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
             display_name = (first_msg[:35] + '...') if len(first_msg) > 35 else first_msg
         
         icon = "🟢" if session_key == st.session_state.current_chat else "💬"
-        if st.button(f"{icon} {display_name}", key=f"btn_{session_key}", use_container_width=True):
+        if st.button(f"{icon} {display_name}", key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
 
@@ -218,9 +234,13 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT & DUAL UI BUTTONS
+# 7. CHAT INPUT & ICONS
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+# Functional Plus button acting as an icon
+if st.button("+", key="plus_btn"):
+    open_file_upload_dialog()
+
+# Static Mic Icon
 st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):

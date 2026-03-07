@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Custom Styling)
+# 3. CSS (UI & Restored Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -68,7 +68,7 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS (Dropdown Style) --- */
+    /* --- SUB-TABS --- */
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
         min-width: 0 !important;
@@ -79,46 +79,51 @@ st.markdown(f"""
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
-    /* --- INCREASED CHAT TEXT FONT SIZE --- */
-    [data-testid="stChatMessage"] p {{ font-size: 1.25rem !important; line-height: 1.6 !important; }}
+    /* --- SEARCH BAR RESTORED --- */
+    div[data-testid="stChatInput"] {{
+        width: 650px !important;
+        margin: 0 auto !important;
+        background-color: transparent !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 0; right: 0; z-index: 999;
+    }}
 
-    /* --- PURE WHITE SEARCH BAR --- */
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
-        border-radius: 15px !important;
-        height: 80px !important;
+        border-radius: 40px !important; /* Pill Shape */
+        height: 70px !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    /* --- DESIGNED BY BOX (3D DARK GREY EFFECT) --- */
-    .signature-box-3d {{
-        margin-top: 40px;
-        padding: 18px;
-        border-radius: 12px;
-        background: #2C2C2C;
-        border-bottom: 4px solid #1A1A1A; /* Shadow depth */
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
-        text-align: center;
-        transition: 0.3s;
-    }}
-    .signature-box-3d:hover {{
-        transform: translateY(2px);
-        border-bottom: 2px solid #1A1A1A;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    div[data-testid="stChatInput"] textarea {{ 
+        background-color: #FFFFFF !important; 
+        color: #1A1A1A !important;
+        font-size: 1.1rem !important; 
+        padding-left: 95px !important; 
+        border: none !important;
     }}
 
-    /* DIALOG STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; text-align: center; }}
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
+    /* RESTORED PLUS & MIC ICONS */
+    .plus-tab-ui {{ position: fixed; left: calc(50% - 310px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFFFFF !important; z-index: 1001; bottom: 39px !important; }}
+    .mic-tab-ui {{ position: fixed; left: calc(50% - 270px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
 
-    .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
+    /* RESTORED SEND BUTTON */
+    div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 17px !important; width: 35px !important; height: 35px !important; }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
+
+    /* --- SIGNATURE BOX 3D --- */
+    .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
+
+    .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. DIALOGS
+# 4. DIALOGS & FUNCTIONS
 # ==========================================
 @st.dialog("University Tools")
 def open_uni_tools():
@@ -128,9 +133,9 @@ def open_uni_tools():
 
 @st.dialog("Chat History 🕑")
 def open_chat_history():
-    st.write("Pick a session:")
+    st.write("Recent Chats:")
     for session_key, messages in st.session_state.sessions.items():
-        display_name = (messages[0]["content"][:35] + "...") if messages else session_key
+        display_name = (messages[0]["content"][:30] + "...") if messages else session_key
         if st.button(display_name, key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
@@ -140,53 +145,40 @@ def open_chat_history():
 # ==========================================
 with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
-    
     if st.button("➕ New Session"):
         new_id = f"New Session {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[new_id] = []
         st.session_state.current_chat = new_id
         st.rerun()
-
     if st.button("Chat History 🕑"):
         open_chat_history()
-
     if st.button("University Tools ⚙️"):
         open_uni_tools()
-
     if st.button("Academics 📚"):
         st.session_state.show_acad_menu = not st.session_state.show_acad_menu
         st.rerun()
-
     if st.session_state.show_acad_menu:
         if st.button("Syllabus", help="sub_tab"): st.toast("Syllabus clicked")
         if st.button("Notes", help="sub_tab"): st.toast("Notes clicked")
         if st.button("PYQs", help="sub_tab"): st.toast("PYQs clicked")
-            
     if st.button("Admission - Fee 💸"):
         st.toast("Admission and Fee clicked")
     
-    # --- UPDATED SIGNATURE TAB (3D DARK GREY) ---
-    st.markdown("""
-        <div class="signature-box-3d">
-            <p style="color:#A0A0A0; font-size:0.8rem; margin:0; text-transform: uppercase; letter-spacing: 1px;">Designed by</p>
-            <h3 style="color:#FFFFFF; margin:5px 0 0 0; font-weight:800; font-size:1.3rem; letter-spacing: 0.5px;">SUMIT CHAUDHARY</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CHAT
+# 6. MAIN CHAT DISPLAY
 # ==========================================
 title_class = "title-container-empty" if is_chat_empty else "title-container-active"
-st.markdown(f"""
-    <div class="{title_class}">
-        <div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div>
-        <div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 
 for message in st.session_state.sessions[st.session_state.current_chat]:
-    with st.chat_message(message["role"], avatar="👤" if message["role"] == "user" else "🤖"):
+    with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
         st.markdown(message["content"])
+
+# Restoration of UI overlay buttons
+st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

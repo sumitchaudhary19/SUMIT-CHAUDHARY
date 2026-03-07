@@ -66,7 +66,7 @@ dashboard_bg = """
         text-align: center;
         font-weight: 400;
         letter-spacing: 3px;
-        margin-bottom: 60px;
+        margin-bottom: 50px;
         margin-top: 10px;
     }
     </style>
@@ -80,6 +80,7 @@ chatbot_bg = """
     </style>
 """
 
+# Injecting Background View
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -110,7 +111,7 @@ st.markdown(f"""
         font-size: 2.8rem !important; /* Huge Font */
         font-weight: 900 !important;
         border-radius: 50px !important; /* Strong Rounded Corners */
-        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important;
+        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important; /* Fixed dark gradient match image_e4a960.png */
         border: 2px solid rgba(255, 255, 255, 0.15) !important;
         box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
         transition: 0.5s all cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
@@ -184,8 +185,8 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    # Adjusted columns for bigger tabs
-    c1, c2, c3, c4 = st.columns([0.2, 2, 2, 0.2])
+    # columns for massive tabs
+    c1, c2, c3, c4 = st.columns([0.4, 2, 2, 0.4])
     
     with c2:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):

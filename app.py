@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Sleek UI with Auto-updating History)
+# 3. CSS (UI with Dual Buttons in Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -67,15 +67,7 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* POPUP STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {{
-        background-color: #2C2C2C !important;
-        border-radius: 15px !important;
-        border: 1px solid #444 !important;
-    }}
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
-
-    /* SEARCH BAR */
+    /* SEARCH BAR & DUAL BUTTONS */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -92,8 +84,12 @@ st.markdown(f"""
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
-    div[data-testid="stChatInput"] textarea {{ height: 80px !important; }}
+    div[data-testid="stChatInput"] textarea {{ 
+        height: 80px !important; 
+        padding-left: 95px !important; /* Made space for two icons */
+    }}
 
+    /* PLUS ICON TAB */
     .plus-tab-ui {{
         position: fixed;
         left: calc(50% - 310px);
@@ -104,6 +100,27 @@ st.markdown(f"""
         color: #FFFFFF !important;
         z-index: 1001; bottom: 44px !important;
     }}
+
+    /* MIC ICON TAB */
+    .mic-tab-ui {{
+        position: fixed;
+        left: calc(50% - 270px); /* Positioned right side of plus icon */
+        width: 32px; height: 32px;
+        background-color: #333333 !important;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        color: #A0A0A0 !important; /* Light grey symbol */
+        z-index: 1001; bottom: 44px !important;
+        font-size: 18px;
+    }}
+
+    /* DIALOG STYLING */
+    div[data-testid="stDialog"] div[role="dialog"] {{
+        background-color: #2C2C2C !important;
+        border-radius: 15px !important;
+        border: 1px solid #444 !important;
+    }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
@@ -125,7 +142,6 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
@@ -143,7 +159,7 @@ with st.sidebar:
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
     
     if st.button("➕ New Session"):
-        new_id = f"Session {len(st.session_state.sessions) + 1}"
+        new_id = f"New Session {len(st.session_state.sessions) + 1}"
         st.session_state.sessions[new_id] = []
         st.session_state.current_chat = new_id
         st.rerun()
@@ -174,9 +190,10 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
         st.markdown(message["content"])
 
 # ==========================================
-# 7. CHAT INPUT
+# 7. CHAT INPUT & DUAL UI BUTTONS
 # ==========================================
 st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
+st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

@@ -29,12 +29,12 @@ if "show_acad_menu" not in st.session_state:
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
-    st.session_state.page_view = "chatbot" # Default view
+    st.session_state.page_view = "chatbot" 
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Dashboard Layout)
+# 3. CSS (FIXED ERROR & UI STYLING)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -68,21 +68,24 @@ st.markdown(f"""
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
+        display: block !important;
     }}
 
-    /* --- MINI MENU & POPUP --- */
+    /* --- MINI MENU LIST POPUP --- */
     .mini-menu-list {{
         background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
         position: absolute; left: 40px; top: 0px; z-index: 999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
 
-    /* --- DASHBOARD LARGE TABS --- */
+    /* --- DASHBOARD LARGE TABS (Fixed Styling) --- */
     div.stButton > button[title="dash_tab"] {{
-        height: 120px !important;
-        font-size: 1.5rem !important;
+        height: 150px !important;
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
         border-radius: 20px !important;
         margin: 10px !important;
+        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
     /* SEARCH BAR */
@@ -100,14 +103,12 @@ st.markdown(f"""
 # 4. SIDEBAR LOGIC
 # ==========================================
 with st.sidebar:
-    col1, col2 = st.columns([1, 5])
-    with col1:
-        if st.button("☰", key="hamburger_icon"):
-            st.session_state.show_mini_menu = not st.session_state.show_mini_menu
-            st.rerun()
+    # 3-line symbol
+    if st.button("☰", key="hamburger_icon"):
+        st.session_state.show_mini_menu = not st.session_state.show_mini_menu
+        st.rerun()
     
     if st.session_state.show_mini_menu:
-        # Custom container for interactive dashboard/setting clicks
         st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
         if st.button("📊 Dashboard", key="nav_dash", use_container_width=True):
             st.session_state.page_view = "dashboard"
@@ -137,21 +138,20 @@ with st.sidebar:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 
-# --- VIEW 1: DASHBOARD INTERFACE ---
+# --- VIEW 1: DASHBOARD INTERFACE (FIXED) ---
 if st.session_state.page_view == "dashboard":
-    # Spacer for vertical centering
     st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
-    
-    col_left, col1, col2, col_right = st.columns([1, 2, 2, 1])
+    col_left, col1, col2, col_right = st.columns([0.5, 2, 2, 0.5])
     
     with col1:
-        if st.button("AskMNIT", title="dash_tab", use_container_width=True):
+        # Note: help="dash_tab" is used instead of title to avoid the TypeError
+        if st.button("AskMNIT", help="dash_tab", key="btn_askmnit", use_container_width=True):
             st.session_state.page_view = "chatbot"
             st.rerun()
             
     with col2:
-        if st.button("Coming Soon", title="dash_tab", use_container_width=True):
-            st.toast("This feature is under development!")
+        if st.button("Coming Soon", help="dash_tab", key="btn_soon", use_container_width=True):
+            st.toast("Feature coming soon!")
 
 # --- VIEW 2: CHATBOT INTERFACE ---
 else:

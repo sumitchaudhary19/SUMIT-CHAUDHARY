@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Soft Fonts)
+# 3. CSS (Dynamic Background & Square-Pill Tabs)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,22 +41,23 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* SOFT CUTE WELCOME TEXT - Container Box Removed */
+    /* SOFT CUTE WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
-        font-size: 8vw; /* Covers ~80% screen width */
+        font-size: 8vw;
         font-weight: 900;
         color: white;
         text-align: center;
         letter-spacing: -2px;
         margin-top: 5vh;
-        /* Box, padding, and rounded corners removed to just keep text */
         background: none !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
         display: block !important;
         width: 90%;
         margin-left: 5%;
+        paint-order: stroke fill;
+        -webkit-text-stroke: 0.04em white;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .sub-tagline {
@@ -65,8 +66,8 @@ dashboard_bg = """
         text-align: center;
         font-weight: 400;
         letter-spacing: 2px;
-        margin-bottom: 40px;
-        margin-top: 10px; /* Space from welcome text */
+        margin-bottom: 50px;
+        margin-top: 10px;
     }
     </style>
 """
@@ -79,6 +80,7 @@ chatbot_bg = """
     </style>
 """
 
+# Injecting Background View
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -90,24 +92,37 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* SHINY VIOLET MAIN TABS */
+    /* MAIN SIDEBAR TABS */
     .stButton>button {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
-        border-radius: 15px !important;
+        border-radius: 12px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 8px 15px rgba(138, 99, 255, 0.2) !important;
         border: none !important;
     }}
 
-    /* DASHBOARD BUTTONS CUSTOM */
+    /* --- DASHBOARD SQUARE-PILL TABS (REVAMPED) --- */
     div.stButton > button[help="dash_tab_btn"] {{
-        height: 180px !important;
-        font-size: 2rem !important;
-        font-weight: 800 !important;
-        border-radius: 25px !important;
+        height: 220px !important; /* Larger vertical size */
+        width: 100% !important;
+        font-size: 2.2rem !important;
+        font-weight: 900 !important;
+        border-radius: 40px !important; /* Square Pill Effect */
+        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important; /* Image Match Color */
+        border: 2px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4) !important;
+        transition: 0.4s all ease !important;
+        color: white !important;
+        text-transform: uppercase;
+    }}
+
+    div.stButton > button[help="dash_tab_btn"]:hover {{
+        transform: translateY(-10px) !important;
+        box-shadow: 0 20px 45px rgba(138, 99, 255, 0.3) !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
     }}
 
     .mini-menu-list {{
@@ -167,8 +182,8 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome to askmnit</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
-    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
+    st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([0.4, 2, 2, 0.4])
     
     with c2:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
@@ -177,7 +192,7 @@ if st.session_state.page_view == "dashboard":
             
     with c3:
         if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned!")
+            st.toast("Stay tuned for new modules!")
 
 # --- VIEW: CHATBOT ---
 else:

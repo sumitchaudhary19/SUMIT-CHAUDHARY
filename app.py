@@ -31,9 +31,8 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Navigation)
+# 3. CSS (Dynamic Background & Headers)
 # ==========================================
-# Gradient background pattern matching the provided image for Dashboard
 dashboard_bg = """
     <style>
     [data-testid="stAppViewContainer"] {
@@ -41,6 +40,24 @@ dashboard_bg = """
     }
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
+    
+    /* DASHBOARD HEADERS */
+    .dash-welcome {
+        color: white;
+        font-size: 4rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 0px;
+        font-family: 'Inter', sans-serif;
+    }
+    .dash-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1.3rem;
+        text-align: center;
+        margin-bottom: 50px;
+        font-weight: 400;
+        font-family: 'Inter', sans-serif;
+    }
     </style>
 """
 
@@ -52,7 +69,6 @@ chatbot_bg = """
     </style>
 """
 
-# Inject background based on view
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -84,13 +100,17 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* DASHBOARD LARGE BUTTONS */
-    div.stButton > button[title="dash_tab_btn"] {{
-        height: 200px !important;
+    /* DASHBOARD LARGE BUTTONS - Target using help attribute */
+    div.stButton > button[help="dash_tab_btn"] {{
+        height: 180px !important;
         font-size: 2.2rem !important;
-        font-weight: 900 !important;
-        border-radius: 30px !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        font-weight: 800 !important;
+        border-radius: 25px !important;
+        transition: 0.3s all ease;
+    }}
+    div.stButton > button[help="dash_tab_btn"]:hover {{
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(138, 99, 255, 0.5) !important;
     }}
 
     /* MINI MENU POPUP */
@@ -109,11 +129,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR (Only visible when NOT in Dashboard)
+# 4. SIDEBAR (Hidden in Dashboard)
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
-        # Hamburger Menu
         if st.button("☰", key="hamburger_icon"):
             st.session_state.show_mini_menu = not st.session_state.show_mini_menu
             st.rerun()
@@ -151,7 +170,12 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 20vh;'></div>", unsafe_allow_html=True)
+    
+    # Welcome Text
+    st.markdown('<p class="dash-welcome">Welcome to AskMNIT</p>', unsafe_allow_html=True)
+    st.markdown('<p class="dash-subtitle">Your Academic Excellence Starts Here – Select Your Gateway.</p>', unsafe_allow_html=True)
+    
     c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
     with c2:
@@ -161,7 +185,7 @@ if st.session_state.page_view == "dashboard":
             
     with c3:
         if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned!")
+            st.toast("Feature under construction!")
 
 # --- VIEW: CHATBOT ---
 else:

@@ -114,7 +114,15 @@ st.markdown(f"""
 
     /* DIALOG STYLING */
     div[data-testid="stDialog"] div[role="dialog"] {{ background-color: #2C2C2C !important; border-radius: 15px !important; border: 1px solid #444 !important; }}
-    div[data-testid="stDialog"] h2 {{ color: white !important; text-align: center; }}
+    
+    /* Heading Color set to Light Grey */
+    div[data-testid="stDialog"] h2 {{ 
+        color: #D3D3D3 !important; 
+        text-align: center; 
+        font-weight: 700;
+    }}
+    
+    div[data-testid="stDialog"] p {{ color: white !important; text-align: center; }}
 
     .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}

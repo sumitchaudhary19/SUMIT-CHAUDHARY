@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Square-Pill Tabs)
+# 3. CSS (Dynamic Background & Massive Tabs)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -62,11 +62,11 @@ dashboard_bg = """
 
     .sub-tagline {
         color: #D1B3FF;
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         text-align: center;
         font-weight: 400;
-        letter-spacing: 2px;
-        margin-bottom: 50px;
+        letter-spacing: 3px;
+        margin-bottom: 60px;
         margin-top: 10px;
     }
     </style>
@@ -80,7 +80,6 @@ chatbot_bg = """
     </style>
 """
 
-# Injecting Background View
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -92,7 +91,7 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* MAIN SIDEBAR TABS */
+    /* SHINY VIOLET MAIN TABS */
     .stButton>button {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -100,29 +99,31 @@ st.markdown(f"""
         border-radius: 12px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 8px 15px rgba(138, 99, 255, 0.2) !important;
+        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         border: none !important;
     }}
 
-    /* --- DASHBOARD SQUARE-PILL TABS (REVAMPED) --- */
+    /* --- MASSIVE DASHBOARD SQUARE-PILL TABS --- */
     div.stButton > button[help="dash_tab_btn"] {{
-        height: 220px !important; /* Larger vertical size */
+        height: 320px !important; /* Massive Height */
         width: 100% !important;
-        font-size: 2.2rem !important;
+        font-size: 2.8rem !important; /* Huge Font */
         font-weight: 900 !important;
-        border-radius: 40px !important; /* Square Pill Effect */
-        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important; /* Image Match Color */
-        border: 2px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.4) !important;
-        transition: 0.4s all ease !important;
+        border-radius: 50px !important; /* Strong Rounded Corners */
+        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+        transition: 0.5s all cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
         color: white !important;
         text-transform: uppercase;
+        letter-spacing: 2px;
     }}
 
     div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: translateY(-10px) !important;
-        box-shadow: 0 20px 45px rgba(138, 99, 255, 0.3) !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        transform: scale(1.05) translateY(-15px) !important;
+        box-shadow: 0 35px 65px rgba(138, 99, 255, 0.4) !important;
+        border: 2px solid rgba(255, 255, 255, 0.4) !important;
+        background: linear-gradient(145deg, #4B2C85 0%, #32165A 100%) !important;
     }}
 
     .mini-menu-list {{
@@ -183,7 +184,8 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns([0.4, 2, 2, 0.4])
+    # Adjusted columns for bigger tabs
+    c1, c2, c3, c4 = st.columns([0.2, 2, 2, 0.2])
     
     with c2:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):

@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Clean White Search Bar without Icons)
+# 3. CSS (Increased Chat Font Size & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -87,7 +87,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important; /* White Container */
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -96,12 +96,12 @@ st.markdown(f"""
 
     /* INCREASED FONT SIZE HERE & RESET PADDING */
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important; /* Pure White inside */
         color: #1A1A1A !important;
         font-size: 1.2rem !important; 
         line-height: 1.5 !important;
         height: 80px !important; 
-        padding: 15px 60px 15px 25px !important; /* Adjusted padding since icons are gone */
+        padding: 15px 60px 15px 25px !important; 
         border: none !important;
     }}
 
@@ -174,6 +174,9 @@ with st.sidebar:
 
     if st.button("University Tools ⚙️"):
         open_uni_tools()
+
+    if st.button("Academics 📚"):
+        st.toast("Academics section coming soon!")
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)

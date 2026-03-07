@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Functional Plus Button & Pure White UI)
+# 3. CSS (Increased Chat Font Size & UI)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -71,7 +71,7 @@ st.markdown(f"""
 
     /* --- INCREASED CHAT TEXT FONT SIZE --- */
     [data-testid="stChatMessage"] p {{
-        font-size: 1.25rem !important; 
+        font-size: 1.25rem !important; /* Font size thoda badha diya */
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
@@ -87,7 +87,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important; /* White Container */
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -95,49 +95,27 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; 
+        background-color: #FFFFFF !important; /* Pure White inside */
         color: #1A1A1A !important;
-        font-size: 1.2rem !important; 
-        line-height: 1.5 !important;
         height: 80px !important; 
         padding-left: 95px !important; 
         border: none !important;
     }}
 
-    /* --- FUNCTIONAL PLUS ICON BUTTON (EXACTLY SAME DESIGN) --- */
-    button[title="Upload File"] {
-        position: fixed !important;
-        left: calc(50% - 310px) !important;
-        bottom: 44px !important;
-        width: 32px !important;
-        height: 32px !important;
+    /* PLUS ICON TAB */
+    .plus-tab-ui {{
+        position: fixed;
+        left: calc(50% - 310px);
+        width: 32px; height: 32px;
         background-color: #333333 !important;
-        border-radius: 50% !important;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
         color: #FFFFFF !important;
-        z-index: 1001 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        min-height: 0 !important;
-    }
-    button[title="Upload File"]:hover, button[title="Upload File"]:focus, button[title="Upload File"]:active {
-        background-color: #444444 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    button[title="Upload File"] p {
-        font-size: 20px !important;
-        margin: 0 !important;
-        line-height: 1 !important;
-        padding-bottom: 2px !important;
-    }
+        z-index: 1001; bottom: 44px !important;
+    }}
 
-    /* --- MIC ICON TAB (NO CHANGES) --- */
-    .mic-tab-ui {
+    /* MIC ICON TAB */
+    .mic-tab-ui {{
         position: fixed;
         left: calc(50% - 270px);
         width: 32px; height: 32px;
@@ -147,53 +125,40 @@ st.markdown(f"""
         color: #A0A0A0 !important;
         z-index: 1001; bottom: 44px !important;
         font-size: 18px;
-    }
+    }}
 
     /* SEND BUTTON ARROW */
-    div[data-testid="stChatInput"] button {
+    div[data-testid="stChatInput"] button {{
         background-color: #1A1A1A !important;
         border-radius: 50% !important;
         right: 15px !important;
         bottom: 22px !important; 
         width: 35px !important; height: 35px !important;
-    }
+    }}
 
-    div[data-testid="stChatInput"] button::after {
+    div[data-testid="stChatInput"] button::after {{
         content: ">"; color: white; font-weight: 900; font-size: 1.2rem;
-    }
-    div[data-testid="stChatInput"] button svg { display: none !important; }
+    }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     /* DIALOG STYLING */
-    div[data-testid="stDialog"] div[role="dialog"] {
+    div[data-testid="stDialog"] div[role="dialog"] {{
         background-color: #2C2C2C !important;
         border-radius: 15px !important;
         border: 1px solid #444 !important;
-    }
-    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p, div[data-testid="stDialog"] label { 
-        color: white !important; 
-    }
+    }}
+    div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
-    .title-container-empty { margin-top: 20vh; transition: 0.5s; }
-    .title-container-active { margin-top: 2vh; scale: 0.7; transition: 0.5s; }
+    .title-container-empty {{ margin-top: 20vh; transition: 0.5s; }}
+    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     
-    .signature-box { margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }
+    .signature-box {{ margin-top: 40px; padding: 15px; border-radius: 8px; background: #EAECEF; border: 1px solid #CCC; text-align: center; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
 # 4. DIALOGS
 # ==========================================
-@st.dialog("Upload File 📄")
-def open_attachment_dialog():
-    st.write("Select a file to attach to your search:")
-    uploaded_file = st.file_uploader("Choose a file", type=['pdf', 'png', 'jpg', 'jpeg'], label_visibility="collapsed")
-    if uploaded_file:
-        st.success(f"File '{uploaded_file.name}' selected!")
-        if st.button("Use in Search"):
-            st.toast(f"'{uploaded_file.name}' attached successfully!")
-            time.sleep(1)
-            st.rerun()
-
 @st.dialog("University Tools")
 def open_uni_tools():
     st.write("Access MNIT Portals:")
@@ -204,6 +169,7 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
+        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
@@ -254,11 +220,7 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 7. CHAT INPUT & DUAL UI BUTTONS
 # ==========================================
-# Functional Plus button disguised as the original UI using CSS
-if st.button("+", help="Upload File"):
-    open_attachment_dialog()
-
-# Original un-changed Mic Tab
+st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
 st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):

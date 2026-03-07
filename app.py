@@ -53,7 +53,7 @@ st.markdown(f"""
         width: 320px !important;
     }}
 
-    /* SHINY VIOLET TABS */
+    /* SHINY VIOLET TABS (For both Sidebar and Popups) */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
         min-width: 250px !important;
@@ -153,9 +153,20 @@ def open_chat_history():
             display_name = (first_msg[:35] + '...') if len(first_msg) > 35 else first_msg
         
         icon = "🟢" if session_key == st.session_state.current_chat else "💬"
-        if st.button(f"{icon} {display_name}", key=f"btn_{session_key}", use_container_width=True):
+        if st.button(f"{icon} {display_name}", key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
+
+# --- NEW ACADEMICS DIALOG ---
+@st.dialog("Academics 📚")
+def open_academics():
+    st.write("Select Resource:")
+    if st.button("Syllabus 📄"):
+        st.toast("Syllabus logic coming soon!")
+    if st.button("Notes 📝"):
+        st.toast("Notes logic coming soon!")
+    if st.button("PYQ ⏳"):
+        st.toast("PYQ logic coming soon!")
 
 # ==========================================
 # 5. SIDEBAR
@@ -176,7 +187,7 @@ with st.sidebar:
         open_uni_tools()
 
     if st.button("Academics 📚"):
-        st.toast("Academics section coming soon!")
+        open_academics()
     
     st.markdown("<div style='margin-top: 30px; border-top: 1px solid #DDD;'></div>", unsafe_allow_html=True)
     st.markdown("""<div class="signature-box"><p style="color:#666; font-size:0.75rem; margin:0;">Architected by</p><h3 style="color:#1A1A1A; margin:0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)

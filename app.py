@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Increased Chat Font Size & UI)
+# 3. CSS (Perfect Dual Buttons & Layout)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -40,11 +40,9 @@ st.markdown(f"""
         color: #1A1A1A !important;
     }}
     
-    [data-testid="stMain"] {{
-        background-color: #FFFFFF !important;
-    }}
-
+    [data-testid="stMain"] {{ background-color: #FFFFFF !important; }}
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}}
+    [data-testid="stHeader"] {{ display: none !important; }}
     [data-testid="stBottom"] {{ background-color: #FFFFFF !important; border-top: none !important; }}
 
     section[data-testid="stSidebar"] {{
@@ -56,7 +54,6 @@ st.markdown(f"""
     /* SHINY VIOLET TABS */
     .stButton>button, [data-testid="stLinkButton"] > a {{
         width: 100% !important;
-        min-width: 250px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
         border: none !important;
@@ -64,19 +61,17 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        transition: 0.3s all ease !important;
-        display: block !important;
         margin-bottom: 12px !important;
     }}
 
     /* --- INCREASED CHAT TEXT FONT SIZE --- */
     [data-testid="stChatMessage"] p {{
-        font-size: 1.25rem !important; /* Font size thoda badha diya */
+        font-size: 1.25rem !important; 
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
 
-    /* --- PURE WHITE SEARCH BAR STYLING --- */
+    /* --- SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -87,7 +82,7 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; /* White Container */
+        background-color: #FFFFFF !important;
         border: 1px solid #DDDDDD !important;
         border-radius: 15px !important;
         height: 80px !important;
@@ -95,36 +90,38 @@ st.markdown(f"""
     }}
 
     div[data-testid="stChatInput"] textarea {{ 
-        background-color: #FFFFFF !important; /* Pure White inside */
+        background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
+        font-size: 1.2rem !important; 
+        line-height: 1.5 !important;
         height: 80px !important; 
-        padding-left: 95px !important; 
+        padding-left: 95px !important; /* Space for both buttons */
         border: none !important;
     }}
 
-    /* PLUS ICON TAB */
-    .plus-tab-ui {{
+    /* --- FIXED BUTTONS POSITIONING --- */
+    div.stButton > button[key="plus_btn"], div.stButton > button[key="mic_btn"] {{
         position: fixed;
-        left: calc(50% - 310px);
-        width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%;
+        bottom: 44px !important;
+        width: 32px !important;
+        height: 32px !important;
+        background: #333333 !important;
+        color: white !important;
+        border-radius: 50% !important;
+        z-index: 1002;
+        padding: 0 !important;
         display: flex; align-items: center; justify-content: center;
-        color: #FFFFFF !important;
-        z-index: 1001; bottom: 44px !important;
+        box-shadow: none !important;
+        border: none !important;
+        transition: 0.2s ease;
     }}
 
-    /* MIC ICON TAB */
-    .mic-tab-ui {{
-        position: fixed;
-        left: calc(50% - 270px);
-        width: 32px; height: 32px;
-        background-color: #333333 !important;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #A0A0A0 !important;
-        z-index: 1001; bottom: 44px !important;
-        font-size: 18px;
+    div.stButton > button[key="plus_btn"] {{ left: calc(50% - 310px); font-size: 20px !important; }}
+    div.stButton > button[key="mic_btn"] {{ left: calc(50% - 270px); font-size: 18px !important; color: #A0A0A0 !important; }}
+
+    div.stButton > button[key="plus_btn"]:hover, div.stButton > button[key="mic_btn"]:hover {{
+        background: #1A1A1A !important;
+        transform: scale(1.05);
     }}
 
     /* SEND BUTTON ARROW */
@@ -159,6 +156,26 @@ st.markdown(f"""
 # ==========================================
 # 4. DIALOGS
 # ==========================================
+@st.dialog("Select File to Attach 📄")
+def open_attachment_dialog():
+    st.write("Upload a PDF or Image file:")
+    uploaded_file = st.file_uploader("Drop file here or click to browse", type=['pdf', 'png', 'jpg', 'jpeg'], label_visibility="collapsed")
+    
+    if uploaded_file:
+        st.success(f"File attached: {uploaded_file.name}")
+        if st.button("Use in Search"):
+            # Right now just visually confirming, logic for PDF parsing can go here
+            st.toast(f"'{uploaded_file.name}' is ready to be processed!")
+            time.sleep(1)
+            st.rerun()
+
+@st.dialog("Voice Input 🎤")
+def open_voice_dialog():
+    st.write("Listening... (Speak now)")
+    st.info("Bhai, Mic feature is under construction.")
+    if st.button("Close"):
+        st.rerun()
+
 @st.dialog("University Tools")
 def open_uni_tools():
     st.write("Access MNIT Portals:")
@@ -169,14 +186,13 @@ def open_uni_tools():
 def open_chat_history():
     st.write("Pick a session based on your first message:")
     for session_key, messages in st.session_state.sessions.items():
-        # Display first user message or default session name
         display_name = session_key
         if len(messages) > 0:
             first_msg = messages[0]["content"]
             display_name = (first_msg[:35] + '...') if len(first_msg) > 35 else first_msg
         
         icon = "🟢" if session_key == st.session_state.current_chat else "💬"
-        if st.button(f"{icon} {display_name}", key=f"btn_{session_key}", use_container_width=True):
+        if st.button(f"{icon} {display_name}", key=f"hist_{session_key}", use_container_width=True):
             st.session_state.current_chat = session_key
             st.rerun()
 
@@ -220,8 +236,12 @@ for message in st.session_state.sessions[st.session_state.current_chat]:
 # ==========================================
 # 7. CHAT INPUT & DUAL UI BUTTONS
 # ==========================================
-st.markdown('<div class="plus-tab-ui">+</div>', unsafe_allow_html=True)
-st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
+# Functional overlay buttons for the search bar
+if st.button("+", key="plus_btn"):
+    open_attachment_dialog()
+
+if st.button("🎤", key="mic_btn"):
+    open_voice_dialog()
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
@@ -234,7 +254,7 @@ if st.session_state.pending_generation:
         try:
             def generate_response():
                 stream = client.chat.completions.create(
-                    messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students. You help with academics and campus life."},
                               {"role": "user", "content": user_query}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7,

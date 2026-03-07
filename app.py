@@ -30,7 +30,7 @@ if "show_acad_menu" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Equal Size Sub-Tabs Styling)
+# 3. CSS (UI & Interactive Syllabus List)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -69,12 +69,12 @@ st.markdown(f"""
         margin-bottom: 12px !important;
     }}
 
-    /* --- SUB-TABS (Equal Length Dropdown Style) --- */
+    /* --- SUB-TABS (Dropdown Style) --- */
     div.stButton > button[title="sub_tab"] {{
         width: 85% !important;
-        min-width: 85% !important; /* Ye dono tabs ko equal size deta hai */
+        min-width: 85% !important;
         max-width: 85% !important;
-        margin-left: 15% !important; /* Right shift for sub-menu feel */
+        margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
         border-radius: 8px !important;
@@ -84,14 +84,14 @@ st.markdown(f"""
         box-shadow: 0 2px 10px rgba(138, 99, 255, 0.2) !important;
     }}
 
-    /* --- INCREASED CHAT TEXT FONT SIZE --- */
+    /* --- CHAT TEXT FONT SIZE --- */
     [data-testid="stChatMessage"] p {{
         font-size: 1.25rem !important; 
         line-height: 1.6 !important;
         color: #1A1A1A !important;
     }}
 
-    /* --- PURE WHITE SEARCH BAR STYLING --- */
+    /* --- SEARCH BAR STYLING --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -127,10 +127,7 @@ st.markdown(f"""
         bottom: 22px !important; 
         width: 35px !important; height: 35px !important;
     }}
-
-    div[data-testid="stChatInput"] button::after {{
-        content: ">"; color: white; font-weight: 900; font-size: 1.2rem;
-    }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
     div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
     /* DIALOG STYLING */
@@ -142,7 +139,7 @@ st.markdown(f"""
     }}
     div[data-testid="stDialog"] h2, div[data-testid="stDialog"] p {{ color: white !important; }}
 
-    /* SCROLLABLE LIST CONTAINER FOR SYLLABUS */
+    /* --- SCROLLABLE LIST CONTAINER (With Hover Effect) --- */
     .scrollable-list {{
         max-height: 200px; overflow-y: auto; text-align: left;
         padding: 15px; background-color: #333333;
@@ -153,6 +150,17 @@ st.markdown(f"""
     .scrollable-list ul {{
         list-style-type: disc; padding-left: 20px;
         color: white; margin: 0; font-size: 1.1rem; line-height: 1.8;
+    }}
+    
+    /* Interactive Hover effect for list items */
+    .scrollable-list li {{
+        transition: color 0.2s ease-in-out;
+        cursor: pointer;
+    }}
+    
+    .scrollable-list li:hover {{
+        color: #4DA8DA; /* Bright Blue color on hover */
+        font-weight: 500;
     }}
 
     .scrollable-list::-webkit-scrollbar {{ width: 8px; }}
@@ -189,7 +197,7 @@ def open_chat_history():
             st.session_state.current_chat = session_key
             st.rerun()
 
-# SCROLLABLE SYLLABUS LIST DIALOG (Triggered from Sub-tab)
+# SCROLLABLE SYLLABUS LIST DIALOG
 @st.dialog("Syllabus Subjects 📖")
 def open_syllabus_list():
     st.markdown("""
@@ -230,7 +238,6 @@ with st.sidebar:
         st.rerun()
 
     if st.session_state.show_acad_menu:
-        # use_container_width=True ensures Streamlit applies our full 85% exact CSS width
         if st.button("Syllabus", help="sub_tab", use_container_width=True):
             open_syllabus_list()
         if st.button("Notes", help="sub_tab", use_container_width=True):

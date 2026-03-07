@@ -26,13 +26,11 @@ if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 if "show_acad_menu" not in st.session_state:
     st.session_state.show_acad_menu = False
-if "show_plus_menu" not in st.session_state:
-    st.session_state.show_plus_menu = False
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI & Restored Circular Plus Design)
+# 3. CSS (UI & Clean Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -67,9 +65,20 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         transition: 0.3s all ease !important;
         display: block !important;
+        margin-bottom: 12px !important;
     }}
 
-    /* SEARCH BAR (PILL SHAPE) */
+    /* --- SUB-TABS --- */
+    div.stButton > button[title="sub_tab"] {{
+        width: 85% !important;
+        min-width: 0 !important;
+        margin-left: 15% !important;
+        padding: 10px 15px !important;
+        font-size: 0.95rem !important;
+        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
+    }}
+
+    /* --- CLEAN SEARCH BAR (PILL SHAPE) --- */
     div[data-testid="stChatInput"] {{
         width: 650px !important;
         margin: 0 auto !important;
@@ -91,50 +100,18 @@ st.markdown(f"""
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         font-size: 1.1rem !important; 
-        padding-left: 55px !important; 
+        padding-left: 25px !important; /* Reset padding since + and Mic are gone */
         border: none !important;
     }}
 
-    /* --- CIRCULAR PLUS BUTTON ABOVE SEARCH BAR --- */
-    .plus-container-floating {{
-        position: fixed;
-        left: calc(50% - 315px); /* Perfectly aligned to the left of 650px search bar */
-        bottom: 100px;
-        z-index: 1001;
-    }}
+    /* SEND BUTTON */
+    div[data-testid="stChatInput"] button {{ background-color: #1A1A1A !important; border-radius: 50% !important; right: 15px !important; bottom: 17px !important; width: 35px !important; height: 35px !important; }}
+    div[data-testid="stChatInput"] button::after {{ content: ">"; color: white; font-weight: 900; font-size: 1.2rem; }}
+    div[data-testid="stChatInput"] button svg {{ display: none !important; }}
 
-    div.stButton > button[key="plus_btn"] {{
-        width: 35px !important;
-        min-width: 35px !important;
-        height: 35px !important;
-        border-radius: 50% !important; /* Made Circular */
-        background-color: #1A1A1A !important; /* Dark Grey/Black */
-        color: #FFFFFF !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-        padding: 0 !important;
-        font-size: 22px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }}
-
-    /* MIC ICON INSIDE SEARCH BAR */
-    .mic-tab-ui {{ position: fixed; left: calc(50% - 305px); width: 32px; height: 32px; background-color: #333333 !important; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #A0A0A0 !important; z-index: 1001; bottom: 39px !important; font-size: 18px; }}
-
-    /* MINI POPUP MENU ABOVE CIRCULAR BUTTON */
-    .plus-menu-container {{
-        position: fixed; left: calc(50% - 325px); bottom: 145px;
-        width: 180px; background-color: #2C2C2C; border-radius: 12px;
-        padding: 15px; z-index: 1005; color: white;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-bottom: 4px solid #1A1A1A;
-        text-align: left;
-    }}
-
-    .plus-menu-item {{ padding: 8px 0; font-size: 1rem; border-bottom: 1px solid #444; }}
-    .plus-menu-item:last-child {{ border-bottom: none; }}
-
+    /* --- SIGNATURE BOX 3D --- */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
+
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
@@ -169,27 +146,6 @@ st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weig
 for message in st.session_state.sessions[st.session_state.current_chat]:
     with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
         st.markdown(message["content"])
-
-# --- FLOATING CIRCULAR PLUS BUTTON & MENU ---
-st.markdown('<div class="plus-container-floating">', unsafe_allow_html=True)
-if st.button("+", key="plus_btn"):
-    st.session_state.show_plus_menu = not st.session_state.show_plus_menu
-    st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
-
-if st.session_state.show_plus_menu:
-    st.markdown("""
-        <div class="plus-menu-container">
-            <div class="plus-menu-item">Camera 📸</div>
-            <div class="plus-menu-item">Choose File 📁</div>
-        </div>
-    """, unsafe_allow_html=True)
-    if st.button("✖ Close Menu", key="close_plus", use_container_width=True):
-        st.session_state.show_plus_menu = False
-        st.rerun()
-
-# Mic Icon overlay inside search bar
-st.markdown('<div class="mic-tab-ui">🎤</div>', unsafe_allow_html=True)
 
 if prompt := st.chat_input("Ask me anything..."):
     st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})

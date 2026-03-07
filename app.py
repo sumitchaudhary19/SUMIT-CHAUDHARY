@@ -28,13 +28,13 @@ if "show_acad_menu" not in st.session_state:
     st.session_state.show_acad_menu = False
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
-if "view" not in st.session_state:
-    st.session_state.view = "chatbot" # Default view is chatbot
+if "page_view" not in st.session_state:
+    st.session_state.page_view = "chatbot" # Default view
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (UI Styling & Dashboard Grid)
+# 3. CSS (UI & Dashboard Layout)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -70,35 +70,23 @@ st.markdown(f"""
         transition: 0.3s all ease !important;
     }}
 
-    /* --- DASHBOARD BIG TABS STYLING --- */
-    div.stButton > button[title="dash_tab"] {{
-        height: 180px !important;
-        font-size: 1.5rem !important;
-        border-radius: 20px !important;
-        margin-top: 10vh !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 15px 35px rgba(138, 99, 255, 0.4) !important;
-    }}
-
-    /* MINI MENU POPUP */
+    /* --- MINI MENU & POPUP --- */
     .mini-menu-list {{
         background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
         position: absolute; left: 40px; top: 0px; z-index: 999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 130px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
-    .mini-menu-item-btn {{
-        background: none !important; border: none !important; color: #333 !important;
-        text-align: left !important; padding: 5px 0 !important; font-size: 0.95rem !important;
-        width: 100% !important; box-shadow: none !important; cursor: pointer !important;
+
+    /* --- DASHBOARD LARGE TABS --- */
+    div.stButton > button[title="dash_tab"] {{
+        height: 120px !important;
+        font-size: 1.5rem !important;
+        border-radius: 20px !important;
+        margin: 10px !important;
     }}
 
     /* SEARCH BAR */
-    div[data-testid="stChatInput"] > div {{
-        background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important;
-        border-radius: 40px !important; height: 70px !important;
-    }}
+    div[data-testid="stChatInput"] > div {{ background-color: #FFFFFF !important; border: 1px solid #DDDDDD !important; border-radius: 40px !important; height: 70px !important; }}
 
     /* SIGNATURE BOX 3D */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
@@ -119,22 +107,21 @@ with st.sidebar:
             st.rerun()
     
     if st.session_state.show_mini_menu:
-        # We use small buttons inside the white popup for functionality
-        with st.container():
-            st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-            if st.button("📊 Dashboard", key="btn_dash"):
-                st.session_state.view = "dashboard"
-                st.session_state.show_mini_menu = False
-                st.rerun()
-            if st.button("⚙️ Settings", key="btn_settings"):
-                st.toast("Settings clicked")
-            st.markdown('</div>', unsafe_allow_html=True)
+        # Custom container for interactive dashboard/setting clicks
+        st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
+        if st.button("📊 Dashboard", key="nav_dash", use_container_width=True):
+            st.session_state.page_view = "dashboard"
+            st.session_state.show_mini_menu = False
+            st.rerun()
+        if st.button("⚙️ Settings", key="nav_sett", use_container_width=True):
+            st.toast("Settings coming soon!")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
     
     if st.button("New Chat"):
-        st.session_state.view = "chatbot"
         st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
+        st.session_state.page_view = "chatbot"
         st.rerun()
 
     if st.button("Chat History 🕑"): st.toast("History clicked")
@@ -147,27 +134,26 @@ with st.sidebar:
     st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CONTENT SWITCHER
+# 5. MAIN CONTENT ROUTING
 # ==========================================
 
-# --- DASHBOARD VIEW ---
-if st.session_state.view == "dashboard":
-    st.markdown("<h1 style='text-align: center; margin-top: 5vh; color: #1A1A1A;'>Dashboard</h1>", unsafe_allow_html=True)
+# --- VIEW 1: DASHBOARD INTERFACE ---
+if st.session_state.page_view == "dashboard":
+    # Spacer for vertical centering
+    st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
     
-    # Centre horizontal alignment with 2 large columns
-    _, col_mid1, col_mid2, _ = st.columns([1, 4, 4, 1])
+    col_left, col1, col2, col_right = st.columns([1, 2, 2, 1])
     
-    with col_mid1:
-        # Title="dash_tab" triggers the specific large button CSS
-        if st.button("AskMNIT 🤖", title="dash_tab"):
-            st.session_state.view = "chatbot"
+    with col1:
+        if st.button("AskMNIT", title="dash_tab", use_container_width=True):
+            st.session_state.page_view = "chatbot"
             st.rerun()
             
-    with col_mid2:
-        if st.button("Coming Soon ⏳", title="dash_tab"):
+    with col2:
+        if st.button("Coming Soon", title="dash_tab", use_container_width=True):
             st.toast("This feature is under development!")
 
-# --- CHATBOT VIEW ---
+# --- VIEW 2: CHATBOT INTERFACE ---
 else:
     title_class = "title-container-empty" if is_chat_empty else "title-container-active"
     st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)

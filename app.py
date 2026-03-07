@@ -75,6 +75,7 @@ st.markdown(f"""
         margin-left: 15% !important;
         padding: 10px 15px !important;
         font-size: 0.95rem !important;
+        border-radius: 8px !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
     }}
 
@@ -100,7 +101,7 @@ st.markdown(f"""
         background-color: #FFFFFF !important; 
         color: #1A1A1A !important;
         font-size: 1.1rem !important; 
-        padding-left: 25px !important; /* Reset padding since + and Mic are gone */
+        padding-left: 25px !important;
         border: none !important;
     }}
 
@@ -121,7 +122,8 @@ st.markdown(f"""
 # 4. SIDEBAR
 # ==========================================
 with st.sidebar:
-    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tools</h2>", unsafe_allow_html=True)
+    # UPDATED: Tools -> Tool Section
+    st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-bottom: 25px;'>Tool Section</h2>", unsafe_allow_html=True)
     if st.button("➕ New Session"):
         st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
         st.rerun()

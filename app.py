@@ -28,7 +28,7 @@ if "pending_generation" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Pure White Search Bar & UI)
+# 3. CSS (Increased Font Size in Search Bar)
 # ==========================================
 st.markdown(f"""
     <style>
@@ -87,9 +87,12 @@ st.markdown(f"""
         box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
     }}
 
+    /* INCREASED FONT SIZE HERE */
     div[data-testid="stChatInput"] textarea {{ 
         background-color: #FFFFFF !important; /* Pure White inside */
         color: #1A1A1A !important;
+        font-size: 1.2rem !important; /* Thoda bada font */
+        line-height: 1.5 !important;
         height: 80px !important; 
         padding-left: 95px !important; 
         border: none !important;

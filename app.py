@@ -21,8 +21,6 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
-if "show_acad_menu" not in st.session_state:
-    st.session_state.show_acad_menu = False
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
@@ -60,7 +58,7 @@ dashboard_style = """
         animation: shine 3s linear infinite, float 4s ease-in-out infinite;
     }
 
-    /* LEFT ALIGNED UPDATED SUBTEXT */
+    /* LEFT ALIGNED SUBTEXT */
     .dashboard-label {
         font-family: 'Inter', sans-serif;
         font-size: 2rem;
@@ -68,7 +66,8 @@ dashboard_style = """
         color: #D1B3FF;
         text-align: left;
         margin-left: 5%;
-        margin-top: -20px;
+        margin-top: 20px;
+        margin-bottom: 20px;
         opacity: 0.8;
         letter-spacing: 1px;
         text-transform: uppercase;
@@ -80,33 +79,32 @@ dashboard_style = """
         50% { transform: translateY(-10px); }
     }
 
-    /* EXACT CENTERING FOR BUTTON */
-    .main-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 60vh;
+    /* LEFT ALIGNED TAB CONTAINER */
+    .tab-container {
+        text-align: left;
+        margin-left: 5%;
     }
 
     div.stButton > button[help="dash_tab_btn"] {
-        width: 500px !important;
-        height: 250px !important; 
-        font-size: 3rem !important; 
+        width: 450px !important;
+        height: 220px !important; 
+        font-size: 2.8rem !important; 
         font-weight: 900 !important;
-        border-radius: 60px !important; 
+        border-radius: 50px !important; 
         background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
         transition: 0.4s all ease !important;
         color: white !important;
         text-transform: uppercase;
-        letter-spacing: 4px;
+        letter-spacing: 3px;
+        display: block !important;
     }
 
     div.stButton > button[help="dash_tab_btn"]:hover {
-        transform: scale(1.05) !important;
-        box-shadow: 0 35px 70px rgba(255, 105, 180, 0.4) !important;
+        transform: scale(1.03) !important;
+        filter: brightness(1.1);
+        box-shadow: 0 30px 60px rgba(255, 105, 180, 0.3) !important;
     }
 
     section[data-testid="stSidebar"] { display: none !important; }
@@ -118,8 +116,8 @@ dashboard_style = """
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; }
-    .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; }
+    section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
+    .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .mini-menu-list { background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px; position: absolute; left: 40px; top: 0px; z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px; }
     .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
     </style>
@@ -162,14 +160,15 @@ if st.session_state.page_view != "dashboard":
 # ==========================================
 if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
-    # Updated text as requested
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
-    # Massive button centered in the remaining space
-    st.markdown('<div class="main-container">', unsafe_allow_html=True)
-    if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
-        st.session_state.page_view = "chatbot"
-        st.rerun()
+    # Left-aligned tab stacking
+    st.markdown('<div class="tab-container">', unsafe_allow_html=True)
+    col_dash, col_empty = st.columns([1, 2]) # Forces button to stay on the left
+    with col_dash:
+        if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
+            st.session_state.page_view = "chatbot"
+            st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:

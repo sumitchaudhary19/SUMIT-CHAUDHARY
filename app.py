@@ -6,7 +6,7 @@ import os
 # ==========================================
 # 1. PAGE CONFIG & SECRETS
 # ==========================================
-st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -23,10 +23,6 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
-if "show_mini_menu" not in st.session_state:
-    st.session_state.show_mini_menu = False
-if "dashboard_sidebar_open" not in st.session_state:
-    st.session_state.dashboard_sidebar_open = False
 if "page_view" not in st.session_state:
     st.session_state.page_view = "dashboard"
 
@@ -46,213 +42,118 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Slide-Push Layout & Animations)
+# 4. UNIVERSAL CSS (Header & Fonts)
 # ==========================================
-shift_amount = "280px" if st.session_state.dashboard_sidebar_open else "0px"
-sidebar_left = "0px" if st.session_state.dashboard_sidebar_open else "-300px"
-
-dashboard_style = f"""
+st.markdown(f"""
     <style>
-    html, body {{ overflow-x: hidden; }}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    [data-testid="stAppViewContainer"] {{
-        background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
-        transition: margin-left 0.4s ease-in-out !important;
-        margin-left: {shift_amount} !important; 
-    }}
-    
-    .custom-sidebar {{
-        position: fixed;
-        top: 0;
-        left: {sidebar_left}; 
-        width: 280px;
-        height: 100vh;
-        background: rgba(20, 10, 40, 0.95);
-        backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 10000;
-        transition: left 0.4s ease-in-out;
-        padding-top: 80px;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-    }}
-
-    .custom-sidebar-title {{ 
-        color: white; 
-        font-family: 'Inter', sans-serif; 
-        font-weight: 800; 
-        font-size: 1.5rem; 
-        text-align: center; 
-        margin-bottom: 20px; 
-        border-bottom: 1px solid rgba(255,255,255,0.2); 
-        padding-bottom: 10px;
-        margin-left: 20px;
-        margin-right: 20px;
-    }}
-
-    /* CSS TO FORCE THE STREAMLIT BUTTON INSIDE THE SIDEBAR */
-    div.stButton > button[help="side_btn"] {{
-        position: fixed !important;
-        top: 140px !important; 
-        left: {sidebar_left} !important; 
-        margin-left: 20px !important;
-        width: 240px !important;
-        background: #E5E7EB !important; /* LIGHT GREY COLOR */
-        color: #1A0B2E !important; 
-        text-align: left !important;
-        padding: 12px 15px !important;
-        font-size: 1.2rem !important;
-        font-weight: 800 !important;
-        border-radius: 8px !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-        transition: left 0.4s ease-in-out, filter 0.2s !important;
-        z-index: 10001 !important; /* On top of sidebar background */
-    }}
-    div.stButton > button[help="side_btn"]:hover {{
-        filter: brightness(0.9) !important;
-    }}
-    
+    /* TOP HEADER BAR */
     .top-header-bar {{
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 70px;
+        top: 0; left: 0; width: 100vw; height: 70px;
         background-color: rgba(211, 211, 211, 0.15);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9998; 
-        display: flex;
-        align-items: center;
-        padding-left: 80px; 
-        transition: transform 0.4s ease-in-out;
-        transform: translateX({shift_amount}); 
+        z-index: 99999; 
+        display: flex; align-items: center; padding-left: 80px; 
     }}
-
     .header-logo {{
-        height: 50px; 
-        width: 50px;
+        height: 50px; width: 50px;
         background-image: url("data:image/png;base64,{logo_base64}");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        border-radius: 50%;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
-
-    div.stButton > button[help="dash_sidebar_toggle"] {{
-        position: fixed !important;
-        top: 10px !important; 
-        left: 15px !important; 
-        width: 50px !important;
-        height: 50px !important;
-        border-radius: 50% !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(5px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        color: white !important;
-        font-size: 1.5rem !important;
-        z-index: 10002 !important; 
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        transition: all 0.4s ease !important;
-        transform: translateX({shift_amount});
-    }}
-    
-    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; scale: 1.05; }}
-
-    .welcome-text {{
-        font-family: 'Inter', sans-serif;
-        font-size: 8vw;
-        font-weight: 900;
-        text-align: center;
-        letter-spacing: -2px;
-        margin-top: 10vh;
-        display: block;
-        width: 100%;
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
-    }}
-
-    .dashboard-label {{
-        font-family: 'Inter', sans-serif;
-        font-size: 2rem;
-        font-weight: 400;
-        color: #D1B3FF;
-        text-align: left;
-        margin-left: 5%;
-        margin-top: 20px;
-        margin-bottom: 30px;
-        opacity: 0.8;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-    }}
-
-    @keyframes shine {{ to {{ background-position: 200% center; }} }}
-    @keyframes floatText {{ 0%, 100% {{ transform: translateY(0px); }} 50% {{ transform: translateY(-10px); }} }}
-    @keyframes floatingButton {{ 0% {{ transform: translateY(0px); }} 50% {{ transform: translateY(-15px); }} 100% {{ transform: translateY(0px); }} }}
-
-    .tab-container {{ margin-left: 5%; margin-right: 5%; }}
-
-    div.stButton > button[help="dash_tab_btn"] {{
-        width: 100% !important;
-        height: 200px !important; 
-        font-size: 1.8rem !important; 
-        font-weight: 800 !important;
-        border-radius: 40px !important; 
-        background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-        color: #1A0B2E !important; 
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: 0.4s all ease !important;
-        animation: floatingButton 4s ease-in-out infinite;
-    }}
-
-    div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: scale(1.05) !important;
-        filter: brightness(1.1);
-        box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
-        animation-play-state: paused;
-    }}
-
-    section[data-testid="stSidebar"] {{ display: none !important; }}
-    div[data-testid="stSidebarNav"] {{ display: none !important; }}
     header {{ display: none !important; }}
     </style>
-"""
+""", unsafe_allow_html=True)
 
-chatbot_style = """
-    <style>
-    [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
-    .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
-    .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
-    header { display: none !important; }
-    </style>
-"""
-
+# ==========================================
+# 5. DASHBOARD SPECIFIC CSS
+# ==========================================
 if st.session_state.page_view == "dashboard":
-    st.markdown(dashboard_style, unsafe_allow_html=True)
-else:
-    st.markdown(chatbot_style, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
+        }
+        
+        /* STYLE THE NATIVE STREAMLIT SIDEBAR TO LOOK LIKE CUSTOM DARK PUSH SIDEBAR */
+        [data-testid="stSidebar"] {
+            background-color: rgba(20, 10, 40, 0.95) !important;
+            backdrop-filter: blur(15px) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding-top: 80px !important;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5) !important;
+        }
+        [data-testid="stSidebarUserContent"] {
+            padding-top: 80px !important; 
+        }
+        
+        /* ANIMATED WELCOME TEXT */
+        .welcome-text {
+            font-size: 8vw; font-weight: 900; text-align: center; letter-spacing: -2px; margin-top: 15vh;
+            display: block; width: 100%; paint-order: stroke fill; -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
+            background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF); background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
+        }
+        .dashboard-label {
+            font-size: 2rem; font-weight: 400; color: #D1B3FF; text-align: left; margin-left: 5%;
+            margin-top: 20px; margin-bottom: 30px; opacity: 0.8; letter-spacing: 1px; text-transform: uppercase;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes floatText { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes floatingButton { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+
+        .tab-container { margin-left: 5%; margin-right: 5%; }
+        
+        /* MASSIVE TABS */
+        div.stButton > button[help="dash_tab_btn"] {
+            width: 100% !important; height: 200px !important; font-size: 1.8rem !important; font-weight: 800 !important;
+            border-radius: 40px !important; background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
+            border: 2px solid rgba(255, 255, 255, 0.5) !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+            color: #1A0B2E !important; text-transform: uppercase; letter-spacing: 1px; transition: 0.4s all ease !important;
+            animation: floatingButton 4s ease-in-out infinite;
+        }
+        div.stButton > button[help="dash_tab_btn"]:hover { transform: scale(1.05) !important; filter: brightness(1.1); animation-play-state: paused; }
+
+        /* Custom Sidebar Button Styling */
+        div[data-testid="stSidebar"] div.stButton > button {
+            background: #E5E7EB !important; color: #1A0B2E !important; font-weight: 800 !important; font-size: 1.1rem !important;
+            border-radius: 8px !important; border: none !important; margin-bottom: 10px !important; transition: filter 0.2s !important;
+        }
+        div[data-testid="stSidebar"] div.stButton > button:hover { filter: brightness(0.9) !important; }
+        
+        /* Collapse toggle button override */
+        button[kind="header"] { color: white !important; background: rgba(255, 255, 255, 0.1) !important; border-radius: 50% !important; margin-top:10px !important; margin-left: 10px !important; }
+        </style>
+    """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. CHATBOT NATIVE SIDEBAR (Only in Chatbot View)
+# 6. CHATBOT SPECIFIC CSS
 # ==========================================
-if st.session_state.page_view == "chatbot":
-    with st.sidebar:
+else:
+    st.markdown("""
+        <style>
+        [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+        [data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; }
+        div[data-testid="stSidebar"] div.stButton > button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important; }
+        .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
+        </style>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 7. RENDER NATIVE SIDEBAR (Changes based on View)
+# ==========================================
+with st.sidebar:
+    if st.session_state.page_view == "dashboard":
+        st.markdown("<h3 style='color: white; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;'>Navigation</h3>", unsafe_allow_html=True)
+        if st.button("ASKMNIT 🤖"):
+            st.session_state.page_view = "chatbot"
+            st.rerun()
+    else:
         if st.button("⬅️ Back to Dashboard", use_container_width=True):
             st.session_state.page_view = "dashboard"
             st.rerun()
@@ -268,31 +169,12 @@ if st.session_state.page_view == "chatbot":
         st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CONTENT ROUTING
+# 8. MAIN CONTENT ROUTING
 # ==========================================
+# Persistent Header
+st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
+
 if st.session_state.page_view == "dashboard":
-    
-    toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
-    if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
-        st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
-        st.rerun()
-
-    # RENDER CUSTOM SIDEBAR BACKGROUND & TITLE
-    st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
-    
-    # RENDER SIDEBAR TAB INSIDE THE PUSH LOGIC
-    # Render it only when sidebar is open to prevent clicking it when hidden
-    if st.session_state.dashboard_sidebar_open:
-        if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
-            st.session_state.page_view = "chatbot"
-            st.session_state.dashboard_sidebar_open = False
-            st.rerun()
-
-    st.markdown(f'''
-        <div class="top-header-bar">
-            <div class="header-logo"></div>
-        </div>
-    ''', unsafe_allow_html=True)
     
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
@@ -311,6 +193,7 @@ if st.session_state.page_view == "dashboard":
             
     st.markdown('</div>', unsafe_allow_html=True)
 
+# --- VIEW: CHATBOT ---
 else:
     st.markdown("""<div style="margin-top: 10vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 

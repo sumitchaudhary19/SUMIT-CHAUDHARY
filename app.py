@@ -26,12 +26,12 @@ if "show_acad_menu" not in st.session_state:
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
-    st.session_state.page_view = "dashboard"
+    st.session_state.page_view = "chatbot"
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Animated Text)
+# 3. CSS (Dynamic Background & Soft Fonts)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,46 +41,30 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* ANIMATED WELCOME TEXT */
+    /* SOFT CUTE WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
-        font-size: 8vw;
+        font-size: 8vw; /* Covers ~80% screen width */
         font-weight: 900;
+        color: white;
         text-align: center;
         letter-spacing: -2px;
         margin-top: 5vh;
-        display: block;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 50px; /* Rounded corners for cuteness */
+        display: inline-block;
         width: 90%;
         margin-left: 5%;
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 3s linear infinite, float 4s ease-in-out infinite, glow 2s ease-in-out infinite alternate;
-    }
-
-    @keyframes shine { to { background-position: 200% center; } }
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-15px); }
-    }
-    @keyframes glow {
-        from { text-shadow: 0 0 10px rgba(255,255,255,0.2); }
-        to { text-shadow: 0 0 30px rgba(209, 179, 255, 0.6), 0 0 10px rgba(255,255,255,0.4); }
     }
 
     .sub-tagline {
         color: #D1B3FF;
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         text-align: center;
         font-weight: 400;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         margin-bottom: 40px;
-        opacity: 0.8;
     }
     </style>
 """
@@ -104,32 +88,24 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* DASHBOARD BUTTON STYLE - CENTRE MASSIVE PINK */
-    div.stButton > button[help="dash_tab_btn"] {{
+    /* SHINY VIOLET MAIN TABS */
+    .stButton>button {{
         width: 100% !important;
-        height: 320px !important; 
-        font-size: 2.8rem !important; 
-        font-weight: 900 !important;
-        border-radius: 60px !important; 
-        background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.4) !important;
-        transition: 0.4s all ease !important;
-        color: white !important;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }}
-
-    div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: scale(1.05) translateY(-10px) !important;
-        filter: brightness(1.1);
-        box-shadow: 0 35px 65px rgba(255, 105, 180, 0.3) !important;
-    }}
-
-    /* SIDEBAR BUTTONS */
-    section[data-testid="stSidebar"] .stButton>button {{
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
+        border-radius: 15px !important;
+        padding: 14px 20px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+        border: none !important;
+    }}
+
+    /* DASHBOARD BUTTONS CUSTOM */
+    div.stButton > button[help="dash_tab_btn"] {{
+        height: 180px !important;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        border-radius: 25px !important;
     }}
 
     .mini-menu-list {{
@@ -139,6 +115,8 @@ st.markdown(f"""
     }}
 
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
+    .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
+    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -153,15 +131,15 @@ if st.session_state.page_view != "dashboard":
         
         if st.session_state.show_mini_menu:
             st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-            if st.button("📊 Dashboard", use_container_width=True, key="dash_link"):
+            if st.button("📊 Dashboard", use_container_width=True):
                 st.session_state.page_view = "dashboard"
                 st.session_state.show_mini_menu = False
                 st.rerun()
-            if st.button("⚙️ Settings", use_container_width=True, key="settings_link"):
+            if st.button("⚙️ Settings", use_container_width=True):
                 st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
         
         if st.button("New Chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
@@ -169,7 +147,11 @@ if st.session_state.page_view != "dashboard":
 
         st.button("Chat History 🕑")
         st.button("University Tools ⚙️")
-        st.button("Academics 📚")
+        
+        if st.button("Academics 📚"):
+            st.session_state.show_acad_menu = not st.session_state.show_acad_menu
+            st.rerun()
+            
         st.button("Admission - Fee 💸")
         
         st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
@@ -180,22 +162,25 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
+    st.markdown('<div class="welcome-text">welcome to askmnit</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
-    # 3 Columns layout to center the single AskMNIT tab
-    l_spacer, c_main, r_spacer = st.columns([1, 2, 1])
-    
-    with c_main:
+    with c2:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
+            
+    with c3:
+        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
+            st.toast("Stay tuned!")
 
 # --- VIEW: CHATBOT ---
 else:
-    st.markdown(f"""<div style="margin-top: 15vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
+    title_class = "title-container-empty" if is_chat_empty else "title-container-active"
+    st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 
     for message in st.session_state.sessions[st.session_state.current_chat]:
         with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):

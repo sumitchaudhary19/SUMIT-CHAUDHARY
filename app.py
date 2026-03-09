@@ -26,86 +26,111 @@ if "show_acad_menu" not in st.session_state:
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
-    st.session_state.page_view = "chatbot"
+    st.session_state.page_view = "dashboard"
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Layout)
+# 3. CSS (Dynamic Layout & Animations)
 # ==========================================
-dashboard_bg = """
+dashboard_style = """
     <style>
     [data-testid="stAppViewContainer"] {
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
     }
+    
+    /* ANIMATED WELCOME TEXT */
+    .welcome-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 8vw;
+        font-weight: 900;
+        text-align: center;
+        letter-spacing: -2px;
+        margin-top: 2vh;
+        display: block;
+        width: 100%;
+        paint-order: stroke fill;
+        -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shine 3s linear infinite, float 4s ease-in-out infinite;
+    }
+
+    /* LEFT ALIGNED SUBTEXT */
+    .dashboard-label {
+        font-family: 'Inter', sans-serif;
+        font-size: 2rem;
+        font-weight: 400;
+        color: #D1B3FF;
+        text-align: left;
+        margin-left: 5%;
+        margin-top: -20px;
+        opacity: 0.8;
+        letter-spacing: 1px;
+    }
+
+    @keyframes shine { to { background-position: 200% center; } }
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* EXACT CENTERING FOR BUTTON */
+    .main-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 60vh;
+    }
+
+    div.stButton > button[help="dash_tab_btn"] {
+        width: 500px !important;
+        height: 250px !important; 
+        font-size: 3rem !important; 
+        font-weight: 900 !important;
+        border-radius: 60px !important; 
+        background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+        transition: 0.4s all ease !important;
+        color: white !important;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+    }
+
+    div.stButton > button[help="dash_tab_btn"]:hover {
+        transform: scale(1.05) !important;
+        box-shadow: 0 35px 70px rgba(255, 105, 180, 0.4) !important;
+    }
+
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
+    header { display: none !important; }
     </style>
 """
 
-chatbot_bg = """
+chatbot_style = """
     <style>
-    [data-testid="stAppViewContainer"] {
-        background-color: #FFFFFF !important;
-    }
+    [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+    section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; }
+    .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; }
+    .mini-menu-list { background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px; position: absolute; left: 40px; top: 0px; z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px; }
+    .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
     </style>
 """
 
 if st.session_state.page_view == "dashboard":
-    st.markdown(dashboard_bg, unsafe_allow_html=True)
+    st.markdown(dashboard_style, unsafe_allow_html=True)
 else:
-    st.markdown(chatbot_bg, unsafe_allow_html=True)
-
-st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
-    
-    /* SIDEBAR STYLING */
-    section[data-testid="stSidebar"] {{
-        background-color: #F0F2F6 !important;
-        border-right: 1px solid #DDDDDD !important;
-    }}
-
-    /* SHINY VIOLET MAIN TABS */
-    .stButton>button {{
-        width: 100% !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-        color: white !important;
-        border-radius: 10px !important;
-        padding: 14px 20px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
-        border: none !important;
-    }}
-
-    /* DASHBOARD CENTRE MASSIVE BUTTON */
-    div.stButton > button[help="dash_tab_btn"] {{
-        height: 250px !important;
-        font-size: 2.8rem !important;
-        font-weight: 900 !important;
-        border-radius: 35px !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
-    }}
-
-    /* MINI MENU POPUP */
-    .mini-menu-list {{
-        background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
-        position: absolute; left: 40px; top: 0px; z-index: 999;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
-    }}
-
-    .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
-    
-    .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
-    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
-    </style>
-""", unsafe_allow_html=True)
+    st.markdown(chatbot_style, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR LOGIC
+# 4. SIDEBAR LOGIC (Only in Chatbot View)
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
@@ -115,52 +140,38 @@ if st.session_state.page_view != "dashboard":
         
         if st.session_state.show_mini_menu:
             st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-            if st.button("📊 Dashboard", use_container_width=True):
+            if st.button("📊 Dashboard", use_container_width=True, key="dash_link"):
                 st.session_state.page_view = "dashboard"
                 st.session_state.show_mini_menu = False
                 st.rerun()
-            if st.button("⚙️ Settings", use_container_width=True):
-                st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
-        
         if st.button("New Chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
             st.rerun()
-
         st.button("Chat History 🕑")
         st.button("University Tools ⚙️")
-        
-        if st.button("Academics 📚"):
-            st.session_state.show_acad_menu = not st.session_state.show_acad_menu
-            st.rerun()
-            
+        st.button("Academics 📚")
         st.button("Admission - Fee 💸")
-        
         st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 5. MAIN CONTENT ROUTING
 # ==========================================
-
-# --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    # Spacer for vertical centering
-    st.markdown("<div style='height: 32vh;'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-label">your dashboard</div>', unsafe_allow_html=True)
     
-    # 3 Columns layout to centre the single AskMNIT button
-    c1, c2, c3 = st.columns([1, 2, 1])
-    
-    with c2:
-        if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
-            st.session_state.page_view = "chatbot"
-            st.rerun()
+    # Massive button centered in the remaining space
+    st.markdown('<div class="main-container">', unsafe_allow_html=True)
+    if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
+        st.session_state.page_view = "chatbot"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- VIEW: CHATBOT ---
 else:
-    title_class = "title-container-empty" if is_chat_empty else "title-container-active"
-    st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div style="margin-top: 10vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 
     for message in st.session_state.sessions[st.session_state.current_chat]:
         with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):

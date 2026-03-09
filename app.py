@@ -52,6 +52,7 @@ logo_base64 = get_base64_of_bin_file(local_logo_path)
 shift_amount = "280px" if st.session_state.dashboard_sidebar_open else "0px"
 sidebar_left = "0px" if st.session_state.dashboard_sidebar_open else "-300px"
 
+# FIX: Careful escaping of curly braces {{ and }}
 dashboard_style = f"""
     <style>
     /* Prevent default scrolling on the main container to avoid weird jumps */
@@ -169,7 +170,7 @@ dashboard_style = f"""
         transform: translateX({shift_amount});
     }}
     
-    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; scale: 1.05; }}
+    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; transform: translateX({shift_amount}) scale(1.05) !important; }}
 
     /* ANIMATED WELCOME TEXT */
     .welcome-text {{
@@ -272,4 +273,64 @@ if st.session_state.page_view == "chatbot":
 
         st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
         if st.button("New Chat"):
-            st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1
+            st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
+            st.rerun()
+        st.button("Chat History 🕑")
+        st.button("University Tools ⚙️")
+        st.button("Academics 📚")
+        st.button("Admission - Fee 💸")
+        st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+
+# ==========================================
+# 6. MAIN CONTENT ROUTING
+# ==========================================
+if st.session_state.page_view == "dashboard":
+    
+    # --- RENDER PROPER CUSTOM HTML SIDEBAR FOR DASHBOARD ---
+    # Toggle Button
+    toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
+    if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
+        st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
+        st.rerun()
+
+    # Sidebar Background & Title
+    st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
+    
+    # The New "ASKMNIT 🤖" Light Grey Sidebar Tab
+    if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
+        st.session_state.page_view = "chatbot"
+        st.session_state.dashboard_sidebar_open = False
+        st.rerun()
+
+    # --- MAIN DASHBOARD CONTENT ---
+    # Header Bar
+    st.markdown(f'''
+        <div class="top-header-bar">
+            <div class="header-logo"></div>
+        </div>
+    ''', unsafe_allow_html=True)
+    
+    st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="tab-container">', unsafe_allow_html=True)
+    col1, col2 = st.columns([1, 1]) 
+    
+    with col1:
+        if st.button("ASKMNIT - YOUR PERSONAL AI ASSISTANT", help="dash_tab_btn", key="dash_ask"):
+            st.session_state.page_view = "chatbot"
+            st.rerun()
+            
+    with col2:
+        if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
+            st.toast("ERP Login coming soon!")
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- VIEW: CHATBOT ---
+else:
+    st.markdown(f"""<div style="margin-top: 10vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
+
+    for message in st.session_state.sessions[st.session_state.current_chat]:
+        with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
+            st.markdown(

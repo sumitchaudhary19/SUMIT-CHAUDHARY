@@ -80,7 +80,6 @@ chatbot_bg = """
     </style>
 """
 
-# Injecting Background View
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -106,12 +105,12 @@ st.markdown(f"""
 
     /* --- MASSIVE DASHBOARD SQUARE-PILL TABS --- */
     div.stButton > button[help="dash_tab_btn"] {{
-        height: 320px !important; /* Massive Height */
+        height: 320px !important; 
         width: 100% !important;
-        font-size: 2.8rem !important; /* Huge Font */
+        font-size: 2.5rem !important; 
         font-weight: 900 !important;
-        border-radius: 50px !important; /* Strong Rounded Corners */
-        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important; /* Fixed dark gradient match image_e4a960.png */
+        border-radius: 50px !important; 
+        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.15) !important;
         box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
         transition: 0.5s all cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
@@ -124,7 +123,6 @@ st.markdown(f"""
         transform: scale(1.05) translateY(-15px) !important;
         box-shadow: 0 35px 65px rgba(138, 99, 255, 0.4) !important;
         border: 2px solid rgba(255, 255, 255, 0.4) !important;
-        background: linear-gradient(145deg, #4B2C85 0%, #32165A 100%) !important;
     }}
 
     .mini-menu-list {{
@@ -181,21 +179,27 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown('<div class="welcome-text">welcome to askmnit</div>', unsafe_allow_html=True)
+    # Changed text to just 'welcome'
+    st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    # columns for massive tabs
-    c1, c2, c3, c4 = st.columns([0.4, 2, 2, 0.4])
+    # teeno tabs side by side aligned in 3 columns
+    c1, c2, c3 = st.columns([1, 1, 1])
     
-    with c2:
+    with c1:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
             
-    with c3:
+    with c2:
         if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
             st.toast("Stay tuned for new modules!")
+
+    with c3:
+        # Added the 'New Tab' as requested
+        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
+            st.toast("New functionality coming here!")
 
 # --- VIEW: CHATBOT ---
 else:

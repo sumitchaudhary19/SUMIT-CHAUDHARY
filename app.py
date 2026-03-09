@@ -23,6 +23,8 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
+if "show_mini_menu" not in st.session_state:
+    st.session_state.show_mini_menu = False
 if "dashboard_sidebar_open" not in st.session_state:
     st.session_state.dashboard_sidebar_open = False
 if "page_view" not in st.session_state:
@@ -58,14 +60,14 @@ dashboard_style = f"""
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
         transition: margin-left 0.4s ease-in-out !important;
-        margin-left: {shift_amount} !important; /* THIS PUSHES THE SCREEN RIGHT */
+        margin-left: {shift_amount} !important; /* PUSHES SCREEN RIGHT */
     }}
     
-    /* CUSTOM PUSH SIDEBAR */
+    /* CUSTOM PUSH SIDEBAR BACKGROUND */
     .custom-sidebar {{
         position: fixed;
         top: 0;
-        left: {sidebar_left}; /* Toggles in and out */
+        left: {sidebar_left}; 
         width: 280px;
         height: 100vh;
         background: rgba(20, 10, 40, 0.95);
@@ -74,29 +76,42 @@ dashboard_style = f"""
         z-index: 10000;
         transition: left 0.4s ease-in-out;
         padding-top: 80px;
-        padding-left: 20px;
-        padding-right: 20px;
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }}
 
-    .custom-sidebar-title {{ color: white; font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1.5rem; text-align: center; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px;}}
+    .custom-sidebar-title {{ 
+        color: white; 
+        font-family: 'Inter', sans-serif; 
+        font-weight: 800; 
+        font-size: 1.5rem; 
+        text-align: center; 
+        margin-bottom: 20px; 
+        border-bottom: 1px solid rgba(255,255,255,0.2); 
+        padding-bottom: 10px;
+        margin-left: 20px;
+        margin-right: 20px;
+    }}
     
-    /* Sidebar Buttons */
-    div[data-testid="stVerticalBlock"] > div > div > div > button[help="side_btn"] {{
-        width: 100% !important;
-        background: transparent !important;
-        border: none !important;
+    /* FORCE STREAMLIT BUTTONS INTO THE SIDEBAR */
+    div[data-testid="stVerticalBlock"] > div > div > div > div > div > div > button[help="side_btn"] {{
+        width: 240px !important;
+        position: relative !important;
+        left: {sidebar_left} !important; /* Moves in and out with sidebar */
+        margin-left: 20px !important;
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
         color: white !important;
         text-align: left !important;
         padding: 12px 15px !important;
         font-size: 1.1rem !important;
         border-radius: 8px !important;
-        margin-bottom: 8px !important;
-        transition: background 0.2s !important;
+        margin-bottom: 10px !important;
+        transition: all 0.4s ease-in-out, background 0.2s !important;
         justify-content: flex-start !important;
+        z-index: 10001 !important; /* Sit on top of sidebar background */
     }}
-    div[data-testid="stVerticalBlock"] > div > div > div > button[help="side_btn"]:hover {{
-        background: rgba(255, 255, 255, 0.1) !important;
+    div[data-testid="stVerticalBlock"] > div > div > div > div > div > div > button[help="side_btn"]:hover {{
+        background: rgba(255, 255, 255, 0.15) !important;
     }}
 
     /* LIGHT GREY TOP HEADER BAR */
@@ -112,9 +127,9 @@ dashboard_style = f"""
         z-index: 9998; /* Below Sidebar */
         display: flex;
         align-items: center;
-        padding-left: 80px; /* Space for the toggle button */
+        padding-left: 80px; 
         transition: transform 0.4s ease-in-out;
-        transform: translateX({shift_amount}); /* Move header with content */
+        transform: translateX({shift_amount}); 
     }}
 
     .header-logo {{
@@ -128,11 +143,11 @@ dashboard_style = f"""
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
 
-    /* TOGGLE BUTTON (Moves with Sidebar state) */
+    /* TOGGLE BUTTON */
     div.stButton > button[help="dash_sidebar_toggle"] {{
         position: fixed !important;
         top: 10px !important; 
-        left: 15px !important; /* Stays fixed relative to viewport, or shifts slightly */
+        left: 15px !important; 
         width: 50px !important;
         height: 50px !important;
         border-radius: 50% !important;
@@ -141,14 +156,13 @@ dashboard_style = f"""
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         color: white !important;
         font-size: 1.5rem !important;
-        z-index: 10001 !important; /* Absolute Top */
+        z-index: 10002 !important; 
         padding: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
         transition: all 0.4s ease !important;
-        /* Move button if sidebar is open to sit nicely */
         transform: translateX({shift_amount});
     }}
     
@@ -219,18 +233,16 @@ dashboard_style = f"""
         animation-play-state: paused;
     }}
 
-    /* Hide default Streamlit sidebar everywhere now, we use custom */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     div[data-testid="stSidebarNav"] {{ display: none !important; }}
     header {{ display: none !important; }}
     </style>
 """
 
-# Simplified Chatbot Style (No Push effect needed here)
+# Simplified Chatbot Style 
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    /* Show default sidebar only in chatbot view */
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
@@ -268,45 +280,19 @@ if st.session_state.page_view == "chatbot":
 # ==========================================
 if st.session_state.page_view == "dashboard":
     
-    # Custom Sidebar UI Injection (This creates the sliding div)
-    st.markdown('<div class="custom-sidebar">', unsafe_allow_html=True)
-    st.markdown('<div class="custom-sidebar-title">Menu Options</div>', unsafe_allow_html=True)
-    
-    # We use Streamlit columns inside the markdown div by creating the buttons right after.
-    # Note: Streamlit buttons will render where Python executes them, so they visually sit inside the shifting page, 
-    # To truly put them IN the fixed sidebar div, we trick it by placing the buttons in a Streamlit container 
-    # that we then CSS-position into the sidebar, OR we just use a dedicated sidebar column.
-    
-    # A simpler approach: We put the buttons in an invisible column on the left that acts as the sidebar logic.
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- SIDEBAR CONTENT LOGIC ---
-    # We render buttons. Using CSS we target `button[help="side_btn"]` and force them into the fixed sidebar visually.
-    # Actually, the cleanest way in pure Streamlit without React wrappers is to just render them, 
-    # and let CSS flex handle their position, but since we are pushing the main container, we render them first.
-    
-    col_hidden, col_main = st.columns([0.01, 0.99]) # Dummy col to hold sidebar buttons logically
-    
-    with col_hidden:
-        # These buttons will be styled by CSS to appear inside the sliding `.custom-sidebar` div.
-        # However, due to Streamlit DOM structure, they might jump. 
-        # A better trick: Use `st.sidebar` but style it to look like the custom one!
-        pass 
-        
     # --- RENDER PROPER CUSTOM HTML SIDEBAR FOR DASHBOARD ---
-    # Because Streamlit buttons break out of HTML divs, we build the sidebar using Streamlit columns 
-    # and CSS transform on the whole app, which we did above!
-    # So we render the toggle button first.
-    
+    # Toggle Button
     toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
     if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
         st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
         st.rerun()
 
-    # If sidebar is open, render its buttons. CSS `.custom-sidebar` provides the visual background.
-    if st.session_state.dashboard_sidebar_open:
-        st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div>', unsafe_allow_html=True)
-        # We place buttons here. CSS targets them to stack nicely.
+    # Sidebar Background & Title
+    st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
+    
+    # Container specifically targeted by CSS to sit inside the custom sidebar background
+    sidebar_container = st.container()
+    with sidebar_container:
         if st.button("💬 Chatbot View", help="side_btn", key="go_to_chat"):
             st.session_state.page_view = "chatbot"
             st.session_state.dashboard_sidebar_open = False
@@ -317,10 +303,6 @@ if st.session_state.page_view == "dashboard":
             st.toast("Tools opened!")
         if st.button("💸 Admission - Fee", help="side_btn", key="fee_dash"):
             st.toast("Fees opened!")
-        st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        # Render empty sidebar offscreen
-        st.markdown('<div class="custom-sidebar"></div>', unsafe_allow_html=True)
 
     # --- MAIN DASHBOARD CONTENT ---
     # Header Bar

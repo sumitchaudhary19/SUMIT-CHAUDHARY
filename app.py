@@ -152,11 +152,11 @@ if st.session_state.page_view != "dashboard":
         
         if st.session_state.show_mini_menu:
             st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-            if st.button("📊 Dashboard", use_container_width=True):
+            if st.button("📊 Dashboard", use_container_width=True, key="dash_link"):
                 st.session_state.page_view = "dashboard"
                 st.session_state.show_mini_menu = False
                 st.rerun()
-            if st.button("⚙️ Settings", use_container_width=True):
+            if st.button("⚙️ Settings", use_container_width=True, key="settings_link"):
                 st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -182,8 +182,9 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
-    # Arranging all three tabs in one single row with equal gaps
-    c1, c2, c3 = st.columns([1, 1, 1])
+    # 5 Columns layout to center the 3 tabs [Buffer, Tab1, Tab2, Tab3, Buffer]
+    # Ratio: 0.5 buffer, 2 for each tab, 0.5 buffer
+    l_spacer, c1, c2, c3, r_spacer = st.columns([0.5, 2, 2, 2, 0.5])
     
     with c1:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):

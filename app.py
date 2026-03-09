@@ -92,28 +92,6 @@ dashboard_style = f"""
         margin-right: 20px;
     }}
     
-    /* FORCE STREAMLIT BUTTONS INTO THE SIDEBAR */
-    div[data-testid="stVerticalBlock"] > div > div > div > div > div > div > button[help="side_btn"] {{
-        width: 240px !important;
-        position: relative !important;
-        left: {sidebar_left} !important; /* Moves in and out with sidebar */
-        margin-left: 20px !important;
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        color: white !important;
-        text-align: left !important;
-        padding: 12px 15px !important;
-        font-size: 1.1rem !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        transition: all 0.4s ease-in-out, background 0.2s !important;
-        justify-content: flex-start !important;
-        z-index: 10001 !important; /* Sit on top of sidebar background */
-    }}
-    div[data-testid="stVerticalBlock"] > div > div > div > div > div > div > button[help="side_btn"]:hover {{
-        background: rgba(255, 255, 255, 0.15) !important;
-    }}
-
     /* LIGHT GREY TOP HEADER BAR */
     .top-header-bar {{
         position: fixed;
@@ -233,6 +211,7 @@ dashboard_style = f"""
         animation-play-state: paused;
     }}
 
+    /* Hide default Streamlit sidebar everywhere now, we use custom */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     div[data-testid="stSidebarNav"] {{ display: none !important; }}
     header {{ display: none !important; }}
@@ -243,6 +222,7 @@ dashboard_style = f"""
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+    /* Show default sidebar only in chatbot view */
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
@@ -287,23 +267,9 @@ if st.session_state.page_view == "dashboard":
         st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
         st.rerun()
 
-    # Sidebar Background & Title
+    # Sidebar Background & Title (Empty Content Now)
     st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
     
-    # Container specifically targeted by CSS to sit inside the custom sidebar background
-    sidebar_container = st.container()
-    with sidebar_container:
-        if st.button("💬 Chatbot View", help="side_btn", key="go_to_chat"):
-            st.session_state.page_view = "chatbot"
-            st.session_state.dashboard_sidebar_open = False
-            st.rerun()
-        if st.button("📚 Academics", help="side_btn", key="acad_dash"):
-            st.toast("Academics opened!")
-        if st.button("⚙️ University Tools", help="side_btn", key="tools_dash"):
-            st.toast("Tools opened!")
-        if st.button("💸 Admission - Fee", help="side_btn", key="fee_dash"):
-            st.toast("Fees opened!")
-
     # --- MAIN DASHBOARD CONTENT ---
     # Header Bar
     st.markdown(f'''

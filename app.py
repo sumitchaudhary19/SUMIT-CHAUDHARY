@@ -29,7 +29,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Layout & Animations)
+# 3. CSS (Dynamic Layout & Lavender Theme)
 # ==========================================
 dashboard_style = """
     <style>
@@ -79,32 +79,33 @@ dashboard_style = """
         50% { transform: translateY(-10px); }
     }
 
-    /* LEFT ALIGNED TAB CONTAINER */
+    /* CUSTOM LAVENDER TAB DESIGN */
     .tab-container {
         text-align: left;
         margin-left: 5%;
     }
 
     div.stButton > button[help="dash_tab_btn"] {
-        width: 450px !important;
-        height: 220px !important; 
-        font-size: 2.8rem !important; 
-        font-weight: 900 !important;
+        width: 700px !important; /* Increased width for longer text */
+        height: 200px !important; 
+        font-size: 2.2rem !important; 
+        font-weight: 800 !important;
         border-radius: 50px !important; 
-        background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        /* Match image_f6e318 color: Light Lavender Gradient */
+        background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.5) !important;
         box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
         transition: 0.4s all ease !important;
-        color: white !important;
+        color: #1A0B2E !important; /* Dark text for light background */
         text-transform: uppercase;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         display: block !important;
     }
 
     div.stButton > button[help="dash_tab_btn"]:hover {
-        transform: scale(1.03) !important;
-        filter: brightness(1.1);
-        box-shadow: 0 30px 60px rgba(255, 105, 180, 0.3) !important;
+        transform: scale(1.02) !important;
+        filter: brightness(1.05);
+        box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
     }
 
     section[data-testid="stSidebar"] { display: none !important; }
@@ -162,11 +163,11 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
-    # Left-aligned tab stacking
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
-    col_dash, col_empty = st.columns([1, 2]) # Forces button to stay on the left
+    col_dash, col_empty = st.columns([1.5, 1]) 
     with col_dash:
-        if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
+        # Renamed and color-matched button
+        if st.button("ASKMNIT - YOUR PERSONAL AI ASSISTANT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)

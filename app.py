@@ -52,35 +52,22 @@ dashboard_bg = """
         display: block;
         width: 90%;
         margin-left: 5%;
-        
-        /* Character Rounding logic from previous step */
         paint-order: stroke fill;
         -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
         stroke-linecap: round;
         stroke-linejoin: round;
-
-        /* Color & Glow Animation Base */
         background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        
-        /* Keyframes Activation */
         animation: shine 3s linear infinite, float 4s ease-in-out infinite, glow 2s ease-in-out infinite alternate;
     }
 
-    /* 1. Metallic Shine Animation */
-    @keyframes shine {
-        to { background-position: 200% center; }
-    }
-
-    /* 2. Soft Floating Animation */
+    @keyframes shine { to { background-position: 200% center; } }
     @keyframes float {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-15px); }
     }
-
-    /* 3. Outer Glow Animation */
     @keyframes glow {
         from { text-shadow: 0 0 10px rgba(255,255,255,0.2); }
         to { text-shadow: 0 0 30px rgba(209, 179, 255, 0.6), 0 0 10px rgba(255,255,255,0.4); }
@@ -130,16 +117,17 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* MASSIVE DASHBOARD BUTTONS */
+    /* --- MASSIVE LIGHT PINK EQUAL DASHBOARD TABS --- */
     div.stButton > button[help="dash_tab_btn"] {{
         height: 320px !important; 
         width: 100% !important;
         font-size: 2.5rem !important; 
         font-weight: 900 !important;
         border-radius: 50px !important; 
-        background: linear-gradient(145deg, #3E1F75 0%, #251045 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.15) !important;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+        /* Updated to Light Pink Gradient */
+        background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.3) !important;
         transition: 0.5s all cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
         color: white !important;
         text-transform: uppercase;
@@ -147,8 +135,9 @@ st.markdown(f"""
     }}
 
     div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: scale(1.05) translateY(-15px) !important;
-        box-shadow: 0 35px 65px rgba(138, 99, 255, 0.4) !important;
+        transform: scale(1.02) translateY(-10px) !important;
+        box-shadow: 0 35px 65px rgba(255, 105, 180, 0.4) !important;
+        filter: brightness(1.1);
     }}
 
     .mini-menu-list {{
@@ -180,7 +169,7 @@ if st.session_state.page_view != "dashboard":
                 st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
         
         if st.button("New Chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
@@ -207,6 +196,7 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
+    # 3 Columns for Equal Sized Massive Tabs
     c1, c2, c3 = st.columns([1, 1, 1])
     
     with c1:
@@ -215,10 +205,12 @@ if st.session_state.page_view == "dashboard":
             st.rerun()
             
     with c2:
-        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
+        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
+            st.toast("Stay tuned!")
 
     with c3:
-        st.button("New Tab", help="dash_tab_btn", key="dash_new")
+        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
+            st.toast("Module currently locked.")
 
 # --- VIEW: CHATBOT ---
 else:

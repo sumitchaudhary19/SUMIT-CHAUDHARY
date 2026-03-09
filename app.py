@@ -114,17 +114,15 @@ st.markdown(f"""
         padding: 14px 20px !important;
         font-weight: 600 !important;
         box-shadow: 0 8px 15px rgba(138, 99, 255, 0.2) !important;
-        border: none !important;
     }}
 
-    /* --- MASSIVE LIGHT PINK EQUAL DASHBOARD TABS --- */
+    /* --- MASSIVE LIGHT PINK DASHBOARD TABS --- */
     div.stButton > button[help="dash_tab_btn"] {{
         height: 320px !important; 
         width: 100% !important;
         font-size: 2.5rem !important; 
         font-weight: 900 !important;
         border-radius: 50px !important; 
-        /* Updated to Light Pink Gradient */
         background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.3) !important;
         box-shadow: 0 25px 50px rgba(0,0,0,0.3) !important;
@@ -137,7 +135,6 @@ st.markdown(f"""
     div.stButton > button[help="dash_tab_btn"]:hover {{
         transform: scale(1.02) translateY(-10px) !important;
         box-shadow: 0 35px 65px rgba(255, 105, 180, 0.4) !important;
-        filter: brightness(1.1);
     }}
 
     .mini-menu-list {{
@@ -169,7 +166,7 @@ if st.session_state.page_view != "dashboard":
                 st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
         
         if st.button("New Chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
@@ -196,8 +193,10 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    # 3 Columns for Equal Sized Massive Tabs
-    c1, c2, c3 = st.columns([1, 1, 1])
+    
+    # Logic: 2 parts for AskMNIT, 1 part each for others (Total 4 parts)
+    # This effectively doubles the AskMNIT tab length relative to the others
+    c1, c2, c3 = st.columns([2, 1, 1])
     
     with c1:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
@@ -205,12 +204,10 @@ if st.session_state.page_view == "dashboard":
             st.rerun()
             
     with c2:
-        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned!")
+        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
 
     with c3:
-        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
-            st.toast("Module currently locked.")
+        st.button("New Tab", help="dash_tab_btn", key="dash_new")
 
 # --- VIEW: CHATBOT ---
 else:

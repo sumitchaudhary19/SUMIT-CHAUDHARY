@@ -48,23 +48,19 @@ logo_base64 = get_base64_of_bin_file(local_logo_path)
 # ==========================================
 # 4. CSS (Slide-Push Layout & Animations)
 # ==========================================
-# Calculate shift logic based on state
 shift_amount = "280px" if st.session_state.dashboard_sidebar_open else "0px"
 sidebar_left = "0px" if st.session_state.dashboard_sidebar_open else "-300px"
 
-# FIX: Careful escaping of curly braces {{ and }}
 dashboard_style = f"""
     <style>
-    /* Prevent default scrolling on the main container to avoid weird jumps */
     html, body {{ overflow-x: hidden; }}
     
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
         transition: margin-left 0.4s ease-in-out !important;
-        margin-left: {shift_amount} !important; /* PUSHES SCREEN RIGHT */
+        margin-left: {shift_amount} !important; 
     }}
     
-    /* CUSTOM PUSH SIDEBAR BACKGROUND */
     .custom-sidebar {{
         position: fixed;
         top: 0;
@@ -93,14 +89,13 @@ dashboard_style = f"""
         margin-right: 20px;
     }}
 
-    /* SIDEBAR LIGHT GREY TAB "ASKMNIT" */
     button[help="side_btn"] {{
         position: fixed !important;
-        top: 140px !important; /* Sits right under the Navigation text */
+        top: 140px !important; 
         left: 20px !important;
         width: 240px !important;
-        background: #E5E7EB !important; /* LIGHT GREY COLOR */
-        color: #1A0B2E !important; /* Dark Text */
+        background: #E5E7EB !important; 
+        color: #1A0B2E !important; 
         text-align: left !important;
         padding: 12px 15px !important;
         font-size: 1.2rem !important;
@@ -109,7 +104,7 @@ dashboard_style = f"""
         border: none !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
         transition: transform 0.4s ease-in-out, filter 0.2s !important;
-        transform: translateX({sidebar_left}) !important; /* Syncs slide with sidebar */
+        transform: translateX({sidebar_left}) !important; 
         z-index: 10001 !important;
         display: block !important;
     }}
@@ -118,7 +113,6 @@ dashboard_style = f"""
         cursor: pointer !important;
     }}
     
-    /* LIGHT GREY TOP HEADER BAR */
     .top-header-bar {{
         position: fixed;
         top: 0;
@@ -128,7 +122,7 @@ dashboard_style = f"""
         background-color: rgba(211, 211, 211, 0.15);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9998; /* Below Sidebar */
+        z-index: 9998; 
         display: flex;
         align-items: center;
         padding-left: 80px; 
@@ -147,7 +141,6 @@ dashboard_style = f"""
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
 
-    /* TOGGLE BUTTON */
     div.stButton > button[help="dash_sidebar_toggle"] {{
         position: fixed !important;
         top: 10px !important; 
@@ -170,9 +163,8 @@ dashboard_style = f"""
         transform: translateX({shift_amount});
     }}
     
-    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; transform: translateX({shift_amount}) scale(1.05) !important; }}
+    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; scale: 1.05; }}
 
-    /* ANIMATED WELCOME TEXT */
     .welcome-text {{
         font-family: 'Inter', sans-serif;
         font-size: 8vw;
@@ -213,7 +205,6 @@ dashboard_style = f"""
 
     .tab-container {{ margin-left: 5%; margin-right: 5%; }}
 
-    /* MASSIVE TABS */
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
         height: 200px !important; 
@@ -237,18 +228,15 @@ dashboard_style = f"""
         animation-play-state: paused;
     }}
 
-    /* Hide default Streamlit sidebar everywhere now, we use custom */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     div[data-testid="stSidebarNav"] {{ display: none !important; }}
     header {{ display: none !important; }}
     </style>
 """
 
-# Simplified Chatbot Style 
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    /* Show default sidebar only in chatbot view */
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
@@ -256,7 +244,6 @@ chatbot_style = """
     </style>
 """
 
-# Apply styles based on view
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_style, unsafe_allow_html=True)
 else:
@@ -279,32 +266,26 @@ if st.session_state.page_view == "chatbot":
         st.button("University Tools ⚙️")
         st.button("Academics 📚")
         st.button("Admission - Fee 💸")
-        st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
     
-    # --- RENDER PROPER CUSTOM HTML SIDEBAR FOR DASHBOARD ---
-    # Toggle Button
     toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
     if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
         st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
         st.rerun()
 
-    # Sidebar Background & Title
     st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
     
-    # The New "ASKMNIT 🤖" Light Grey Sidebar Tab
     if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
         st.session_state.page_view = "chatbot"
         st.session_state.dashboard_sidebar_open = False
         st.rerun()
 
-    # --- MAIN DASHBOARD CONTENT ---
-    # Header Bar
-    st.markdown(f'''
+    st.markdown('''
         <div class="top-header-bar">
             <div class="header-logo"></div>
         </div>
@@ -327,10 +308,30 @@ if st.session_state.page_view == "dashboard":
             
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- VIEW: CHATBOT ---
 else:
-    st.markdown(f"""<div style="margin-top: 10vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div style="margin-top: 10vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 
     for message in st.session_state.sessions[st.session_state.current_chat]:
         with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):
-            st.markdown(
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Ask me anything..."):
+        st.session_state.sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+        st.session_state.pending_generation = True
+        st.rerun()
+
+    if st.session_state.pending_generation:
+        user_query = st.session_state.sessions[st.session_state.current_chat][-1]["content"]
+        with st.chat_message("assistant", avatar="🤖"):
+            try:
+                stream = client.chat.completions.create(
+                    messages=[{"role": "system", "content": "You are 'AskMNIT', an assistant for MNIT Jaipur students."},{"role": "user", "content": user_query}],
+                    model="llama-3.3-70b-versatile", stream=True
+                )
+                def gen():
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content: yield chunk.choices[0].delta.content
+                response_text = st.write_stream(gen())
+                st.session_state.sessions[st.session_state.current_chat].append({"role": "assistant", "content": response_text})
+            except Exception as e: st.error(f"Error: {str(e)}")
+        st.session_state.pending_generation = False

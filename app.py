@@ -29,7 +29,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Header Bar, Floating Tabs & Lavender Theme)
+# 3. CSS (Header Logo, Layout & Animations)
 # ==========================================
 dashboard_style = """
     <style>
@@ -37,20 +37,27 @@ dashboard_style = """
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
     }
     
-    /* LIGHT GREY TOP HEADER BAR */
+    /* LIGHT GREY TOP HEADER BAR WITH LOGO */
     .top-header-bar {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 60px;
+        height: 70px;
         background-color: rgba(211, 211, 211, 0.15); /* Light Grey with Transparency */
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9999;
         display: flex;
         align-items: center;
-        padding-left: 20px;
+        padding-left: 40px; /* Space from left edge */
+    }
+
+    .header-logo {
+        height: 50px; /* Perfect size for the header */
+        width: auto;
+        border-radius: 50%;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
 
     /* ANIMATED WELCOME TEXT */
@@ -182,8 +189,12 @@ if st.session_state.page_view != "dashboard":
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Insert the Header Bar
-    st.markdown('<div class="top-header-bar"></div>', unsafe_allow_html=True)
+    # Insert the Header Bar with MNIT Logo
+    st.markdown('''
+        <div class="top-header-bar">
+            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Malaviya_National_Institute_of_Technology%2C_Jaipur_Logo.png/220px-Malaviya_National_Institute_of_Technology%2C_Jaipur_Logo.png" class="header-logo" alt="MNIT Logo">
+        </div>
+    ''', unsafe_allow_html=True)
     
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)

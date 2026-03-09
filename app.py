@@ -89,12 +89,14 @@ dashboard_style = f"""
         margin-right: 20px;
     }}
 
-    button[help="side_btn"] {{
+    /* CSS TO FORCE THE STREAMLIT BUTTON INSIDE THE SIDEBAR */
+    div.stButton > button[help="side_btn"] {{
         position: fixed !important;
         top: 140px !important; 
-        left: 20px !important;
+        left: {sidebar_left} !important; 
+        margin-left: 20px !important;
         width: 240px !important;
-        background: #E5E7EB !important; 
+        background: #E5E7EB !important; /* LIGHT GREY COLOR */
         color: #1A0B2E !important; 
         text-align: left !important;
         padding: 12px 15px !important;
@@ -103,14 +105,11 @@ dashboard_style = f"""
         border-radius: 8px !important;
         border: none !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-        transition: transform 0.4s ease-in-out, filter 0.2s !important;
-        transform: translateX({sidebar_left}) !important; 
-        z-index: 10001 !important;
-        display: block !important;
+        transition: left 0.4s ease-in-out, filter 0.2s !important;
+        z-index: 10001 !important; /* On top of sidebar background */
     }}
-    button[help="side_btn"]:hover {{
+    div.stButton > button[help="side_btn"]:hover {{
         filter: brightness(0.9) !important;
-        cursor: pointer !important;
     }}
     
     .top-header-bar {{
@@ -278,14 +277,18 @@ if st.session_state.page_view == "dashboard":
         st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
         st.rerun()
 
+    # RENDER CUSTOM SIDEBAR BACKGROUND & TITLE
     st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
     
-    if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
-        st.session_state.page_view = "chatbot"
-        st.session_state.dashboard_sidebar_open = False
-        st.rerun()
+    # RENDER SIDEBAR TAB INSIDE THE PUSH LOGIC
+    # Render it only when sidebar is open to prevent clicking it when hidden
+    if st.session_state.dashboard_sidebar_open:
+        if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
+            st.session_state.page_view = "chatbot"
+            st.session_state.dashboard_sidebar_open = False
+            st.rerun()
 
-    st.markdown('''
+    st.markdown(f'''
         <div class="top-header-bar">
             <div class="header-logo"></div>
         </div>

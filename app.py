@@ -29,7 +29,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Layout & Lavender Theme)
+# 3. CSS (Floating Tabs & Lavender Theme)
 # ==========================================
 dashboard_style = """
     <style>
@@ -55,7 +55,7 @@ dashboard_style = """
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        animation: shine 3s linear infinite, float 4s ease-in-out infinite;
+        animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
     }
 
     /* LEFT ALIGNED SUBTEXT */
@@ -67,45 +67,56 @@ dashboard_style = """
         text-align: left;
         margin-left: 5%;
         margin-top: 20px;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
         opacity: 0.8;
         letter-spacing: 1px;
         text-transform: uppercase;
     }
 
     @keyframes shine { to { background-position: 200% center; } }
-    @keyframes float {
+    @keyframes floatText {
         0%, 100% { transform: translateY(0px); }
         50% { transform: translateY(-10px); }
     }
 
-    /* CUSTOM LAVENDER TAB DESIGN */
+    /* FLOATING BUTTON ANIMATION */
+    @keyframes floatingButton {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+        100% { transform: translateY(0px); }
+    }
+
     .tab-container {
-        text-align: left;
         margin-left: 5%;
+        margin-right: 5%;
     }
 
     div.stButton > button[help="dash_tab_btn"] {
-        width: 700px !important; /* Increased width for longer text */
+        width: 100% !important;
         height: 200px !important; 
-        font-size: 2.2rem !important; 
+        font-size: 1.8rem !important; 
         font-weight: 800 !important;
-        border-radius: 50px !important; 
-        /* Match image_f6e318 color: Light Lavender Gradient */
+        border-radius: 40px !important; 
         background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.5) !important;
         box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-        transition: 0.4s all ease !important;
-        color: #1A0B2E !important; /* Dark text for light background */
+        color: #1A0B2E !important; 
         text-transform: uppercase;
-        letter-spacing: 2px;
-        display: block !important;
+        letter-spacing: 1px;
+        transition: 0.4s all ease !important;
+        animation: floatingButton 4s ease-in-out infinite;
+    }
+
+    /* Stagger the animation for the second button a bit */
+    div.stButton > button[key="dash_erp"] {
+        animation-delay: 0.5s;
     }
 
     div.stButton > button[help="dash_tab_btn"]:hover {
-        transform: scale(1.02) !important;
-        filter: brightness(1.05);
+        transform: scale(1.05) !important;
+        filter: brightness(1.1);
         box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
+        animation-play-state: paused; /* Stop floating on hover */
     }
 
     section[data-testid="stSidebar"] { display: none !important; }
@@ -164,12 +175,17 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
-    col_dash, col_empty = st.columns([1.5, 1]) 
-    with col_dash:
-        # Renamed and color-matched button
+    col1, col2 = st.columns([1, 1]) 
+    
+    with col1:
         if st.button("ASKMNIT - YOUR PERSONAL AI ASSISTANT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
+            
+    with col2:
+        if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
+            st.toast("ERP Login coming soon!")
+            
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:

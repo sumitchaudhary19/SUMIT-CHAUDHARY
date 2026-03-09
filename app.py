@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Massive Tabs)
+# 3. CSS (Dynamic Background & Animated Text)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,7 +41,7 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* SOFT CUTE WELCOME TEXT */
+    /* ANIMATED WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
         font-size: 8vw;
@@ -104,11 +104,11 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* DASHBOARD BUTTONS STYLE */
+    /* DASHBOARD BUTTONS STYLE - LIGHT PINK MASSIVE */
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
-        height: 250px !important; 
-        font-size: 2.5rem !important; 
+        height: 320px !important; 
+        font-size: 2.2rem !important; 
         font-weight: 900 !important;
         border-radius: 50px !important; 
         background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
@@ -182,21 +182,21 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
-    # Hero Row: AskMNIT takes full width (Massive Length)
-    c_hero_l, c_hero, c_hero_r = st.columns([0.1, 4, 0.1])
-    with c_hero:
+    # Arranging all three tabs in one single row with equal gaps
+    c1, c2, c3 = st.columns([1, 1, 1])
+    
+    with c1:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
-
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-
-    # Sub Row: Equal smaller tabs below
-    c_bot_l, c1, c2, c_bot_r = st.columns([0.1, 2, 2, 0.1])
-    with c1:
-        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
+            
     with c2:
-        st.button("New Tab", help="dash_tab_btn", key="dash_new")
+        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
+            st.toast("Stay tuned!")
+
+    with c3:
+        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
+            st.toast("Module locked.")
 
 # --- VIEW: CHATBOT ---
 else:

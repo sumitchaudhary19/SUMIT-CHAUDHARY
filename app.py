@@ -31,9 +31,8 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Navigation)
+# 3. CSS (Dynamic Background & Layout)
 # ==========================================
-# Gradient background pattern matching the provided image for Dashboard
 dashboard_bg = """
     <style>
     [data-testid="stAppViewContainer"] {
@@ -52,7 +51,6 @@ chatbot_bg = """
     </style>
 """
 
-# Inject background based on view
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -62,9 +60,7 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"] {{
-        font-family: 'Inter', sans-serif;
-    }}
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
     /* SIDEBAR STYLING */
     section[data-testid="stSidebar"] {{
@@ -84,13 +80,14 @@ st.markdown(f"""
         border: none !important;
     }}
 
-    /* DASHBOARD LARGE BUTTONS */
-    div.stButton > button[title="dash_tab_btn"] {{
-        height: 200px !important;
-        font-size: 2.2rem !important;
+    /* DASHBOARD CENTRE MASSIVE BUTTON */
+    div.stButton > button[help="dash_tab_btn"] {{
+        height: 250px !important;
+        font-size: 2.8rem !important;
         font-weight: 900 !important;
-        border-radius: 30px !important;
+        border-radius: 35px !important;
         text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
     }}
 
     /* MINI MENU POPUP */
@@ -100,7 +97,6 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
 
-    /* SIGNATURE BOX */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
     
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
@@ -109,11 +105,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR (Only visible when NOT in Dashboard)
+# 4. SIDEBAR LOGIC
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
-        # Hamburger Menu
         if st.button("☰", key="hamburger_icon"):
             st.session_state.show_mini_menu = not st.session_state.show_mini_menu
             st.rerun()
@@ -151,17 +146,16 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
+    # Spacer for vertical centering
+    st.markdown("<div style='height: 32vh;'></div>", unsafe_allow_html=True)
+    
+    # 3 Columns layout to centre the single AskMNIT button
+    c1, c2, c3 = st.columns([1, 2, 1])
     
     with c2:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
-            
-    with c3:
-        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned!")
 
 # --- VIEW: CHATBOT ---
 else:

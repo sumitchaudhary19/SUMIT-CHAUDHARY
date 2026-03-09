@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Animated Text)
+# 3. CSS (Dynamic Background & Massive Tabs)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,7 +41,7 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* ANIMATED WELCOME TEXT */
+    /* SOFT CUTE WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
         font-size: 8vw;
@@ -79,8 +79,7 @@ dashboard_bg = """
         text-align: center;
         font-weight: 400;
         letter-spacing: 3px;
-        margin-bottom: 50px;
-        margin-top: 10px;
+        margin-bottom: 40px;
         opacity: 0.8;
     }
     </style>
@@ -105,36 +104,31 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* MAIN SIDEBAR TABS */
-    .stButton>button {{
-        width: 100% !important;
-        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 20px !important;
-        font-weight: 600 !important;
-        box-shadow: 0 8px 15px rgba(138, 99, 255, 0.2) !important;
-    }}
-
-    /* --- MASSIVE LIGHT PINK DASHBOARD TABS --- */
+    /* DASHBOARD BUTTONS STYLE */
     div.stButton > button[help="dash_tab_btn"] {{
-        height: 320px !important; 
         width: 100% !important;
+        height: 250px !important; 
         font-size: 2.5rem !important; 
         font-weight: 900 !important;
         border-radius: 50px !important; 
         background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.3) !important;
         box-shadow: 0 25px 50px rgba(0,0,0,0.3) !important;
-        transition: 0.5s all cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        transition: 0.4s all ease !important;
         color: white !important;
         text-transform: uppercase;
         letter-spacing: 2px;
     }}
 
     div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: scale(1.02) translateY(-10px) !important;
-        box-shadow: 0 35px 65px rgba(255, 105, 180, 0.4) !important;
+        transform: translateY(-10px) !important;
+        filter: brightness(1.1);
+    }}
+
+    /* SIDEBAR BUTTONS */
+    section[data-testid="stSidebar"] .stButton>button {{
+        background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
+        color: white !important;
     }}
 
     .mini-menu-list {{
@@ -174,11 +168,7 @@ if st.session_state.page_view != "dashboard":
 
         st.button("Chat History 🕑")
         st.button("University Tools ⚙️")
-        
-        if st.button("Academics 📚"):
-            st.session_state.show_acad_menu = not st.session_state.show_acad_menu
-            st.rerun()
-            
+        st.button("Academics 📚")
         st.button("Admission - Fee 💸")
         
         st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
@@ -192,21 +182,20 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
-    st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    
-    # Logic: 2 parts for AskMNIT, 1 part each for others (Total 4 parts)
-    # This effectively doubles the AskMNIT tab length relative to the others
-    c1, c2, c3 = st.columns([2, 1, 1])
-    
-    with c1:
+    # Hero Row: AskMNIT takes full width (Massive Length)
+    c_hero_l, c_hero, c_hero_r = st.columns([0.1, 4, 0.1])
+    with c_hero:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
-            
-    with c2:
-        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
 
-    with c3:
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
+    # Sub Row: Equal smaller tabs below
+    c_bot_l, c1, c2, c_bot_r = st.columns([0.1, 2, 2, 0.1])
+    with c1:
+        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
+    with c2:
         st.button("New Tab", help="dash_tab_btn", key="dash_new")
 
 # --- VIEW: CHATBOT ---

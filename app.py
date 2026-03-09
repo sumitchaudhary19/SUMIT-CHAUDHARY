@@ -29,7 +29,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Floating Tabs & Lavender Theme)
+# 3. CSS (Header Bar, Floating Tabs & Lavender Theme)
 # ==========================================
 dashboard_style = """
     <style>
@@ -37,6 +37,22 @@ dashboard_style = """
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
     }
     
+    /* LIGHT GREY TOP HEADER BAR */
+    .top-header-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background-color: rgba(211, 211, 211, 0.15); /* Light Grey with Transparency */
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+    }
+
     /* ANIMATED WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
@@ -44,7 +60,7 @@ dashboard_style = """
         font-weight: 900;
         text-align: center;
         letter-spacing: -2px;
-        margin-top: 2vh;
+        margin-top: 10vh; /* Shifted down for Header */
         display: block;
         width: 100%;
         paint-order: stroke fill;
@@ -107,16 +123,11 @@ dashboard_style = """
         animation: floatingButton 4s ease-in-out infinite;
     }
 
-    /* Stagger the animation for the second button a bit */
-    div.stButton > button[key="dash_erp"] {
-        animation-delay: 0.5s;
-    }
-
     div.stButton > button[help="dash_tab_btn"]:hover {
         transform: scale(1.05) !important;
         filter: brightness(1.1);
         box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
-        animation-play-state: paused; /* Stop floating on hover */
+        animation-play-state: paused;
     }
 
     section[data-testid="stSidebar"] { display: none !important; }
@@ -171,6 +182,9 @@ if st.session_state.page_view != "dashboard":
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
+    # Insert the Header Bar
+    st.markdown('<div class="top-header-bar"></div>', unsafe_allow_html=True)
+    
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     

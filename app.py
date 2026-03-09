@@ -26,7 +26,7 @@ if "show_acad_menu" not in st.session_state:
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
 if "page_view" not in st.session_state:
-    st.session_state.page_view = "chatbot"
+    st.session_state.page_view = "dashboard"
 
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
@@ -104,16 +104,16 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* DASHBOARD BUTTONS STYLE - LIGHT PINK MASSIVE */
+    /* DASHBOARD BUTTON STYLE - CENTRE MASSIVE PINK */
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
         height: 320px !important; 
-        font-size: 2.2rem !important; 
+        font-size: 2.8rem !important; 
         font-weight: 900 !important;
-        border-radius: 50px !important; 
+        border-radius: 60px !important; 
         background: linear-gradient(145deg, #FFB6C1 0%, #FF69B4 100%) !important;
         border: 2px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.3) !important;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.4) !important;
         transition: 0.4s all ease !important;
         color: white !important;
         text-transform: uppercase;
@@ -121,8 +121,9 @@ st.markdown(f"""
     }}
 
     div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: translateY(-10px) !important;
+        transform: scale(1.05) translateY(-10px) !important;
         filter: brightness(1.1);
+        box-shadow: 0 35px 65px rgba(255, 105, 180, 0.3) !important;
     }}
 
     /* SIDEBAR BUTTONS */
@@ -182,22 +183,15 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
-    # 5 Columns layout to center the 3 tabs [Buffer, Tab1, Tab2, Tab3, Buffer]
-    # Ratio: 0.5 buffer, 2 for each tab, 0.5 buffer
-    l_spacer, c1, c2, c3, r_spacer = st.columns([0.5, 2, 2, 2, 0.5])
+    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
     
-    with c1:
+    # 3 Columns layout to center the single AskMNIT tab
+    l_spacer, c_main, r_spacer = st.columns([1, 2, 1])
+    
+    with c_main:
         if st.button("AskMNIT", help="dash_tab_btn", key="dash_ask"):
             st.session_state.page_view = "chatbot"
             st.rerun()
-            
-    with c2:
-        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned!")
-
-    with c3:
-        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
-            st.toast("Module locked.")
 
 # --- VIEW: CHATBOT ---
 else:

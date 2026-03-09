@@ -31,7 +31,7 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Massive Tabs)
+# 3. CSS (Dynamic Background & Animated Text)
 # ==========================================
 dashboard_bg = """
     <style>
@@ -41,23 +41,49 @@ dashboard_bg = """
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
 
-    /* SOFT CUTE WELCOME TEXT */
+    /* ANIMATED WELCOME TEXT */
     .welcome-text {
         font-family: 'Inter', sans-serif;
         font-size: 8vw;
         font-weight: 900;
-        color: white;
         text-align: center;
         letter-spacing: -2px;
         margin-top: 5vh;
-        background: none !important;
-        display: block !important;
+        display: block;
         width: 90%;
         margin-left: 5%;
+        
+        /* Character Rounding logic from previous step */
         paint-order: stroke fill;
-        -webkit-text-stroke: 0.04em white;
+        -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
         stroke-linecap: round;
         stroke-linejoin: round;
+
+        /* Color & Glow Animation Base */
+        background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        
+        /* Keyframes Activation */
+        animation: shine 3s linear infinite, float 4s ease-in-out infinite, glow 2s ease-in-out infinite alternate;
+    }
+
+    /* 1. Metallic Shine Animation */
+    @keyframes shine {
+        to { background-position: 200% center; }
+    }
+
+    /* 2. Soft Floating Animation */
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+    }
+
+    /* 3. Outer Glow Animation */
+    @keyframes glow {
+        from { text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        to { text-shadow: 0 0 30px rgba(209, 179, 255, 0.6), 0 0 10px rgba(255,255,255,0.4); }
     }
 
     .sub-tagline {
@@ -68,6 +94,7 @@ dashboard_bg = """
         letter-spacing: 3px;
         margin-bottom: 50px;
         margin-top: 10px;
+        opacity: 0.8;
     }
     </style>
 """
@@ -91,7 +118,7 @@ st.markdown(f"""
 
     html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
     
-    /* SHINY VIOLET MAIN TABS */
+    /* MAIN SIDEBAR TABS */
     .stButton>button {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
@@ -99,11 +126,11 @@ st.markdown(f"""
         border-radius: 12px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
+        box-shadow: 0 8px 15px rgba(138, 99, 255, 0.2) !important;
         border: none !important;
     }}
 
-    /* --- MASSIVE DASHBOARD SQUARE-PILL TABS --- */
+    /* MASSIVE DASHBOARD BUTTONS */
     div.stButton > button[help="dash_tab_btn"] {{
         height: 320px !important; 
         width: 100% !important;
@@ -122,7 +149,6 @@ st.markdown(f"""
     div.stButton > button[help="dash_tab_btn"]:hover {{
         transform: scale(1.05) translateY(-15px) !important;
         box-shadow: 0 35px 65px rgba(138, 99, 255, 0.4) !important;
-        border: 2px solid rgba(255, 255, 255, 0.4) !important;
     }}
 
     .mini-menu-list {{
@@ -132,8 +158,6 @@ st.markdown(f"""
     }}
 
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
-    .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
-    .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -156,7 +180,7 @@ if st.session_state.page_view != "dashboard":
                 st.toast("Settings coming soon!")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color: #1A1A1A; text-align: center; margin-top: 10px;'>Tool Section</h2>", unsafe_allow_html=True)
         
         if st.button("New Chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
@@ -179,12 +203,10 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    # Changed text to just 'welcome'
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
     
     st.markdown("<div style='height: 2vh;'></div>", unsafe_allow_html=True)
-    # teeno tabs side by side aligned in 3 columns
     c1, c2, c3 = st.columns([1, 1, 1])
     
     with c1:
@@ -193,18 +215,14 @@ if st.session_state.page_view == "dashboard":
             st.rerun()
             
     with c2:
-        if st.button("Coming Soon", help="dash_tab_btn", key="dash_soon"):
-            st.toast("Stay tuned for new modules!")
+        st.button("Coming Soon", help="dash_tab_btn", key="dash_soon")
 
     with c3:
-        # Added the 'New Tab' as requested
-        if st.button("New Tab", help="dash_tab_btn", key="dash_new"):
-            st.toast("New functionality coming here!")
+        st.button("New Tab", help="dash_tab_btn", key="dash_new")
 
 # --- VIEW: CHATBOT ---
 else:
-    title_class = "title-container-empty" if is_chat_empty else "title-container-active"
-    st.markdown(f"""<div class="{title_class}"><div style="color: #1A1A1A; font-weight: 800; text-align: center; font-size: 3.5rem;">AskMNIT</div><div style="text-align: center; color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div style="margin-top: 15vh; text-align: center;"><div style="color: #1A1A1A; font-weight: 800; font-size: 3.5rem;">AskMNIT</div><div style="color: #666666; font-size: 1.2rem;">Your Professional AI Assistant</div></div>""", unsafe_allow_html=True)
 
     for message in st.session_state.sessions[st.session_state.current_chat]:
         with st.chat_message(message["role"], avatar="👤" if message["role"]=="user" else "🤖"):

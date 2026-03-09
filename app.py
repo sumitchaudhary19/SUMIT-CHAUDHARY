@@ -1,5 +1,7 @@
 import streamlit as st
 from groq import Groq
+import base64
+import os
 
 # ==========================================
 # 1. PAGE CONFIG & SECRETS
@@ -29,45 +31,64 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Header Logo, Layout & Animations)
+# 3. HELPER FUNCTION (For Local Image in CSS)
 # ==========================================
-dashboard_style = """
+def get_base64_of_bin_file(bin_file):
+    if os.path.exists(bin_file):
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    return ""
+
+# UPDATED FILE NAME HERE
+local_logo_path = "mnit_logo.png" 
+logo_base64 = get_base64_of_bin_file(local_logo_path)
+
+# ==========================================
+# 4. CSS (Header Logo, Layout & Animations)
+# ==========================================
+dashboard_style = f"""
     <style>
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
-    }
+    }}
     
-    /* LIGHT GREY TOP HEADER BAR WITH LOGO */
-    .top-header-bar {
+    /* LIGHT GREY TOP HEADER BAR */
+    .top-header-bar {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 70px;
-        background-color: rgba(211, 211, 211, 0.15); /* Light Grey with Transparency */
+        background-color: rgba(211, 211, 211, 0.15);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9999;
         display: flex;
         align-items: center;
-        padding-left: 40px; /* Space from left edge */
-    }
+        padding-left: 40px;
+    }}
 
-    .header-logo {
-        height: 50px; /* Perfect size for the header */
-        width: auto;
+    /* RENDER LOCAL LOGO VIA BASE64 */
+    .header-logo {{
+        height: 50px; 
+        width: 50px;
+        background-image: url("data:image/png;base64,{logo_base64}");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
         border-radius: 50%;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
+    }}
 
     /* ANIMATED WELCOME TEXT */
-    .welcome-text {
+    .welcome-text {{
         font-family: 'Inter', sans-serif;
         font-size: 8vw;
         font-weight: 900;
         text-align: center;
         letter-spacing: -2px;
-        margin-top: 10vh; /* Shifted down for Header */
+        margin-top: 10vh;
         display: block;
         width: 100%;
         paint-order: stroke fill;
@@ -79,10 +100,10 @@ dashboard_style = """
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
-    }
+    }}
 
     /* LEFT ALIGNED SUBTEXT */
-    .dashboard-label {
+    .dashboard-label {{
         font-family: 'Inter', sans-serif;
         font-size: 2rem;
         font-weight: 400;
@@ -94,27 +115,25 @@ dashboard_style = """
         opacity: 0.8;
         letter-spacing: 1px;
         text-transform: uppercase;
-    }
+    }}
 
-    @keyframes shine { to { background-position: 200% center; } }
-    @keyframes floatText {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
+    @keyframes shine {{ to {{ background-position: 200% center; }} }}
+    @keyframes floatText {{
+        0%, 100% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-10px); }}
+    }}
+    @keyframes floatingButton {{
+        0% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-15px); }}
+        100% {{ transform: translateY(0px); }}
+    }}
 
-    /* FLOATING BUTTON ANIMATION */
-    @keyframes floatingButton {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-15px); }
-        100% { transform: translateY(0px); }
-    }
-
-    .tab-container {
+    .tab-container {{
         margin-left: 5%;
         margin-right: 5%;
-    }
+    }}
 
-    div.stButton > button[help="dash_tab_btn"] {
+    div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
         height: 200px !important; 
         font-size: 1.8rem !important; 
@@ -128,18 +147,18 @@ dashboard_style = """
         letter-spacing: 1px;
         transition: 0.4s all ease !important;
         animation: floatingButton 4s ease-in-out infinite;
-    }
+    }}
 
-    div.stButton > button[help="dash_tab_btn"]:hover {
+    div.stButton > button[help="dash_tab_btn"]:hover {{
         transform: scale(1.05) !important;
         filter: brightness(1.1);
         box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
         animation-play-state: paused;
-    }
+    }}
 
-    section[data-testid="stSidebar"] { display: none !important; }
-    div[data-testid="stSidebarNav"] { display: none !important; }
-    header { display: none !important; }
+    section[data-testid="stSidebar"] {{ display: none !important; }}
+    div[data-testid="stSidebarNav"] {{ display: none !important; }}
+    header {{ display: none !important; }}
     </style>
 """
 
@@ -159,7 +178,7 @@ else:
     st.markdown(chatbot_style, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR LOGIC (Only in Chatbot View)
+# 5. SIDEBAR LOGIC (Only in Chatbot View)
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
@@ -186,13 +205,13 @@ if st.session_state.page_view != "dashboard":
         st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 5. MAIN CONTENT ROUTING
+# 6. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Insert the Header Bar with MNIT Logo
+    # Insert the Header Bar with Local Logo
     st.markdown('''
         <div class="top-header-bar">
-            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Malaviya_National_Institute_of_Technology%2C_Jaipur_Logo.png/220px-Malaviya_National_Institute_of_Technology%2C_Jaipur_Logo.png" class="header-logo" alt="MNIT Logo">
+            <div class="header-logo"></div>
         </div>
     ''', unsafe_allow_html=True)
     

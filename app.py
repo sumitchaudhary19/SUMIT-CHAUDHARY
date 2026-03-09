@@ -60,17 +60,18 @@ dashboard_style = """
         animation: shine 3s linear infinite, float 4s ease-in-out infinite;
     }
 
-    /* LEFT ALIGNED SUBTEXT */
+    /* LEFT ALIGNED SUBTEXT - UPDATED TO UPPERCASE */
     .dashboard-label {
         font-family: 'Inter', sans-serif;
-        font-size: 2rem;
-        font-weight: 400;
+        font-size: 2.2rem;
+        font-weight: 700;
         color: #D1B3FF;
         text-align: left;
         margin-left: 5%;
-        margin-top: -20px;
-        opacity: 0.8;
-        letter-spacing: 1px;
+        margin-top: -10px;
+        opacity: 0.9;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
 
     @keyframes shine { to { background-position: 200% center; } }
@@ -161,7 +162,7 @@ if st.session_state.page_view != "dashboard":
 # ==========================================
 if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-label">your dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-label">YOUR DASHBOARD</div>', unsafe_allow_html=True)
     
     # Massive button centered in the remaining space
     st.markdown('<div class="main-container">', unsafe_allow_html=True)

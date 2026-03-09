@@ -6,7 +6,7 @@ import os
 # ==========================================
 # 1. PAGE CONFIG & SECRETS
 # ==========================================
-st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="collapsed")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -25,6 +25,8 @@ if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
 if "show_mini_menu" not in st.session_state:
     st.session_state.show_mini_menu = False
+if "dashboard_sidebar_open" not in st.session_state:
+    st.session_state.dashboard_sidebar_open = False
 if "page_view" not in st.session_state:
     st.session_state.page_view = "dashboard"
 
@@ -40,12 +42,11 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-# UPDATED FILE NAME HERE
 local_logo_path = "mnit_logo.png" 
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Header Logo, Layout & Animations)
+# 4. CSS (Header, Sidebar, Layout & Animations)
 # ==========================================
 dashboard_style = f"""
     <style>
@@ -69,7 +70,6 @@ dashboard_style = f"""
         padding-left: 40px;
     }}
 
-    /* RENDER LOCAL LOGO VIA BASE64 */
     .header-logo {{
         height: 50px; 
         width: 50px;
@@ -79,6 +79,65 @@ dashboard_style = f"""
         background-position: center;
         border-radius: 50%;
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }}
+
+    /* CUSTOM DASHBOARD SIDEBAR TOGGLE BUTTON (Circular) */
+    div.stButton > button[help="dash_sidebar_toggle"] {{
+        position: fixed !important;
+        top: 90px !important; /* Just below the header */
+        left: 20px !important;
+        width: 50px !important;
+        height: 50px !important;
+        border-radius: 50% !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(5px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        font-size: 1.5rem !important;
+        z-index: 10000 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        transition: all 0.3s ease !important;
+    }}
+    
+    div.stButton > button[help="dash_sidebar_toggle"]:hover {{
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: scale(1.1) !important;
+    }}
+
+    /* CUSTOM DASHBOARD SIDEBAR MENU */
+    .dashboard-sidebar-menu {{
+        position: fixed;
+        top: 150px; /* Below the toggle button */
+        left: 20px;
+        background: rgba(30, 15, 55, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        width: 250px;
+        z-index: 9998;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }}
+    
+    /* Styling buttons inside the custom dashboard sidebar */
+    .dashboard-sidebar-menu button {{
+        width: 100% !important;
+        background: transparent !important;
+        border: none !important;
+        color: white !important;
+        text-align: left !important;
+        padding: 10px 15px !important;
+        font-size: 1.1rem !important;
+        border-radius: 8px !important;
+        margin-bottom: 5px !important;
+        transition: background 0.2s !important;
+    }}
+    .dashboard-sidebar-menu button:hover {{
+        background: rgba(255, 255, 255, 0.1) !important;
     }}
 
     /* ANIMATED WELCOME TEXT */
@@ -102,7 +161,6 @@ dashboard_style = f"""
         animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
     }}
 
-    /* LEFT ALIGNED SUBTEXT */
     .dashboard-label {{
         font-family: 'Inter', sans-serif;
         font-size: 2rem;
@@ -128,10 +186,7 @@ dashboard_style = f"""
         100% {{ transform: translateY(0px); }}
     }}
 
-    .tab-container {{
-        margin-left: 5%;
-        margin-right: 5%;
-    }}
+    .tab-container {{ margin-left: 5%; margin-right: 5%; }}
 
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
@@ -156,6 +211,7 @@ dashboard_style = f"""
         animation-play-state: paused;
     }}
 
+    /* Hide default Streamlit sidebar in dashboard view */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     div[data-testid="stSidebarNav"] {{ display: none !important; }}
     header {{ display: none !important; }}
@@ -165,6 +221,7 @@ dashboard_style = f"""
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+    /* Show default sidebar only in chatbot view */
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .mini-menu-list { background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px; position: absolute; left: 40px; top: 0px; z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px; }
@@ -178,7 +235,7 @@ else:
     st.markdown(chatbot_style, unsafe_allow_html=True)
 
 # ==========================================
-# 5. SIDEBAR LOGIC (Only in Chatbot View)
+# 5. DEFAULT SIDEBAR LOGIC (Only in Chatbot View)
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
@@ -188,32 +245,55 @@ if st.session_state.page_view != "dashboard":
         
         if st.session_state.show_mini_menu:
             st.markdown('<div class="mini-menu-list">', unsafe_allow_html=True)
-            if st.button("📊 Dashboard", use_container_width=True, key="dash_link"):
+            if st.button("📊 Dashboard", use_container_width=True, key="dash_link_chat"):
                 st.session_state.page_view = "dashboard"
                 st.session_state.show_mini_menu = False
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
-        if st.button("New Chat"):
+        if st.button("New Chat", key="new_chat_btn_chat"):
             st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
             st.rerun()
-        st.button("Chat History 🕑")
-        st.button("University Tools ⚙️")
-        st.button("Academics 📚")
-        st.button("Admission - Fee 💸")
+        st.button("Chat History 🕑", key="hist_chat")
+        st.button("University Tools ⚙️", key="uni_chat")
+        st.button("Academics 📚", key="acad_chat")
+        st.button("Admission - Fee 💸", key="fee_chat")
         st.markdown(f"""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
 # 6. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Insert the Header Bar with Local Logo
+    # Header Bar
     st.markdown('''
         <div class="top-header-bar">
             <div class="header-logo"></div>
         </div>
     ''', unsafe_allow_html=True)
+    
+    # Dashboard Custom Sidebar Toggle (Circular Button)
+    toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
+    if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
+        st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
+        st.rerun()
+
+    # Dashboard Custom Sidebar Menu
+    if st.session_state.dashboard_sidebar_open:
+        st.markdown('<div class="dashboard-sidebar-menu">', unsafe_allow_html=True)
+        st.markdown("<h3 style='color: white; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;'>Menu</h3>", unsafe_allow_html=True)
+        if st.button("💬 Chatbot View", key="go_to_chat"):
+            st.session_state.page_view = "chatbot"
+            st.session_state.dashboard_sidebar_open = False
+            st.rerun()
+        if st.button("📚 Academics", key="acad_dash"):
+            st.toast("Academics opened!")
+        if st.button("⚙️ University Tools", key="tools_dash"):
+            st.toast("Tools opened!")
+        if st.button("💸 Admission - Fee", key="fee_dash"):
+            st.toast("Fees opened!")
+        st.markdown('</div>', unsafe_allow_html=True)
+
     
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)

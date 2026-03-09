@@ -60,17 +60,17 @@ dashboard_style = """
         animation: shine 3s linear infinite, float 4s ease-in-out infinite;
     }
 
-    /* LEFT ALIGNED SUBTEXT - UPDATED TO UPPERCASE */
+    /* LEFT ALIGNED UPDATED SUBTEXT */
     .dashboard-label {
         font-family: 'Inter', sans-serif;
-        font-size: 2.2rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 400;
         color: #D1B3FF;
         text-align: left;
         margin-left: 5%;
-        margin-top: -10px;
-        opacity: 0.9;
-        letter-spacing: 2px;
+        margin-top: -20px;
+        opacity: 0.8;
+        letter-spacing: 1px;
         text-transform: uppercase;
     }
 
@@ -162,7 +162,8 @@ if st.session_state.page_view != "dashboard":
 # ==========================================
 if st.session_state.page_view == "dashboard":
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
-    st.markdown('<div class="dashboard-label">YOUR DASHBOARD</div>', unsafe_allow_html=True)
+    # Updated text as requested
+    st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
     # Massive button centered in the remaining space
     st.markdown('<div class="main-container">', unsafe_allow_html=True)

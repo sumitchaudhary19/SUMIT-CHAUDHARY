@@ -31,8 +31,9 @@ if "page_view" not in st.session_state:
 is_chat_empty = len(st.session_state.sessions[st.session_state.current_chat]) == 0
 
 # ==========================================
-# 3. CSS (Dynamic Background & Soft Fonts)
+# 3. CSS (Dynamic Background & Navigation)
 # ==========================================
+# Gradient background pattern matching the provided image for Dashboard
 dashboard_bg = """
     <style>
     [data-testid="stAppViewContainer"] {
@@ -40,32 +41,6 @@ dashboard_bg = """
     }
     section[data-testid="stSidebar"] { display: none !important; }
     div[data-testid="stSidebarNav"] { display: none !important; }
-
-    /* SOFT CUTE WELCOME TEXT */
-    .welcome-text {
-        font-family: 'Inter', sans-serif;
-        font-size: 8vw; /* Covers ~80% screen width */
-        font-weight: 900;
-        color: white;
-        text-align: center;
-        letter-spacing: -2px;
-        margin-top: 5vh;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 50px; /* Rounded corners for cuteness */
-        display: inline-block;
-        width: 90%;
-        margin-left: 5%;
-    }
-
-    .sub-tagline {
-        color: #D1B3FF;
-        font-size: 1.2rem;
-        text-align: center;
-        font-weight: 400;
-        letter-spacing: 2px;
-        margin-bottom: 40px;
-    }
     </style>
 """
 
@@ -77,6 +52,7 @@ chatbot_bg = """
     </style>
 """
 
+# Inject background based on view
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_bg, unsafe_allow_html=True)
 else:
@@ -86,45 +62,58 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+    html, body, [class*="css"] {{
+        font-family: 'Inter', sans-serif;
+    }}
     
+    /* SIDEBAR STYLING */
+    section[data-testid="stSidebar"] {{
+        background-color: #F0F2F6 !important;
+        border-right: 1px solid #DDDDDD !important;
+    }}
+
     /* SHINY VIOLET MAIN TABS */
     .stButton>button {{
         width: 100% !important;
         background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important;
         color: white !important;
-        border-radius: 15px !important;
+        border-radius: 10px !important;
         padding: 14px 20px !important;
         font-weight: 600 !important;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 4px 15px rgba(138, 99, 255, 0.3) !important;
         border: none !important;
     }}
 
-    /* DASHBOARD BUTTONS CUSTOM */
-    div.stButton > button[help="dash_tab_btn"] {{
-        height: 180px !important;
-        font-size: 2rem !important;
-        font-weight: 800 !important;
-        border-radius: 25px !important;
+    /* DASHBOARD LARGE BUTTONS */
+    div.stButton > button[title="dash_tab_btn"] {{
+        height: 200px !important;
+        font-size: 2.2rem !important;
+        font-weight: 900 !important;
+        border-radius: 30px !important;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }}
 
+    /* MINI MENU POPUP */
     .mini-menu-list {{
         background-color: white; border: 1px solid #DDD; border-radius: 8px; padding: 10px;
         position: absolute; left: 40px; top: 0px; z-index: 999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 150px;
     }}
 
+    /* SIGNATURE BOX */
     .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
+    
     .title-container-empty {{ margin-top: 15vh; transition: 0.5s; }}
     .title-container-active {{ margin-top: 2vh; scale: 0.7; transition: 0.5s; }}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. SIDEBAR LOGIC
+# 4. SIDEBAR (Only visible when NOT in Dashboard)
 # ==========================================
 if st.session_state.page_view != "dashboard":
     with st.sidebar:
+        # Hamburger Menu
         if st.button("☰", key="hamburger_icon"):
             st.session_state.show_mini_menu = not st.session_state.show_mini_menu
             st.rerun()
@@ -162,10 +151,7 @@ if st.session_state.page_view != "dashboard":
 
 # --- VIEW: DASHBOARD ---
 if st.session_state.page_view == "dashboard":
-    st.markdown('<div class="welcome-text">welcome to askmnit</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-tagline">THE FUTURE OF MNIT IS HERE. PICK YOUR GATEWAY.</div>', unsafe_allow_html=True)
-    
-    st.markdown("<div style='height: 5vh;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 30vh;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns([0.5, 2, 2, 0.5])
     
     with c2:

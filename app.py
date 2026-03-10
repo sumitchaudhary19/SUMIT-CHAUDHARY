@@ -23,8 +23,6 @@ if "current_chat" not in st.session_state:
     st.session_state.current_chat = "New Session 1"
 if "pending_generation" not in st.session_state:
     st.session_state.pending_generation = False
-if "dashboard_sidebar_open" not in st.session_state:
-    st.session_state.dashboard_sidebar_open = False
 if "page_view" not in st.session_state:
     st.session_state.page_view = "dashboard"
 
@@ -44,79 +42,16 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Slide-Push Layout & Animations)
+# 4. CSS (Clean Dashboard Layout)
 # ==========================================
-# Calculate shift logic based on state
-shift_amount = "280px" if st.session_state.dashboard_sidebar_open else "0px"
-sidebar_left = "0px" if st.session_state.dashboard_sidebar_open else "-300px"
-
 dashboard_style = f"""
     <style>
-    /* Prevent default scrolling on the main container to avoid weird jumps */
     html, body {{ overflow-x: hidden; }}
     
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
-        transition: margin-left 0.4s ease-in-out !important;
-        margin-left: {shift_amount} !important; /* PUSHES SCREEN RIGHT */
     }}
     
-    /* CUSTOM PUSH SIDEBAR BACKGROUND */
-    .custom-sidebar {{
-        position: fixed;
-        top: 0;
-        left: {sidebar_left}; 
-        width: 280px;
-        height: 100vh;
-        background: rgba(20, 10, 40, 0.95);
-        backdrop-filter: blur(15px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 10000;
-        transition: left 0.4s ease-in-out;
-        padding-top: 80px;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-    }}
-
-    .custom-sidebar-title {{ 
-        color: white; 
-        font-family: 'Inter', sans-serif; 
-        font-weight: 800; 
-        font-size: 1.5rem; 
-        text-align: center; 
-        margin-bottom: 20px; 
-        border-bottom: 1px solid rgba(255,255,255,0.2); 
-        padding-bottom: 10px;
-        margin-left: 20px;
-        margin-right: 20px;
-    }}
-
-    /* FORCE STREAMLIT BUTTONS INTO THE SIDEBAR */
-    div[data-testid="stVerticalBlock"] > div > div > div > div > div > div > button[help="side_btn"],
-    div[data-testid="stVerticalBlock"] > div > div > div > div > button[help="side_btn"],
-    div[data-testid="stVerticalBlock"] button[help="side_btn"] {{
-        position: fixed !important;
-        top: 140px !important; 
-        left: {sidebar_left} !important; /* Syncs slide with sidebar */
-        margin-left: 20px !important;
-        width: 240px !important;
-        background: #E5E7EB !important; /* LIGHT GREY COLOR */
-        color: #1A0B2E !important; /* Dark Text */
-        text-align: left !important;
-        padding: 12px 15px !important;
-        font-size: 1.2rem !important;
-        font-weight: 800 !important;
-        border-radius: 8px !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-        transition: left 0.4s ease-in-out, filter 0.2s !important;
-        z-index: 10001 !important; /* Sit on top of sidebar background */
-        display: block !important;
-    }}
-    div[data-testid="stVerticalBlock"] button[help="side_btn"]:hover {{
-        filter: brightness(0.9) !important;
-        cursor: pointer !important;
-    }}
-
     /* LIGHT GREY TOP HEADER BAR */
     .top-header-bar {{
         position: fixed;
@@ -127,12 +62,10 @@ dashboard_style = f"""
         background-color: rgba(211, 211, 211, 0.15);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9998; /* Below Sidebar */
+        z-index: 9998; 
         display: flex;
         align-items: center;
-        padding-left: 80px; 
-        transition: transform 0.4s ease-in-out;
-        transform: translateX({shift_amount}); 
+        padding-left: 40px; 
     }}
 
     .header-logo {{
@@ -146,31 +79,6 @@ dashboard_style = f"""
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
 
-    /* THE MISSING TOGGLE BUTTON RESTORED */
-    div.stButton > button[help="dash_sidebar_toggle"] {{
-        position: fixed !important;
-        top: 10px !important; 
-        left: 15px !important; 
-        width: 50px !important;
-        height: 50px !important;
-        border-radius: 50% !important;
-        background: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(5px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        color: white !important;
-        font-size: 1.5rem !important;
-        z-index: 10002 !important; 
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        transition: all 0.4s ease !important;
-        transform: translateX({shift_amount});
-    }}
-    
-    div.stButton > button[help="dash_sidebar_toggle"]:hover {{ background: rgba(255, 255, 255, 0.2) !important; scale: 1.05; }}
-
     /* ANIMATED WELCOME TEXT */
     .welcome-text {{
         font-family: 'Inter', sans-serif;
@@ -178,7 +86,7 @@ dashboard_style = f"""
         font-weight: 900;
         text-align: center;
         letter-spacing: -2px;
-        margin-top: 10vh;
+        margin-top: 15vh;
         display: block;
         width: 100%;
         paint-order: stroke fill;
@@ -200,7 +108,7 @@ dashboard_style = f"""
         text-align: left;
         margin-left: 5%;
         margin-top: 20px;
-        margin-bottom: 30px;
+        margin-bottom: 50px;
         opacity: 0.8;
         letter-spacing: 1px;
         text-transform: uppercase;
@@ -212,7 +120,7 @@ dashboard_style = f"""
 
     .tab-container {{ margin-left: 5%; margin-right: 5%; }}
 
-    /* MASSIVE TABS */
+    /* MASSIVE ERP LOGIN TAB */
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
         height: 200px !important; 
@@ -243,11 +151,9 @@ dashboard_style = f"""
     </style>
 """
 
-# Simplified Chatbot Style 
 chatbot_style = """
     <style>
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    /* Show default sidebar only in chatbot view */
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
     .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
@@ -255,7 +161,6 @@ chatbot_style = """
     </style>
 """
 
-# Apply styles based on view
 if st.session_state.page_view == "dashboard":
     st.markdown(dashboard_style, unsafe_allow_html=True)
 else:
@@ -285,24 +190,6 @@ if st.session_state.page_view == "chatbot":
 # ==========================================
 if st.session_state.page_view == "dashboard":
     
-    # --- RESTORED: TOGGLE BUTTON ---
-    toggle_icon = "✖" if st.session_state.dashboard_sidebar_open else "☰"
-    if st.button(toggle_icon, help="dash_sidebar_toggle", key="dash_toggle"):
-        st.session_state.dashboard_sidebar_open = not st.session_state.dashboard_sidebar_open
-        st.rerun()
-
-    # --- CUSTOM HTML SIDEBAR BACKGROUND ---
-    st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
-    
-    # --- RENDER SIDEBAR TAB ---
-    # Will only be rendered when sidebar is open. CSS positions it perfectly inside the div.
-    if st.session_state.dashboard_sidebar_open:
-        if st.button("ASKMNIT 🤖", help="side_btn", key="dash_side_askmnit"):
-            st.session_state.page_view = "chatbot"
-            st.session_state.dashboard_sidebar_open = False
-            st.rerun()
-
-    # --- MAIN DASHBOARD CONTENT ---
     # Header Bar
     st.markdown(f'''
         <div class="top-header-bar">
@@ -314,14 +201,12 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
+    
+    # Kept columns to maintain width/alignment. Placing ERP LOGIN on the left.
     col1, col2 = st.columns([1, 1]) 
     
     with col1:
-        if st.button("ASKMNIT - YOUR PERSONAL AI ASSISTANT", help="dash_tab_btn", key="dash_ask"):
-            st.session_state.page_view = "chatbot"
-            st.rerun()
-            
-    with col2:
+        # Re-using the ERP LOGIN tab
         if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
             st.toast("ERP Login coming soon!")
             

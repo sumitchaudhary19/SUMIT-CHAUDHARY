@@ -6,7 +6,8 @@ import os
 # ==========================================
 # 1. PAGE CONFIG & SECRETS
 # ==========================================
-st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="collapsed")
+# Make sure sidebar is expanded by default
+st.set_page_config(page_title="AskMNIT", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -42,177 +43,155 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Clean Dashboard Layout)
+# 4. UNIVERSAL CSS (Header, Fonts, & Native Sidebar Styling)
 # ==========================================
-dashboard_style = f"""
+# This CSS applies to ALL pages, keeping the sidebar consistent.
+universal_css = f"""
     <style>
-    html, body {{ overflow-x: hidden; }}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; overflow-x: hidden; }}
     
-    [data-testid="stAppViewContainer"] {{
-        background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
-    }}
-    
-    /* LIGHT GREY TOP HEADER BAR */
+    /* TOP HEADER BAR */
     .top-header-bar {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 70px;
-        background-color: rgba(211, 211, 211, 0.15);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9998; 
-        display: flex;
-        align-items: center;
-        padding-left: 40px; 
+        position: fixed; top: 0; left: 0; width: 100vw; height: 70px;
+        background-color: rgba(211, 211, 211, 0.15); backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1); z-index: 99999; 
+        display: flex; align-items: center; padding-left: 20px; 
     }}
-
     .header-logo {{
-        height: 50px; 
-        width: 50px;
-        background-image: url("data:image/png;base64,{logo_base64}");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        border-radius: 50%;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        height: 50px; width: 50px; background-image: url("data:image/png;base64,{logo_base64}");
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
-
-    /* ANIMATED WELCOME TEXT */
-    .welcome-text {{
-        font-family: 'Inter', sans-serif;
-        font-size: 8vw;
-        font-weight: 900;
-        text-align: center;
-        letter-spacing: -2px;
-        margin-top: 15vh;
-        display: block;
-        width: 100%;
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF);
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
-    }}
-
-    .dashboard-label {{
-        font-family: 'Inter', sans-serif;
-        font-size: 2rem;
-        font-weight: 400;
-        color: #D1B3FF;
-        text-align: left;
-        margin-left: 5%;
-        margin-top: 20px;
-        margin-bottom: 50px;
-        opacity: 0.8;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-    }}
-
-    @keyframes shine {{ to {{ background-position: 200% center; }} }}
-    @keyframes floatText {{ 0%, 100% {{ transform: translateY(0px); }} 50% {{ transform: translateY(-10px); }} }}
-    @keyframes floatingButton {{ 0% {{ transform: translateY(0px); }} 50% {{ transform: translateY(-15px); }} 100% {{ transform: translateY(0px); }} }}
-
-    .tab-container {{ margin-left: 5%; margin-right: 5%; }}
-
-    /* MASSIVE TABS */
-    div.stButton > button[help="dash_tab_btn"] {{
-        width: 100% !important;
-        height: 200px !important; 
-        font-size: 1.8rem !important; 
-        font-weight: 800 !important;
-        border-radius: 40px !important; 
-        background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
-        color: #1A0B2E !important; 
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: 0.4s all ease !important;
-        animation: floatingButton 4s ease-in-out infinite;
-    }}
-
-    div.stButton > button[help="dash_tab_btn"]:hover {{
-        transform: scale(1.05) !important;
-        filter: brightness(1.1);
-        box-shadow: 0 30px 60px rgba(200, 182, 255, 0.3) !important;
-        animation-play-state: paused;
-    }}
-
-    /* Hide default Streamlit sidebar in dashboard view completely */
-    section[data-testid="stSidebar"] {{ display: none !important; }}
-    div[data-testid="stSidebarNav"] {{ display: none !important; }}
+    
     header {{ display: none !important; }}
+
+    /* PERMANENT SIDEBAR STYLING */
+    [data-testid="stSidebar"] {{
+        background-color: rgba(20, 10, 40, 0.95) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding-top: 50px !important;
+    }}
+    
+    /* Make sidebar toggle invisible so user can't close it easily */
+    [data-testid="stSidebarCollapseButton"] {{ display: none !important; }}
+    
+    /* Style buttons inside sidebar */
+    div[data-testid="stSidebar"] div.stButton > button {{
+        background: #E5E7EB !important; color: #1A0B2E !important; font-weight: 800 !important; font-size: 1.1rem !important;
+        border-radius: 8px !important; border: none !important; margin-bottom: 10px !important; transition: filter 0.2s !important;
+        width: 100% !important; text-align: left !important; justify-content: flex-start !important; padding: 10px 15px !important;
+    }}
+    div[data-testid="stSidebar"] div.stButton > button:hover {{ filter: brightness(0.9) !important; }}
+    
+    .signature-box-3d {{ margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }}
     </style>
 """
+st.markdown(universal_css, unsafe_allow_html=True)
 
-chatbot_style = """
-    <style>
-    [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
-    section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
-    .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
-    .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
-    header { display: none !important; }
-    </style>
-"""
-
+# ==========================================
+# 5. PAGE SPECIFIC CSS (Dashboard vs Chatbot Content Area)
+# ==========================================
 if st.session_state.page_view == "dashboard":
-    st.markdown(dashboard_style, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
+        }
+        
+        .welcome-text {
+            font-size: 8vw; font-weight: 900; text-align: center; letter-spacing: -2px; margin-top: 15vh;
+            display: block; width: 100%; paint-order: stroke fill; -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
+            background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF); background-size: 200% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
+        }
+        .dashboard-label {
+            font-size: 2rem; font-weight: 400; color: #D1B3FF; text-align: left; margin-left: 5%;
+            margin-top: 20px; margin-bottom: 50px; opacity: 0.8; letter-spacing: 1px; text-transform: uppercase;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes floatText { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes floatingButton { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+
+        .tab-container { margin-left: 5%; margin-right: 5%; }
+        
+        /* MASSIVE TABS in main dashboard area */
+        div[data-testid="stMainBlockContainer"] div.stButton > button {
+            width: 100% !important; height: 200px !important; font-size: 1.8rem !important; font-weight: 800 !important;
+            border-radius: 40px !important; background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
+            border: 2px solid rgba(255, 255, 255, 0.5) !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+            color: #1A0B2E !important; text-transform: uppercase; letter-spacing: 1px; transition: 0.4s all ease !important;
+            animation: floatingButton 4s ease-in-out infinite; display: block !important; justify-content: center !important; text-align: center !important;
+        }
+        div[data-testid="stMainBlockContainer"] div.stButton > button:hover { transform: scale(1.05) !important; filter: brightness(1.1); animation-play-state: paused; }
+        </style>
+    """, unsafe_allow_html=True)
 else:
-    st.markdown(chatbot_style, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
+        /* Style buttons inside main chat area normally */
+        div[data-testid="stMainBlockContainer"] div.stButton > button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important; }
+        </style>
+    """, unsafe_allow_html=True)
 
 # ==========================================
-# 5. CHATBOT NATIVE SIDEBAR (Only in Chatbot View)
+# 6. RENDER PERMANENT SIDEBAR
 # ==========================================
-if st.session_state.page_view == "chatbot":
-    with st.sidebar:
-        if st.button("⬅️ Back to Dashboard", use_container_width=True):
-            st.session_state.page_view = "dashboard"
-            st.rerun()
+with st.sidebar:
+    st.markdown("<h3 style='color: white; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 20px;'>Navigation</h3>", unsafe_allow_html=True)
+    
+    # Navigation Links in Sidebar
+    if st.button("🏠 Dashboard"):
+        st.session_state.page_view = "dashboard"
+        st.rerun()
+        
+    if st.button("💬 ASKMNIT 🤖"):
+        st.session_state.page_view = "chatbot"
+        st.rerun()
+        
+    if st.button("🏢 ERP LOGIN"):
+        st.toast("ERP Login coming soon!")
+        
+    st.markdown("<div style='height: 30px;'></div>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #D1B3FF; margin-bottom: 10px;'>Tools</h4>", unsafe_allow_html=True)
+    
+    if st.button("New Chat"):
+        st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
+        st.session_state.page_view = "chatbot"
+        st.rerun()
+    st.button("Chat History 🕑")
+    st.button("Academics 📚")
+    st.button("Admission - Fee 💸")
 
-        st.markdown("<h2 style='color: #1A1A1A; text-align: center;'>Tool Section</h2>", unsafe_allow_html=True)
-        if st.button("New Chat"):
-            st.session_state.sessions[f"New Session {len(st.session_state.sessions)+1}"] = []
-            st.rerun()
-        st.button("Chat History 🕑")
-        st.button("University Tools ⚙️")
-        st.button("Academics 📚")
-        st.button("Admission - Fee 💸")
-        st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="signature-box-3d"><p style="color:#A0A0A0; font-size:0.8rem; margin:0;">Designed by</p><h3 style="color:#FFFFFF; margin:5px 0 0 0;">SUMIT CHAUDHARY</h3></div>""", unsafe_allow_html=True)
 
 # ==========================================
-# 6. MAIN CONTENT ROUTING
+# 7. MAIN CONTENT ROUTING
 # ==========================================
+# Render the persistent top header
+st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
+
 if st.session_state.page_view == "dashboard":
-    
-    # Header Bar
-    st.markdown(f'''
-        <div class="top-header-bar">
-            <div class="header-logo"></div>
-        </div>
-    ''', unsafe_allow_html=True)
-    
+    # Dashboard Main View
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
     
-    # Restored ASKMNIT and ERP LOGIN side-by-side
+    # Keeping columns to maintain width/alignment. Placing a quick-access button or leaving clean.
+    # Here we put a massive ERP LOGIN button as requested previously.
     col1, col2 = st.columns([1, 1]) 
     
     with col1:
-        if st.button("ASKMNIT 🤖", help="dash_tab_btn", key="dash_ask"):
-            st.session_state.page_view = "chatbot"
-            st.rerun()
+        if st.button("ERP LOGIN FAST-ACCESS", key="dash_erp_main"):
+            st.toast("ERP Login coming soon!")
             
     with col2:
-        if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
-            st.toast("ERP Login coming soon!")
+         if st.button("LAUNCH ASKMNIT 🤖", key="dash_ask_main"):
+            st.session_state.page_view = "chatbot"
+            st.rerun()
             
     st.markdown('</div>', unsafe_allow_html=True)
 

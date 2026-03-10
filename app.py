@@ -120,7 +120,7 @@ dashboard_style = f"""
 
     .tab-container {{ margin-left: 5%; margin-right: 5%; }}
 
-    /* MASSIVE ERP LOGIN TAB */
+    /* MASSIVE TABS */
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important;
         height: 200px !important; 
@@ -202,11 +202,15 @@ if st.session_state.page_view == "dashboard":
     
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
     
-    # Kept columns to maintain width/alignment. Placing ERP LOGIN on the left.
+    # Restored ASKMNIT and ERP LOGIN side-by-side
     col1, col2 = st.columns([1, 1]) 
     
     with col1:
-        # Re-using the ERP LOGIN tab
+        if st.button("ASKMNIT 🤖", help="dash_tab_btn", key="dash_ask"):
+            st.session_state.page_view = "chatbot"
+            st.rerun()
+            
+    with col2:
         if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
             st.toast("ERP Login coming soon!")
             

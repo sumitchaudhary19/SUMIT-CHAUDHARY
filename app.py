@@ -85,6 +85,29 @@ dashboard_style = f"""
         margin-right: 20px;
     }}
 
+    /* NEW ASKMNIT TAB INSIDE SIDEBAR */
+    button[help="side_btn_askmnit"] {{
+        position: fixed !important;
+        top: 140px !important; /* Positioned just below Navigation title */
+        left: 20px !important;
+        width: calc({sidebar_width} - 40px) !important;
+        background: #E5E7EB !important; /* Light Grey Color */
+        color: #1A0B2E !important; 
+        text-align: left !important;
+        padding: 12px 15px !important;
+        font-size: 1.2rem !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
+        transition: filter 0.2s !important;
+        z-index: 10001 !important; 
+    }}
+    button[help="side_btn_askmnit"]:hover {{
+        filter: brightness(0.9) !important;
+        cursor: pointer !important;
+    }}
+
     /* LIGHT GREY TOP HEADER BAR - Adjusted width to account for sidebar */
     .top-header-bar {{
         position: fixed;
@@ -225,6 +248,11 @@ if st.session_state.page_view == "dashboard":
     
     # PERMANENT CUSTOM SIDEBAR
     st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
+
+    # ADD "ASKMNIT" TAB TO SIDEBAR
+    if st.button("ASKMNIT 🤖", help="side_btn_askmnit", key="dash_side_askmnit"):
+        st.session_state.page_view = "chatbot"
+        st.rerun()
 
     # Header Bar
     st.markdown(f'''

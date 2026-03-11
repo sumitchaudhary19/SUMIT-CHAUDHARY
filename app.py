@@ -64,7 +64,7 @@ dashboard_style = f"""
         background: rgba(20, 10, 40, 0.95);
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 10000;
+        z-index: 9999;
         padding-top: 80px;
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }}
@@ -82,20 +82,26 @@ dashboard_style = f"""
         margin-right: 20px;
     }}
 
-    /* POSITIONING THE BUTTON TO STAY INSIDE SIDEBAR */
-    div[data-testid="stVerticalBlock"] > div:nth-child(1) > div > div > button[help="side_btn_askmnit"] {{
+    /* THE FIX: FORCE THE BUTTON INTO THE SIDEBAR AREA */
+    div.stButton > button[help="side_btn_askmnit"] {{
         position: fixed !important;
-        top: 155px !important; /* Adjusted to be right under Navigation line */
-        left: 20px !important;
-        width: 240px !important; /* Button width fits inside sidebar width */
-        background: #E5E7EB !important; /* LIGHT GREY */
+        top: 140px !important; 
+        left: 20px !important; 
+        width: 240px !important; 
+        background-color: #E5E7EB !important; /* Light Grey */
         color: #1A0B2E !important; 
-        text-align: left !important;
         font-weight: 800 !important;
         border-radius: 8px !important;
         border: none !important;
-        z-index: 10001 !important;
-        transition: 0.2s all ease !important;
+        z-index: 10000 !important;
+        text-align: left !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 10px 15px !important;
+    }}
+    
+    div.stButton > button[help="side_btn_askmnit"]:hover {{
+        filter: brightness(0.9) !important;
     }}
 
     .top-header-bar {{
@@ -108,9 +114,7 @@ dashboard_style = f"""
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9998; 
-        display: flex;
-        align-items: center;
-        padding-left: 40px; 
+        display: flex; align-items: center; padding-left: 40px; 
     }}
 
     .header-logo {{
@@ -122,7 +126,7 @@ dashboard_style = f"""
 
     .welcome-text {{
         font-family: 'Inter', sans-serif; font-size: 8vw; font-weight: 900; text-align: center;
-        margin-top: 15vh; display: block; width: 100%; -webkit-text-stroke: 0.04em rgba(255,255,255,0.5);
+        margin-top: 15vh; display: block; width: 100%;
         background: linear-gradient(90deg, #FFFFFF, #D1B3FF, #FFFFFF); background-size: 200% auto;
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         animation: shine 3s linear infinite, floatText 4s ease-in-out infinite;
@@ -130,7 +134,7 @@ dashboard_style = f"""
 
     .dashboard-label {{
         font-family: 'Inter', sans-serif; font-size: 2rem; color: #D1B3FF; text-align: left;
-        margin-left: 5%; margin-top: 20px; margin-bottom: 50px; opacity: 0.8; text-transform: uppercase;
+        margin-left: 5%; margin-top: 20px; margin-bottom: 50px; opacity: 0.8;
     }}
 
     @keyframes shine {{ to {{ background-position: 200% center; }} }}
@@ -140,8 +144,7 @@ dashboard_style = f"""
     div.stButton > button[help="dash_tab_btn"] {{
         width: 100% !important; height: 180px !important; font-size: 1.8rem !important; font-weight: 800 !important;
         border-radius: 40px !important; background: linear-gradient(145deg, #E0D4FF 0%, #C8B6FF 100%) !important;
-        color: #1A0B2E !important; text-transform: uppercase; transition: 0.4s all ease !important;
-        animation: floatingButton 4s ease-in-out infinite;
+        color: #1A0B2E !important; text-transform: uppercase; animation: floatingButton 4s ease-in-out infinite;
     }}
 
     section[data-testid="stSidebar"] {{ display: none !important; }}
@@ -167,15 +170,15 @@ else:
 # 5. CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Sidebar UI
+    # Sidebar Background
     st.markdown('<div class="custom-sidebar"><div class="custom-sidebar-title">Navigation</div></div>', unsafe_allow_html=True)
     
-    # The Internal Sidebar Button
-    if st.button("ASKMNIT 🤖", help="side_btn_askmnit", key="side_ask"):
+    # Render the Button - CSS will pull this into the sidebar
+    if st.button("ASKMNIT 🤖", help="side_btn_askmnit", key="side_ask_fixed"):
         st.session_state.page_view = "chatbot"
         st.rerun()
 
-    # Header & Body
+    # Dashboard Body
     st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
     st.markdown('<div class="welcome-text">welcome</div>', unsafe_allow_html=True)
     st.markdown('<div class="dashboard-label">your personal dashboard</div>', unsafe_allow_html=True)
@@ -183,11 +186,12 @@ if st.session_state.page_view == "dashboard":
     st.markdown('<div class="tab-container">', unsafe_allow_html=True)
     col1, col2 = st.columns([1, 1]) 
     with col1:
-        if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp"):
+        if st.button("ERP LOGIN", help="dash_tab_btn", key="dash_erp_fixed"):
             st.toast("ERP Login coming soon!")
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
+    # CHATBOT VIEW
     with st.sidebar:
         if st.button("⬅️ Back to Dashboard", use_container_width=True):
             st.session_state.page_view = "dashboard"

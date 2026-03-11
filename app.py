@@ -40,7 +40,7 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Redrawing Sidebar as per Image)
+# 4. CSS (Sidebar Drawing & Dashboard Layout)
 # ==========================================
 sidebar_width = "280px"
 
@@ -48,28 +48,28 @@ dashboard_style = f"""
     <style>
     html, body {{ overflow-x: hidden; }}
     
+    /* Main Dashboard Container - Drawn to shift right of Sidebar */
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
         margin-left: {sidebar_width} !important;
         width: calc(100% - {sidebar_width}) !important;
     }}
     
-    /* PERMANENT FIXED SIDEBAR */
-    .custom-sidebar {{
+    /* THE DRAWN SIDEBAR (MATCHING PHOTO) */
+    .drawn-sidebar {{
         position: fixed;
         top: 0;
         left: 0;
         width: {sidebar_width};
         height: 100vh;
-        background: rgba(20, 10, 40, 0.98);
-        backdrop-filter: blur(15px);
+        background-color: rgba(15, 5, 30, 0.98); /* Deep dark background */
         border-right: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9999; 
-        padding-top: 30px;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        z-index: 10000;
+        padding-top: 35px;
+        box-shadow: 10px 0 20px rgba(0,0,0,0.4);
     }}
 
-    .custom-sidebar-title {{ 
+    .navigation-text {{ 
         color: white; 
         font-family: 'Inter', sans-serif; 
         font-weight: 800; 
@@ -77,50 +77,21 @@ dashboard_style = f"""
         text-align: left; 
         margin-left: 25px;
         margin-right: 25px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        letter-spacing: 1px;
-        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* The line from the photo */
+        letter-spacing: 0.5px;
     }}
 
-    /* POSITIONING SIDEBAR BUTTONS TO STAY INSIDE */
-    div.stButton > button[help="sidebar_nav_btn"] {{
-        position: fixed !important;
-        left: 20px !important;
-        width: 240px !important;
-        background: rgba(255, 255, 255, 0.08) !important;
-        color: white !important; 
-        text-align: left !important;
-        font-weight: 500 !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        z-index: 10000 !important;
-        padding: 10px 15px !important;
-        transition: 0.3s all ease !important;
-        display: block !important;
-    }}
-    
-    div.stButton > button[help="sidebar_nav_btn"]:hover {{
-        background: rgba(255, 255, 255, 0.15) !important;
-        border-color: rgba(211, 179, 255, 0.5) !important;
-    }}
-
-    /* Fixed top positions for the 4 sidebar buttons */
-    #btn_chatbot {{ top: 110px !important; }}
-    #btn_academics {{ top: 165px !important; }}
-    #btn_tools {{ top: 220px !important; }}
-    #btn_admission {{ top: 275px !important; }}
-
-    /* HEADER BAR */
+    /* HEADER BAR DRAWING */
     .top-header-bar {{
         position: fixed;
         top: 0;
         left: {sidebar_width};
         width: calc(100vw - {sidebar_width});
         height: 70px;
-        background-color: rgba(211, 211, 211, 0.15);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: rgba(211, 211, 211, 0.12);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         z-index: 9998; 
         display: flex;
         align-items: center;
@@ -128,12 +99,16 @@ dashboard_style = f"""
     }}
 
     .header-logo {{
-        height: 50px; width: 50px;
+        height: 52px; 
+        width: 52px;
         background-image: url("data:image/png;base64,{logo_base64}");
-        background-size: contain; background-repeat: no-repeat; background-position: center;
-        border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        border-radius: 50%;
     }}
 
+    /* Hide standard Streamlit Sidebar UI */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     header {{ display: none !important; }}
     footer {{ display: none !important; }}
@@ -158,40 +133,25 @@ else:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Custom Sidebar UI Injection
-    st.markdown('''
-        <div class="custom-sidebar">
-            <div class="custom-sidebar-title">Navigation</div>
+    # 1. DRAW SIDEBAR
+    st.markdown(f'''
+        <div class="drawn-sidebar">
+            <div class="navigation-text">Navigation</div>
         </div>
     ''', unsafe_allow_html=True)
     
-    # Sidebar Navigation Tabs - Drawn as per requested image
-    st.markdown('<div id="btn_chatbot">', unsafe_allow_html=True)
-    if st.button("💬 Chatbot View", help="sidebar_nav_btn", key="dash_btn_chatbot"):
-        st.session_state.page_view = "chatbot"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div id="btn_academics">', unsafe_allow_html=True)
-    if st.button("📚 Academics", help="sidebar_nav_btn", key="dash_btn_academics"):
-        st.toast("Academics coming soon!")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div id="btn_tools">', unsafe_allow_html=True)
-    if st.button("⚙️ University Tools", help="sidebar_nav_btn", key="dash_btn_tools"):
-        st.toast("Tools coming soon!")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div id="btn_admission">', unsafe_allow_html=True)
-    if st.button("💸 Admission - Fee", help="sidebar_nav_btn", key="dash_btn_admission"):
-        st.toast("Fee Section coming soon!")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Top Header Persists
-    st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
+    # 2. DRAW HEADER
+    st.markdown(f'''
+        <div class="top-header-bar">
+            <div class="header-logo"></div>
+        </div>
+    ''', unsafe_allow_html=True)
+    
+    # Main Dashboard Body is now clean and empty as requested
+    pass
 
 else:
-    # CHATBOT VIEW (Standard)
+    # CHATBOT VIEW (Standard Sidebar)
     with st.sidebar:
         if st.button("⬅️ Back to Dashboard", use_container_width=True):
             st.session_state.page_view = "dashboard"

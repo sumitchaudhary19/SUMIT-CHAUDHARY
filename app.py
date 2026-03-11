@@ -1,16 +1,16 @@
 import streamlit as st
 from groq import Groq
-import base64, os, datetime
+import datetime
 
 # ── PAGE CONFIG ──
 st.set_page_config(
-    page_title="AskMNIT — Campus Intelligence",
+    page_title="AskMNIT",
     page_icon="🎓",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# ── SECRETS ──
+# ── GROQ CLIENT ──
 if "GROQ_API_KEY" in st.secrets:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 else:
@@ -18,915 +18,472 @@ else:
     st.stop()
 
 # ── SESSION STATE ──
-for k, v in {
-    "page_view": "dashboard",
-    "ai_messages": [],
-    "ai_pending": False,
-    "chat_sessions": {"Session 1": []},
-    "current_chat": "Session 1",
-    "pending_generation": False,
-    "chat_counter": 1,
-}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+if "page" not in st.session_state:
+    st.session_state.page = "dashboard"
+if "ai_messages" not in st.session_state:
+    st.session_state.ai_messages = []
+if "chat_sessions" not in st.session_state:
+    st.session_state.chat_sessions = {"Session 1": []}
+if "current_chat" not in st.session_state:
+    st.session_state.current_chat = "Session 1"
+if "chat_counter" not in st.session_state:
+    st.session_state.chat_counter = 1
+if "pending" not in st.session_state:
+    st.session_state.pending = False
+if "ai_pending" not in st.session_state:
+    st.session_state.ai_pending = False
 
 # ── GREETING ──
-h = datetime.datetime.now().hour
-greeting = "Good Morning" if h < 12 else ("Good Afternoon" if h < 17 else "Good Evening")
+hour = datetime.datetime.now().hour
+greeting = "Good Morning ☀️" if hour < 12 else ("Good Afternoon 🌤️" if hour < 17 else "Good Evening 🌙")
 
 # ══════════════════════════════════════════════
-# INJECT GLOBAL CSS
+# GLOBAL CSS — clean, no raw HTML divs
 # ══════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* ── RESET & BASE ── */
-*, *::before, *::after { box-sizing: border-box; }
-html, body { overflow-x: hidden; }
-
-/* Hide Streamlit chrome */
-#MainMenu, header, footer,
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-.stDeployButton { display: none !important; }
-
-section[data-testid="stSidebar"] { display: none !important; }
-
-[data-testid="stAppViewContainer"] {
-    background: #060912 !important;
+/* Reset & base */
+html, body, [data-testid="stAppViewContainer"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+[data-testid="stAppViewContainer"] {
+    background: #070B14 !important;
 }
 [data-testid="stMainBlockContainer"] {
-    padding: 0 !important;
+    padding-top: 24px !important;
+    padding-bottom: 40px !important;
     max-width: 100% !important;
 }
-[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-    gap: 0 !important;
-}
+
+/* Hide Streamlit chrome */
+header[data-testid="stHeader"] { display: none !important; }
+footer { display: none !important; }
+#MainMenu { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
 
 /* ── SIDEBAR ── */
-.mnit-sidebar {
-    position: fixed;
-    top: 0; left: 0;
-    width: 255px;
-    height: 100vh;
-    background: #08091A;
-    border-right: 1px solid rgba(255,255,255,0.07);
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0A0F1E 0%, #060912 100%) !important;
+    border-right: 1px solid rgba(59,130,246,0.12) !important;
+    width: 258px !important;
 }
-.mnit-sidebar-scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-bottom: 8px;
-}
-.mnit-sidebar-scroll::-webkit-scrollbar { width: 3px; }
-.mnit-sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 4px; }
-
-.sb-brand {
-    padding: 18px 18px 16px;
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-.sb-logo {
-    width: 38px; height: 38px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-}
-.sb-brand-name {
-    font-weight: 800;
-    font-size: 1rem;
-    color: #F1F5F9;
-    line-height: 1.1;
-}
-.sb-brand-sub {
-    font-size: 0.6rem;
-    color: rgba(241,245,249,0.35);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-top: 2px;
-}
-.sb-live {
-    margin-left: auto;
-    display: flex; align-items: center; gap: 4px;
-    font-size: 0.6rem; font-weight: 600;
-    color: #10B981;
-}
-.sb-live-dot {
-    width: 6px; height: 6px;
-    background: #10B981; border-radius: 50%;
-    animation: blink 2s infinite;
-}
-@keyframes blink {
-    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+section[data-testid="stSidebar"] > div {
+    padding: 0 !important;
 }
 
-.sb-section {
-    padding: 16px 18px 5px;
-    font-size: 0.58rem;
-    font-weight: 700;
-    letter-spacing: 1.8px;
-    text-transform: uppercase;
-    color: rgba(241,245,249,0.25);
-}
-.sb-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    margin: 1px 8px;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-decoration: none;
-}
-.sb-item:hover { background: rgba(255,255,255,0.05); }
-.sb-item.active {
-    background: rgba(59,130,246,0.12);
-    border: 1px solid rgba(59,130,246,0.2);
-}
-.sb-icon { font-size: 0.95rem; width: 18px; text-align: center; flex-shrink: 0; }
-.sb-label {
-    font-size: 0.8rem; font-weight: 500;
-    color: rgba(241,245,249,0.6);
-    flex: 1;
-    transition: color 0.15s;
-}
-.sb-item:hover .sb-label, .sb-item.active .sb-label { color: #F1F5F9; font-weight: 600; }
-.sb-badge {
-    font-size: 0.58rem; font-weight: 700;
-    padding: 2px 6px; border-radius: 20px;
-}
-.bdg-blue { background: rgba(59,130,246,0.15); color: #60A5FA; border: 1px solid rgba(59,130,246,0.25); }
-.bdg-green { background: rgba(16,185,129,0.12); color: #34D399; border: 1px solid rgba(16,185,129,0.2); }
-.bdg-amber { background: rgba(245,158,11,0.12); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
-.bdg-rose { background: rgba(244,63,94,0.12); color: #FB7185; border: 1px solid rgba(244,63,94,0.2); }
-
-.sb-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 8px 16px; }
-
-.sb-profile {
-    padding: 12px 14px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.02);
-    flex-shrink: 0;
-}
-.sb-ava {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; font-weight: 800; color: white;
-    border: 2px solid rgba(59,130,246,0.3); flex-shrink: 0;
-}
-.sb-pname { font-size: 0.78rem; font-weight: 700; color: #F1F5F9; }
-.sb-psub { font-size: 0.62rem; color: rgba(241,245,249,0.35); margin-top: 1px; }
-
-/* ── TOPBAR ── */
-.mnit-topbar {
-    position: fixed;
-    top: 0; left: 255px;
-    width: calc(100% - 255px);
-    height: 58px;
-    background: rgba(6,9,18,0.9);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    z-index: 9000;
-    display: flex;
-    align-items: center;
-    padding: 0 24px;
-    gap: 14px;
-}
-.tb-breadcrumb { flex: 1; display: flex; align-items: center; gap: 6px; }
-.tb-bc { font-size: 0.78rem; font-weight: 600; color: rgba(241,245,249,0.45); }
-.tb-sep { color: rgba(241,245,249,0.2); }
-.tb-bc-active { color: #F1F5F9; }
-.tb-search {
-    display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 8px;
-    padding: 6px 12px;
-    width: 240px;
-}
-.tb-search:hover { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.04); }
-.tb-s-text { font-size: 0.75rem; color: rgba(241,245,249,0.3); flex: 1; }
-.tb-kbd {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 4px; padding: 1px 5px;
-    font-size: 0.58rem; color: rgba(241,245,249,0.25);
-    font-family: monospace;
-}
-.tb-actions { display: flex; align-items: center; gap: 10px; }
-.tb-btn {
-    width: 32px; height: 32px; border-radius: 8px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem; cursor: pointer;
-    position: relative;
-    transition: all 0.15s;
-}
-.tb-btn:hover { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.25); }
-.tb-notif-dot {
-    position: absolute; top: -2px; right: -2px;
-    width: 12px; height: 12px;
-    background: #F43F5E; border-radius: 50%;
-    border: 2px solid #060912;
-    font-size: 0.45rem; color: white; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-}
-.tb-profile {
-    display: flex; align-items: center; gap: 7px;
-    padding: 4px 10px; border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.07);
-    cursor: pointer; transition: all 0.15s;
-}
-.tb-profile:hover { background: rgba(255,255,255,0.04); }
-.tb-pava {
-    width: 24px; height: 24px; border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.6rem; font-weight: 700; color: white;
-}
-.tb-pname { font-size: 0.75rem; font-weight: 600; color: #F1F5F9; }
-
-/* ── MAIN LAYOUT ── */
-.mnit-layout {
-    margin-left: 255px;
-    padding-top: 58px;
-    display: grid;
-    grid-template-columns: 1fr 345px;
-    gap: 0;
-    min-height: 100vh;
-}
-.mnit-main {
-    padding: 22px 20px 30px 22px;
-    overflow: hidden;
-}
-.mnit-ai-col {
-    border-left: 1px solid rgba(255,255,255,0.06);
-    background: #07091A;
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 58px);
-    position: sticky;
-    top: 58px;
-}
-
-/* ── HERO ── */
-.hero {
-    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.06), rgba(6,182,212,0.04));
-    border: 1px solid rgba(59,130,246,0.12);
-    border-radius: 16px;
-    padding: 24px 26px;
-    margin-bottom: 18px;
-    position: relative; overflow: hidden;
-}
-.hero::before {
-    content: '';
-    position: absolute; top: -60px; right: -60px;
-    width: 200px; height: 200px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(59,130,246,0.08), transparent 70%);
-}
-.hero-tag { font-size: 0.65rem; font-weight: 700; color: #06B6D4; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px; }
-.hero-title {
-    font-weight: 800; font-size: 1.55rem;
-    color: #F1F5F9; line-height: 1.2;
-    letter-spacing: -0.5px; margin-bottom: 8px;
-}
-.hero-title span {
-    background: linear-gradient(90deg, #3B82F6, #06B6D4);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-.hero-sub { font-size: 0.82rem; color: rgba(241,245,249,0.5); line-height: 1.6; margin-bottom: 16px; }
-.hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.hchip {
-    display: flex; align-items: center; gap: 5px;
-    padding: 4px 11px; border-radius: 20px;
-    font-size: 0.68rem; font-weight: 600;
-}
-.hc-green { background: rgba(16,185,129,0.1); color: #34D399; border: 1px solid rgba(16,185,129,0.2); }
-.hc-blue  { background: rgba(59,130,246,0.1); color: #60A5FA; border: 1px solid rgba(59,130,246,0.2); }
-.hc-amber { background: rgba(245,158,11,0.1); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
-
-/* ── STATS ── */
-.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
-.scard {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 13px; padding: 16px 14px;
-    transition: all 0.2s ease;
-    position: relative; overflow: hidden;
-}
-.scard::after {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    opacity: 0; transition: opacity 0.2s;
-}
-.scard:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
-.scard:hover::after { opacity: 1; }
-.scard.sc-blue::after  { background: linear-gradient(90deg, #3B82F6, #06B6D4); }
-.scard.sc-green::after { background: linear-gradient(90deg, #10B981, #34D399); }
-.scard.sc-amber::after { background: linear-gradient(90deg, #F59E0B, #FCD34D); }
-.scard.sc-rose::after  { background: linear-gradient(90deg, #F43F5E, #FB7185); }
-.sc-ico {
-    width: 32px; height: 32px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.9rem; margin-bottom: 10px;
-}
-.ico-b { background: rgba(59,130,246,0.1); }
-.ico-g { background: rgba(16,185,129,0.1); }
-.ico-a { background: rgba(245,158,11,0.1); }
-.ico-r { background: rgba(244,63,94,0.1); }
-.sc-val { font-weight: 800; font-size: 1.5rem; color: #F1F5F9; letter-spacing: -1px; line-height: 1; margin-bottom: 3px; }
-.sc-lbl { font-size: 0.68rem; color: rgba(241,245,249,0.35); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
-.sc-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.62rem; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
-.ch-g { background: rgba(16,185,129,0.1); color: #34D399; }
-.ch-a { background: rgba(245,158,11,0.1); color: #FCD34D; }
-.ch-r { background: rgba(244,63,94,0.1); color: #FB7185; }
-.ch-b { background: rgba(59,130,246,0.1); color: #60A5FA; }
-
-/* ── MID GRID ── */
-.mid-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 14px; margin-bottom: 18px; }
-.ccard {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 14px; padding: 18px;
-    transition: border-color 0.2s;
-}
-.ccard:hover { border-color: rgba(59,130,246,0.15); }
-.ccard-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.ccard-title { font-weight: 700; font-size: 0.85rem; color: #F1F5F9; display: flex; align-items: center; gap: 7px; }
-.ccard-link { font-size: 0.7rem; color: #3B82F6; font-weight: 600; cursor: pointer; }
-.ccard-link:hover { opacity: 0.7; }
-
-/* Schedule */
-.sched-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.sched-item:last-child { border-bottom: none; padding-bottom: 0; }
-.sched-bar { width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0; }
-.sched-time { font-size: 0.68rem; font-weight: 700; color: rgba(241,245,249,0.35); min-width: 62px; font-variant-numeric: tabular-nums; }
-.sched-info { flex: 1; }
-.sched-subj { font-size: 0.8rem; font-weight: 600; color: #F1F5F9; margin-bottom: 1px; }
-.sched-meta { font-size: 0.65rem; color: rgba(241,245,249,0.3); }
-.sched-st { font-size: 0.58rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; flex-shrink: 0; }
-.st-live { background: rgba(16,185,129,0.1); color: #34D399; border: 1px solid rgba(16,185,129,0.2); }
-.st-next { background: rgba(245,158,11,0.1); color: #FCD34D; border: 1px solid rgba(245,158,11,0.2); }
-.st-done { background: rgba(255,255,255,0.04); color: rgba(241,245,249,0.25); }
-
-/* Notices */
-.notice-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: padding-left 0.15s; }
-.notice-item:last-child { border-bottom: none; }
-.notice-item:hover { padding-left: 4px; }
-.n-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-.n-text { font-size: 0.78rem; color: rgba(241,245,249,0.65); line-height: 1.5; margin-bottom: 4px; }
-.n-meta { display: flex; align-items: center; gap: 5px; font-size: 0.62rem; color: rgba(241,245,249,0.3); }
-.n-tag { padding: 1px 6px; border-radius: 4px; font-size: 0.58rem; font-weight: 700; }
-
-/* ── QUICK ACCESS ── */
-.qa-title { font-size: 0.7rem; font-weight: 700; color: rgba(241,245,249,0.35); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; }
-.qa-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-.qa-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 12px; padding: 14px;
-    display: flex; align-items: center; gap: 10px;
-    cursor: pointer; transition: all 0.18s ease; text-decoration: none;
-}
-.qa-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(59,130,246,0.2); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(59,130,246,0.07); }
-.qa-ico { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
-.qa-name { font-size: 0.75rem; font-weight: 700; color: #F1F5F9; margin-bottom: 1px; }
-.qa-sub { font-size: 0.62rem; color: rgba(241,245,249,0.3); }
-.qa-arr { margin-left: auto; font-size: 0.7rem; color: rgba(241,245,249,0.2); transition: all 0.15s; }
-.qa-card:hover .qa-arr { color: #3B82F6; transform: translateX(2px); }
-
-/* ── AI PANEL ── */
-.ai-hd {
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(59,130,246,0.03);
-    flex-shrink: 0;
-}
-.ai-ava {
-    width: 32px; height: 32px; border-radius: 9px;
-    background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem; flex-shrink: 0; position: relative;
-}
-.ai-ava::after {
-    content: '';
-    position: absolute; bottom: -2px; right: -2px;
-    width: 9px; height: 9px; background: #10B981;
-    border-radius: 50%; border: 2px solid #07091A;
-    animation: blink 2s infinite;
-}
-.ai-hd-info { flex: 1; }
-.ai-hd-name { font-weight: 800; font-size: 0.85rem; color: #F1F5F9; }
-.ai-hd-status { font-size: 0.62rem; color: #10B981; margin-top: 1px; }
-.ai-model { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 2px 7px; font-size: 0.58rem; font-weight: 700; color: #60A5FA; }
-
-.ai-chips {
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
-}
-.ai-chips-lbl { font-size: 0.58rem; color: rgba(241,245,249,0.25); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 7px; }
-.ai-chip {
-    display: inline-block; margin: 2px;
-    padding: 4px 9px; border-radius: 20px;
-    font-size: 0.67rem; font-weight: 500;
-    color: rgba(241,245,249,0.55);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    cursor: pointer; transition: all 0.15s;
-}
-.ai-chip:hover { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: #F1F5F9; }
-
-.ai-msgs {
-    flex: 1; overflow-y: auto; padding: 14px 12px;
-    display: flex; flex-direction: column; gap: 10px;
-}
-.ai-msgs::-webkit-scrollbar { width: 3px; }
-.ai-msgs::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.2); border-radius: 4px; }
-
-.ai-welcome {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 20px; text-align: center; gap: 10px;
-}
-.ai-w-ico {
-    width: 50px; height: 50px; border-radius: 14px;
-    background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
-    border: 1px solid rgba(59,130,246,0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem;
-    box-shadow: 0 0 24px rgba(59,130,246,0.1);
-}
-.ai-w-title { font-weight: 800; font-size: 0.9rem; color: #F1F5F9; }
-.ai-w-sub { font-size: 0.72rem; color: rgba(241,245,249,0.4); line-height: 1.5; max-width: 200px; }
-
-.msg-u {
-    align-self: flex-end; max-width: 85%;
-    padding: 9px 12px; border-radius: 11px;
-    background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(139,92,246,0.18));
-    border: 1px solid rgba(59,130,246,0.18);
-    font-size: 0.78rem; color: #F1F5F9; line-height: 1.55;
-    border-bottom-right-radius: 3px;
-    animation: msgIn 0.2s ease;
-}
-.msg-a {
-    align-self: flex-start; max-width: 90%;
-    padding: 9px 12px; border-radius: 11px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    font-size: 0.78rem; color: rgba(241,245,249,0.75); line-height: 1.55;
-    border-bottom-left-radius: 3px;
-    animation: msgIn 0.2s ease;
-}
-@keyframes msgIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.msg-meta { font-size: 0.58rem; color: rgba(241,245,249,0.2); margin-top: 3px; }
-.msg-u .msg-meta { text-align: right; }
-
-.ai-inp-area {
-    padding: 10px 12px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
-}
-
-/* Chat input override */
-.stChatInput > div {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(59,130,246,0.2) !important;
-    border-radius: 11px !important;
+/* Sidebar buttons */
+section[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    color: rgba(241,245,249,0.65) !important;
+    border: none !important;
+    border-radius: 9px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.8rem !important;
-    color: #F1F5F9 !important;
+    font-weight: 500 !important;
+    font-size: 0.83rem !important;
+    padding: 9px 14px !important;
+    text-align: left !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    transition: all 0.15s ease !important;
+    margin: 1px 0 !important;
 }
-.stChatInput > div:focus-within {
-    border-color: rgba(59,130,246,0.45) !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.07) !important;
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(59,130,246,0.1) !important;
+    color: #F1F5F9 !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* Chat messages (full page) */
+/* Active nav button */
+.active-nav .stButton > button {
+    background: rgba(59,130,246,0.15) !important;
+    color: #FFFFFF !important;
+    border-left: 3px solid #3B82F6 !important;
+    font-weight: 700 !important;
+}
+
+/* Back button special */
+.back-btn .stButton > button {
+    background: rgba(59,130,246,0.15) !important;
+    color: #60A5FA !important;
+    border: 1px solid rgba(59,130,246,0.25) !important;
+    font-weight: 700 !important;
+}
+
+/* Main content buttons */
+[data-testid="stMain"] .stButton > button {
+    background: linear-gradient(135deg, #3B82F6 0%, #6D28D9 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.25) !important;
+    transition: all 0.18s !important;
+}
+[data-testid="stMain"] .stButton > button:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 22px rgba(59,130,246,0.35) !important;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 14px !important;
+    padding: 18px 16px !important;
+    transition: all 0.2s !important;
+}
+[data-testid="stMetric"]:hover {
+    background: rgba(59,130,246,0.08) !important;
+    border-color: rgba(59,130,246,0.2) !important;
+    transform: translateY(-2px) !important;
+}
+[data-testid="stMetricLabel"] {
+    color: rgba(241,245,249,0.45) !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+[data-testid="stMetricValue"] {
+    color: #F1F5F9 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 1.7rem !important;
+    letter-spacing: -1px !important;
+}
+[data-testid="stMetricDelta"] {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Text */
+[data-testid="stMarkdown"] p, [data-testid="stMarkdown"] li {
+    color: rgba(241,245,249,0.75) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+h1, h2, h3 {
+    color: #F1F5F9 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* Info / success / warning / error boxes */
+[data-testid="stAlert"] {
+    border-radius: 12px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    border: none !important;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 12px !important;
+}
+[data-testid="stExpander"]:hover {
+    border-color: rgba(59,130,246,0.2) !important;
+}
+summary {
+    color: #F1F5F9 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+}
+
+/* Divider */
+hr {
+    border-color: rgba(255,255,255,0.07) !important;
+    margin: 10px 0 !important;
+}
+
+/* Chat input */
+[data-testid="stChatInput"] textarea {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(59,130,246,0.25) !important;
+    border-radius: 12px !important;
+    color: #F1F5F9 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 0.88rem !important;
+}
+[data-testid="stChatInput"] textarea:focus {
+    border-color: rgba(59,130,246,0.5) !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.08) !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+    color: rgba(241,245,249,0.3) !important;
+}
+
+/* Chat messages */
 [data-testid="stChatMessage"] {
     background: rgba(255,255,255,0.03) !important;
     border: 1px solid rgba(255,255,255,0.06) !important;
     border-radius: 12px !important;
-    padding: 12px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.85rem !important;
-    color: rgba(241,245,249,0.85) !important;
+}
+[data-testid="stChatMessage"][data-testid*="user"] {
+    background: rgba(59,130,246,0.08) !important;
+    border-color: rgba(59,130,246,0.15) !important;
 }
 
-/* Streamlit buttons */
-.stButton > button {
-    background: linear-gradient(135deg, #3B82F6, #6D28D9) !important;
-    color: white !important; border: none !important;
-    border-radius: 9px !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 700 !important; font-size: 0.8rem !important;
-    padding: 8px 16px !important;
-    box-shadow: 0 4px 14px rgba(59,130,246,0.2) !important;
-    transition: all 0.18s !important;
-}
-.stButton > button:hover {
-    opacity: 0.9 !important; transform: translateY(-1px) !important;
-    box-shadow: 0 6px 20px rgba(59,130,246,0.35) !important;
+/* Columns gap */
+[data-testid="stHorizontalBlock"] {
+    gap: 14px !important;
 }
 
-/* Full chatbot page sidebar */
-section[data-testid="stSidebar"].chatbot-open {
-    display: block !important;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.2); border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# DASHBOARD PAGE
-# ══════════════════════════════════════════════
-if st.session_state.page_view == "dashboard":
 
-    # ── SIDEBAR ──
+# ══════════════════════════════════════════════════════
+# SIDEBAR
+# ══════════════════════════════════════════════════════
+with st.sidebar:
+
+    # Brand
     st.markdown("""
-    <div class="mnit-sidebar">
-      <div class="mnit-sidebar-scroll">
-
-        <div class="sb-brand">
-          <div class="sb-logo">🎓</div>
-          <div>
-            <div class="sb-brand-name">AskMNIT</div>
-            <div class="sb-brand-sub">Campus Intelligence</div>
-          </div>
-          <div class="sb-live"><div class="sb-live-dot"></div>Live</div>
+    <div style="padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.07);">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:38px;height:38px;background:linear-gradient(135deg,#3B82F6,#6D28D9);border-radius:10px;
+                        display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🎓</div>
+            <div>
+                <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:1rem;color:#F1F5F9;letter-spacing:-0.3px;">AskMNIT</div>
+                <div style="font-size:0.6rem;color:rgba(241,245,249,0.35);letter-spacing:1.2px;text-transform:uppercase;margin-top:1px;">Campus Intelligence</div>
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+                <div style="width:6px;height:6px;background:#10B981;border-radius:50%;animation:none;"></div>
+                <span style="font-size:0.6rem;color:#10B981;font-weight:600;">Live</span>
+            </div>
         </div>
-
-        <div class="sb-section">Main</div>
-        <a class="sb-item active"><span class="sb-icon">🏠</span><span class="sb-label">Dashboard</span></a>
-        <a class="sb-item"><span class="sb-icon">📅</span><span class="sb-label">Schedule</span><span class="sb-badge bdg-green">Today</span></a>
-        <a class="sb-item"><span class="sb-icon">📚</span><span class="sb-label">Academics</span></a>
-        <a class="sb-item"><span class="sb-icon">💰</span><span class="sb-label">Fee Portal</span><span class="sb-badge bdg-amber">Due</span></a>
-        <a class="sb-item"><span class="sb-icon">🏢</span><span class="sb-label">Hostel</span></a>
-
-        <div class="sb-divider"></div>
-        <div class="sb-section">Resources</div>
-        <a class="sb-item"><span class="sb-icon">📄</span><span class="sb-label">Syllabus & Notes</span></a>
-        <a class="sb-item"><span class="sb-icon">📝</span><span class="sb-label">Previous Year Qs</span></a>
-        <a class="sb-item"><span class="sb-icon">🏛️</span><span class="sb-label">Library Catalog</span></a>
-        <a class="sb-item"><span class="sb-icon">📌</span><span class="sb-label">Latest Notices</span><span class="sb-badge bdg-rose">3</span></a>
-        <a class="sb-item"><span class="sb-icon">🗓️</span><span class="sb-label">Exam Schedule</span></a>
-        <a class="sb-item"><span class="sb-icon">🏆</span><span class="sb-label">Results & Grades</span></a>
-
-        <div class="sb-divider"></div>
-        <div class="sb-section">Campus</div>
-        <a class="sb-item"><span class="sb-icon">🎉</span><span class="sb-label">Events & Fests</span><span class="sb-badge bdg-blue">New</span></a>
-        <a class="sb-item"><span class="sb-icon">🏋️</span><span class="sb-label">Sports & Clubs</span></a>
-        <a class="sb-item"><span class="sb-icon">💼</span><span class="sb-label">Placements</span></a>
-        <a class="sb-item"><span class="sb-icon">🔬</span><span class="sb-label">Research & Labs</span></a>
-
-        <div class="sb-divider"></div>
-        <div class="sb-section">Account</div>
-        <a class="sb-item"><span class="sb-icon">⚙️</span><span class="sb-label">Settings</span></a>
-        <a class="sb-item"><span class="sb-icon">🔔</span><span class="sb-label">Notifications</span><span class="sb-badge bdg-rose">5</span></a>
-        <a class="sb-item"><span class="sb-icon">🚪</span><span class="sb-label">Logout</span></a>
-
-      </div>
-      <div class="sb-profile">
-        <div class="sb-ava">SC</div>
-        <div>
-          <div class="sb-pname">Sumit Chaudhary</div>
-          <div class="sb-psub">B.Tech Metallurgy · 3rd Yr</div>
-        </div>
-        <span style="margin-left:auto;color:rgba(241,245,249,0.2);font-size:0.9rem;cursor:pointer;">⋯</span>
-      </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── TOPBAR ──
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+
+    # ── MAIN SECTION ──
+    st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:10px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Main</p>", unsafe_allow_html=True)
+
+    if st.button("🏠  Dashboard", key="nav_dash", use_container_width=True):
+        st.session_state.page = "dashboard"
+        st.rerun()
+    if st.button("📅  Schedule", key="nav_schedule", use_container_width=True):
+        st.session_state.page = "schedule"
+        st.rerun()
+    if st.button("📚  Academics", key="nav_academics", use_container_width=True):
+        st.session_state.page = "academics"
+        st.rerun()
+    if st.button("💰  Fee Portal", key="nav_fee", use_container_width=True):
+        st.session_state.page = "fee"
+        st.rerun()
+    if st.button("🏢  Hostel", key="nav_hostel", use_container_width=True):
+        st.session_state.page = "hostel"
+        st.rerun()
+
+    st.divider()
+
+    # ── RESOURCES SECTION ──
+    st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Resources</p>", unsafe_allow_html=True)
+
+    if st.button("📄  Syllabus & Notes", key="nav_syllabus", use_container_width=True):
+        st.session_state.page = "syllabus"
+        st.rerun()
+    if st.button("📝  Previous Year Qs", key="nav_pyq", use_container_width=True):
+        st.session_state.page = "pyq"
+        st.rerun()
+    if st.button("🏛️  Library Catalog", key="nav_library", use_container_width=True):
+        st.session_state.page = "library"
+        st.rerun()
+    if st.button("📌  Latest Notices  🔴 3", key="nav_notices", use_container_width=True):
+        st.session_state.page = "notices"
+        st.rerun()
+    if st.button("🗓️  Exam Schedule", key="nav_exam", use_container_width=True):
+        st.session_state.page = "exam"
+        st.rerun()
+    if st.button("🏆  Results & Grades", key="nav_results", use_container_width=True):
+        st.session_state.page = "results"
+        st.rerun()
+
+    st.divider()
+
+    # ── CAMPUS SECTION ──
+    st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Campus</p>", unsafe_allow_html=True)
+
+    if st.button("🎉  Events & Fests  🆕", key="nav_events", use_container_width=True):
+        st.session_state.page = "events"
+        st.rerun()
+    if st.button("🏋️  Sports & Clubs", key="nav_sports", use_container_width=True):
+        st.session_state.page = "sports"
+        st.rerun()
+    if st.button("💼  Placements", key="nav_placements", use_container_width=True):
+        st.session_state.page = "placements"
+        st.rerun()
+    if st.button("🔬  Research & Labs", key="nav_research", use_container_width=True):
+        st.session_state.page = "research"
+        st.rerun()
+
+    st.divider()
+
+    # ── ACCOUNT SECTION ──
+    st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Account</p>", unsafe_allow_html=True)
+
+    if st.button("🤖  AskMNIT AI", key="nav_ai", use_container_width=True):
+        st.session_state.page = "ai"
+        st.rerun()
+    if st.button("⚙️  Settings", key="nav_settings", use_container_width=True):
+        st.session_state.page = "settings"
+        st.rerun()
+    if st.button("🔔  Notifications  🔴 5", key="nav_notif", use_container_width=True):
+        st.session_state.page = "notifications"
+        st.rerun()
+    if st.button("🚪  Logout", key="nav_logout", use_container_width=True):
+        st.warning("Logging out...")
+
+    st.divider()
+
+    # Profile card
     st.markdown("""
-    <div class="mnit-topbar">
-      <div class="tb-breadcrumb">
-        <span class="tb-bc">AskMNIT</span>
-        <span class="tb-sep">›</span>
-        <span class="tb-bc tb-bc-active">Dashboard</span>
-      </div>
-      <div class="tb-search">
-        <span style="font-size:0.8rem;">🔍</span>
-        <span class="tb-s-text">Search anything...</span>
-        <span class="tb-kbd">⌘K</span>
-      </div>
-      <div class="tb-actions">
-        <div class="tb-btn">📅</div>
-        <div class="tb-btn">
-          🔔
-          <div class="tb-notif-dot">5</div>
+    <div style="padding:10px 14px 14px;">
+        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);
+                    border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;background:linear-gradient(135deg,#3B82F6,#6D28D9);
+                        border-radius:50%;display:flex;align-items:center;justify-content:center;
+                        font-weight:800;font-size:0.78rem;color:white;flex-shrink:0;">SC</div>
+            <div>
+                <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.82rem;color:#F1F5F9;">Sumit Chaudhary</div>
+                <div style="font-size:0.62rem;color:rgba(59,130,246,0.8);margin-top:1px;">B.Tech Metallurgy · Sem 6</div>
+            </div>
         </div>
-        <div class="tb-profile">
-          <div class="tb-pava">SC</div>
-          <span class="tb-pname">Sumit</span>
-          <span style="color:rgba(241,245,249,0.25);font-size:0.65rem;margin-left:3px;">▾</span>
-        </div>
-      </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── LAYOUT WRAPPER ──
-    st.markdown('<div class="mnit-layout">', unsafe_allow_html=True)
 
-    # ── LEFT: MAIN CONTENT ──
-    st.markdown(f"""
-    <div class="mnit-main">
+# ══════════════════════════════════════════════════════
+# PAGE: DASHBOARD
+# ══════════════════════════════════════════════════════
+if st.session_state.page == "dashboard":
 
-      <!-- HERO -->
-      <div class="hero">
-        <div class="hero-tag">✦ {greeting}</div>
-        <div class="hero-title">Welcome back, <span>Sumit Chaudhary</span> 👋</div>
-        <div class="hero-sub">Here's everything happening on campus today. Stay on top of your schedule, academics, and campus life.</div>
-        <div class="hero-chips">
-          <div class="hchip hc-green">● Semester 6 Active</div>
-          <div class="hchip hc-blue">⏳ Next class in 20 min</div>
-          <div class="hchip hc-amber">📌 3 new notices</div>
+    # Header row
+    col_title, col_btn = st.columns([4, 1])
+    with col_title:
+        st.markdown(f"""
+        <div style="margin-bottom:4px;">
+            <span style="font-size:0.72rem;font-weight:600;color:#06B6D4;letter-spacing:1.5px;text-transform:uppercase;">✦ {greeting}</span>
         </div>
-      </div>
-
-      <!-- STATS -->
-      <div class="stats-row">
-        <div class="scard sc-blue">
-          <div class="sc-ico ico-b">📊</div>
-          <div class="sc-val">78%</div>
-          <div class="sc-lbl">Attendance</div>
-          <span class="sc-chip ch-g">▲ Above minimum</span>
-        </div>
-        <div class="scard sc-green">
-          <div class="sc-ico ico-g">⏳</div>
-          <div class="sc-val">20m</div>
-          <div class="sc-lbl">Next Class</div>
-          <span class="sc-chip ch-a">⚡ Coming soon</span>
-        </div>
-        <div class="scard sc-amber">
-          <div class="sc-ico ico-a">📝</div>
-          <div class="sc-val">6/8</div>
-          <div class="sc-lbl">Assignments</div>
-          <span class="sc-chip ch-r">● 2 Pending</span>
-        </div>
-        <div class="scard sc-rose">
-          <div class="sc-ico ico-r">💰</div>
-          <div class="sc-val">₹18.5k</div>
-          <div class="sc-lbl">Fee Due</div>
-          <span class="sc-chip ch-r">⚠ 5 days left</span>
-        </div>
-      </div>
-
-      <!-- SCHEDULE + NOTICES -->
-      <div class="mid-grid">
-        <div class="ccard">
-          <div class="ccard-hd">
-            <div class="ccard-title">📅 Today's Schedule</div>
-            <div class="ccard-link">View Full →</div>
-          </div>
-          <div class="sched-item">
-            <div class="sched-bar" style="background:#3B82F6;"></div>
-            <div class="sched-time">09:30 AM</div>
-            <div class="sched-info">
-              <div class="sched-subj">Mineral Processing</div>
-              <div class="sched-meta">Room 302 · Prof. R.K. Sharma</div>
-            </div>
-            <div class="sched-st st-done">Done</div>
-          </div>
-          <div class="sched-item">
-            <div class="sched-bar" style="background:#10B981;"></div>
-            <div class="sched-time">11:30 AM</div>
-            <div class="sched-info">
-              <div class="sched-subj">Engineering Materials</div>
-              <div class="sched-meta">Metallurgy Lab 1 · Dr. Mehta</div>
-            </div>
-            <div class="sched-st st-live">● Live</div>
-          </div>
-          <div class="sched-item">
-            <div class="sched-bar" style="background:#F59E0B;"></div>
-            <div class="sched-time">02:00 PM</div>
-            <div class="sched-info">
-              <div class="sched-subj">Thermodynamics — II</div>
-              <div class="sched-meta">Room 201 · Prof. Agarwal</div>
-            </div>
-            <div class="sched-st st-next">Next</div>
-          </div>
-          <div class="sched-item">
-            <div class="sched-bar" style="background:#8B5CF6;"></div>
-            <div class="sched-time">04:00 PM</div>
-            <div class="sched-info">
-              <div class="sched-subj">Phase Transformations</div>
-              <div class="sched-meta">LT-3 · Prof. Singh</div>
-            </div>
-            <div class="sched-st st-done" style="opacity:0.4;">—</div>
-          </div>
-          <div class="sched-item">
-            <div class="sched-bar" style="background:#06B6D4;"></div>
-            <div class="sched-time">05:30 PM</div>
-            <div class="sched-info">
-              <div class="sched-subj">Fluid Mechanics</div>
-              <div class="sched-meta">Room 105 · Dr. Verma</div>
-            </div>
-            <div class="sched-st st-done" style="opacity:0.4;">—</div>
-          </div>
-        </div>
-
-        <div class="ccard">
-          <div class="ccard-hd">
-            <div class="ccard-title">📌 Latest Notices</div>
-            <div class="ccard-link">All →</div>
-          </div>
-          <div class="notice-item">
-            <div class="n-dot" style="background:#F43F5E;"></div>
-            <div>
-              <div class="n-text">Mid-Semester exam dates officially announced. Check portal for schedule.</div>
-              <div class="n-meta"><span class="n-tag" style="background:rgba(244,63,94,0.1);color:#FB7185;">Urgent</span>Today · Academic</div>
-            </div>
-          </div>
-          <div class="notice-item">
-            <div class="n-dot" style="background:#3B82F6;"></div>
-            <div>
-              <div class="n-text">Techfest 2025 registrations OPEN. Last date: 20th March.</div>
-              <div class="n-meta"><span class="n-tag" style="background:rgba(59,130,246,0.1);color:#60A5FA;">Events</span>Yesterday</div>
-            </div>
-          </div>
-          <div class="notice-item">
-            <div class="n-dot" style="background:#10B981;"></div>
-            <div>
-              <div class="n-text">Bonafide Certificate requests can now be submitted online.</div>
-              <div class="n-meta"><span class="n-tag" style="background:rgba(16,185,129,0.1);color:#34D399;">Admin</span>2 days ago</div>
-            </div>
-          </div>
-          <div class="notice-item">
-            <div class="n-dot" style="background:#F59E0B;"></div>
-            <div>
-              <div class="n-text">Hostel mess revised menu effective 15th March. Feedback open.</div>
-              <div class="n-meta"><span class="n-tag" style="background:rgba(245,158,11,0.1);color:#FCD34D;">Hostel</span>3 days ago</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- QUICK ACCESS -->
-      <div class="qa-title">⚡ Quick Access</div>
-      <div class="qa-grid">
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(59,130,246,0.1);">📄</div><div><div class="qa-name">Syllabus & Notes</div><div class="qa-sub">Download materials</div></div><div class="qa-arr">›</div></a>
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(16,185,129,0.1);">📝</div><div><div class="qa-name">Previous Year Qs</div><div class="qa-sub">Exam prep</div></div><div class="qa-arr">›</div></a>
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(245,158,11,0.1);">🏛️</div><div><div class="qa-name">Library Catalog</div><div class="qa-sub">Search & reserve</div></div><div class="qa-arr">›</div></a>
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(139,92,246,0.1);">💼</div><div><div class="qa-name">Placements</div><div class="qa-sub">Upcoming drives</div></div><div class="qa-arr">›</div></a>
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(244,63,94,0.1);">🏆</div><div><div class="qa-name">Results</div><div class="qa-sub">Grades & CGPA</div></div><div class="qa-arr">›</div></a>
-        <a class="qa-card"><div class="qa-ico" style="background:rgba(6,182,212,0.1);">🎉</div><div><div class="qa-name">Events & Fests</div><div class="qa-sub">Campus activities</div></div><div class="qa-arr">›</div></a>
-      </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── RIGHT: AI PANEL (pure HTML header + chips) ──
-    st.markdown("""
-    <div class="mnit-ai-col">
-      <div class="ai-hd">
-        <div class="ai-ava">🤖</div>
-        <div class="ai-hd-info">
-          <div class="ai-hd-name">AskMNIT AI</div>
-          <div class="ai-hd-status">● Online · Ready to help</div>
-        </div>
-        <div class="ai-model">LLaMA 70B</div>
-      </div>
-      <div class="ai-chips">
-        <div class="ai-chips-lbl">Try asking</div>
-        <span class="ai-chip">📅 Mid-sem dates?</span>
-        <span class="ai-chip">💰 Fee due?</span>
-        <span class="ai-chip">🏛️ Library hours?</span>
-        <span class="ai-chip">📝 Exam tips</span>
-        <span class="ai-chip">🏢 Hostel rules</span>
-      </div>
-    """, unsafe_allow_html=True)
-
-    # AI messages display
-    if not st.session_state.ai_messages:
-        st.markdown("""
-      <div class="ai-welcome">
-        <div class="ai-w-ico">🎓</div>
-        <div class="ai-w-title">Hey Sumit! I'm AskMNIT</div>
-        <div class="ai-w-sub">Ask me anything about MNIT — schedules, fees, academics, hostel, exams & more.</div>
-      </div>
+        <h1 style="font-size:1.8rem;margin:0 0 6px 0;letter-spacing:-1px;">
+            Welcome back, <span style="background:linear-gradient(90deg,#3B82F6,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Sumit Chaudhary</span> 👋
+        </h1>
+        <p style="color:rgba(241,245,249,0.5);font-size:0.88rem;margin:0;">Here's your campus at a glance. Stay on top of everything.</p>
         """, unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="ai-msgs">', unsafe_allow_html=True)
-        for msg in st.session_state.ai_messages:
-            css_cls = "msg-u" if msg["role"] == "user" else "msg-a"
-            meta = "You" if msg["role"] == "user" else "AskMNIT AI"
-            st.markdown(f'<div class="{css_cls}">{msg["content"]}<div class="msg-meta">{meta}</div></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-      <div class="ai-inp-area">
-        <div style="font-size:0.62rem;color:rgba(241,245,249,0.2);margin-bottom:6px;letter-spacing:0.5px;">↑ Ask anything about MNIT</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Close layout
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── POSITION CHAT INPUT INSIDE AI PANEL ──
-    st.markdown("""
-    <style>
-    [data-testid="stChatInputContainer"] {
-        position: fixed !important;
-        bottom: 0px !important;
-        right: 0px !important;
-        width: 345px !important;
-        padding: 10px 12px !important;
-        background: #07091A !important;
-        border-top: 1px solid rgba(255,255,255,0.06) !important;
-        z-index: 9500 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    if ai_prompt := st.chat_input("Ask AskMNIT anything about MNIT...", key="ai_panel_input"):
-        st.session_state.ai_messages.append({"role": "user", "content": ai_prompt})
-        st.session_state.ai_pending = True
-        st.rerun()
-
-    if st.session_state.ai_pending and st.session_state.ai_messages:
-        q = st.session_state.ai_messages[-1]["content"]
-        try:
-            resp = client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are AskMNIT — a smart, friendly AI assistant for MNIT Jaipur students. Help with academics, fees, hostel, schedule, placements, events, library, and campus life. Be concise (2-4 sentences), warm, and accurate."},
-                    {"role": "user", "content": q}
-                ],
-                model="llama-3.3-70b-versatile",
-                max_tokens=250
-            )
-            reply = resp.choices[0].message.content
-        except Exception as e:
-            reply = f"⚠️ Sorry, something went wrong: {str(e)}"
-        st.session_state.ai_messages.append({"role": "assistant", "content": reply})
-        st.session_state.ai_pending = False
-        st.rerun()
-
-
-# ══════════════════════════════════════════════
-# FULL CHATBOT PAGE
-# ══════════════════════════════════════════════
-else:
-    st.markdown("""
-    <style>
-    [data-testid="stAppViewContainer"] { margin-left: 0 !important; width: 100% !important; }
-    section[data-testid="stSidebar"] {
-        display: block !important;
-        background: #08091A !important;
-        border-right: 1px solid rgba(255,255,255,0.07) !important;
-    }
-    section[data-testid="stSidebar"] .stButton > button {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        box-shadow: none !important;
-        font-size: 0.76rem !important;
-        padding: 7px 12px !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-    }
-    section[data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(59,130,246,0.1) !important;
-        border-color: rgba(59,130,246,0.25) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    with st.sidebar:
-        if st.button("⬅  Back to Dashboard", use_container_width=True):
-            st.session_state.page_view = "dashboard"
+    with col_btn:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        if st.button("🤖 Open AskMNIT AI", use_container_width=True):
+            st.session_state.page = "ai"
             st.rerun()
 
-        st.markdown("<hr style='border-color:rgba(255,255,255,0.06);margin:12px 0;'>", unsafe_allow_html=True)
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+    # ── STAT CARDS ──
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("📊 Attendance", "78%", "Above minimum ✓")
+    with c2:
+        st.metric("⏳ Next Class", "20 min", "Mineral Processing")
+    with c3:
+        st.metric("📝 Assignments", "6 / 8", "-2 pending")
+    with c4:
+        st.metric("💰 Fee Due", "₹18,500", "-5 days left")
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── SCHEDULE + NOTICES ──
+    col_sched, col_notice = st.columns([1.1, 0.9])
+
+    with col_sched:
+        st.markdown("### 📅 Today's Schedule")
+        schedule = [
+            ("09:30 AM", "Mineral Processing", "Room 302 · Prof. R.K. Sharma", "✅ Done", "#6B7280"),
+            ("11:30 AM", "Engineering Materials", "Metallurgy Lab 1 · Dr. Mehta", "🟢 Live", "#10B981"),
+            ("02:00 PM", "Thermodynamics — II", "Room 201 · Prof. Agarwal", "⏭️ Next", "#F59E0B"),
+            ("04:00 PM", "Phase Transformations", "LT-3 · Prof. Singh", "—", "#8B5CF6"),
+            ("05:30 PM", "Fluid Mechanics", "Room 105 · Dr. Verma", "—", "#06B6D4"),
+        ]
+        for time, subject, room, status, color in schedule:
+            with st.expander(f"{status}  **{subject}**  —  {time}"):
+                st.markdown(f"📍 **Location:** {room}")
+                st.markdown(f"🕐 **Time:** {time}")
+
+    with col_notice:
+        st.markdown("### 📌 Latest Notices")
+        notices = [
+            ("🔴 Urgent", "Mid-Semester exam dates announced. Check portal for schedule.", "Today · Academic Section"),
+            ("🔵 Events", "Techfest 2025 registrations OPEN. Last date: 20th March.", "Yesterday · Student Activities"),
+            ("🟢 Admin", "Bonafide Certificate requests now online via Student Portal.", "2 days ago · Admin Office"),
+            ("🟡 Hostel", "Revised mess menu & new timings from 15th March.", "3 days ago · Hostel Office"),
+        ]
+        for tag, text, meta in notices:
+            with st.expander(f"{tag}  {text[:45]}..."):
+                st.markdown(f"📝 {text}")
+                st.caption(f"🕐 {meta}")
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── QUICK ACCESS ──
+    st.markdown("### ⚡ Quick Access")
+    qa1, qa2, qa3, qa4, qa5, qa6 = st.columns(6)
+    quick = [
+        (qa1, "📄", "Syllabus", "syllabus"),
+        (qa2, "📝", "Prev Qs", "pyq"),
+        (qa3, "🏛️", "Library", "library"),
+        (qa4, "💼", "Placements", "placements"),
+        (qa5, "🏆", "Results", "results"),
+        (qa6, "🎉", "Events", "events"),
+    ]
+    for col, icon, label, page in quick:
+        with col:
+            if st.button(f"{icon}\n{label}", use_container_width=True, key=f"qa_{page}"):
+                st.session_state.page = page
+                st.rerun()
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: AskMNIT AI (Full chat page)
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "ai":
+
+    # Header
+    col_h1, col_h2, col_h3 = st.columns([0.5, 3, 1])
+    with col_h1:
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        if st.button("←", key="back_ai"):
+            st.session_state.page = "dashboard"
+            st.rerun()
+    with col_h2:
         st.markdown("""
-        <div style="display:flex;align-items:center;gap:10px;padding:4px 4px 12px;">
-          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3B82F6,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:0.8rem;">🤖</div>
-          <div>
-            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:0.85rem;color:#F1F5F9;">AskMNIT AI</div>
-            <div style="font-size:0.6rem;color:#10B981;margin-top:1px;">● Online</div>
-          </div>
+        <div style="display:flex;align-items:center;gap:12px;padding-top:4px;">
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,#3B82F6,#6D28D9);
+                        border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🤖</div>
+            <div>
+                <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:1.1rem;color:#F1F5F9;">AskMNIT AI</div>
+                <div style="font-size:0.68rem;color:#10B981;font-weight:500;">● Online · Powered by LLaMA 3.3 70B</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-
-        if st.button("➕  New Chat", use_container_width=True):
+    with col_h3:
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        if st.button("➕ New Chat", use_container_width=True, key="new_chat_btn"):
             n = st.session_state.chat_counter + 1
             st.session_state.chat_counter = n
             name = f"Session {n}"
@@ -934,58 +491,52 @@ else:
             st.session_state.current_chat = name
             st.rerun()
 
-        st.markdown('<p style="color:rgba(241,245,249,0.2);font-size:0.58rem;letter-spacing:1.5px;text-transform:uppercase;margin:14px 0 6px 2px;">Topics</p>', unsafe_allow_html=True)
+    st.divider()
 
-        for icon, label in [
-            ("⚙️", "University Tools"), ("📚", "Academics"),
-            ("💸", "Admission & Fee"), ("🏢", "Hostel Info"),
-            ("📅", "Schedule"), ("📄", "Syllabus & Notes"),
-            ("📝", "Previous Year Qs"), ("🏛️", "Library Catalog"),
-            ("💼", "Placements"), ("🎉", "Events & Fests"),
-            ("🏆", "Results & Grades"), ("🔬", "Research & Labs"),
-        ]:
-            st.button(f"{icon}  {label}", use_container_width=True)
+    # Suggested prompts
+    st.markdown("<p style='color:rgba(241,245,249,0.35);font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;'>💡 Try asking</p>", unsafe_allow_html=True)
+    sp1, sp2, sp3, sp4, sp5 = st.columns(5)
+    suggestions = [
+        (sp1, "📅 Mid-sem dates?"),
+        (sp2, "💰 Fee due dates"),
+        (sp3, "🏛️ Library hours"),
+        (sp4, "🏢 Hostel rules"),
+        (sp5, "💼 Placements info"),
+    ]
+    for col, text in suggestions:
+        with col:
+            if st.button(text, use_container_width=True, key=f"sug_{text}"):
+                clean = text.split(" ", 1)[1] if " " in text else text
+                st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "user", "content": clean})
+                st.session_state.pending = True
+                st.rerun()
 
-        st.markdown("<hr style='border-color:rgba(255,255,255,0.06);margin:14px 0 10px;'>", unsafe_allow_html=True)
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+
+    # Chat history
+    msgs = st.session_state.chat_sessions[st.session_state.current_chat]
+    if not msgs:
         st.markdown("""
-        <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.15);border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:0.82rem;color:#F1F5F9;">Sumit Chaudhary</div>
-          <div style="font-size:0.65rem;color:rgba(99,130,246,0.8);margin-top:3px;">B.Tech Metallurgy · Sem 6</div>
+        <div style="text-align:center;padding:48px 20px;opacity:0.5;">
+            <div style="font-size:2.5rem;margin-bottom:12px;">🎓</div>
+            <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:1rem;color:#F1F5F9;margin-bottom:6px;">Hey Sumit! I'm AskMNIT</div>
+            <div style="font-size:0.82rem;color:rgba(241,245,249,0.6);">Ask me anything about MNIT — academics, fees, hostel, exams, placements & more.</div>
         </div>
         """, unsafe_allow_html=True)
+    else:
+        for msg in msgs:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
-    # ── CHAT AREA ──
-    st.markdown("""
-    <div style="max-width:720px;margin:0 auto;padding:32px 20px 80px;">
-      <div style="text-align:center;margin-bottom:28px;">
-        <div style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:2.6rem;
-             background:linear-gradient(90deg,#3B82F6,#8B5CF6);
-             -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-             background-clip:text;letter-spacing:-2px;line-height:1;">AskMNIT</div>
-        <div style="font-size:0.9rem;color:rgba(241,245,249,0.35);margin-top:8px;">Your Intelligent MNIT Campus Assistant</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    msgs = st.session_state.chat_sessions[st.session_state.current_chat]
-    for msg in msgs:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    if user_prompt := st.chat_input("Ask anything about MNIT Jaipur...", key="chat_page_input"):
-        msgs.append({"role": "user", "content": user_prompt})
-        st.session_state.pending_generation = True
-        st.rerun()
-
-    if st.session_state.pending_generation and msgs:
-        q = msgs[-1]["content"]
+    # Handle pending AI response
+    if st.session_state.pending and msgs:
+        last_q = msgs[-1]["content"]
         with st.chat_message("assistant"):
             try:
                 stream = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": "You are AskMNIT — a smart, friendly AI assistant for MNIT Jaipur students. Help with academics, fees, hostel, schedule, placements, events, library, and campus life. Be helpful, accurate, and use a warm student-friendly tone."},
-                        *[{"role": m["role"], "content": m["content"]} for m in msgs[:-1]],
-                        {"role": "user", "content": q}
+                        {"role": "system", "content": "You are AskMNIT — a helpful, friendly AI assistant for MNIT Jaipur students. Help with academics, exams, fee, hostel, library, placements, events, and campus life. Be concise and warm."},
+                        *[{"role": m["role"], "content": m["content"]} for m in msgs]
                     ],
                     model="llama-3.3-70b-versatile",
                     stream=True
@@ -995,8 +546,383 @@ else:
                         c = chunk.choices[0].delta.content
                         if c: yield c
                 response = st.write_stream(gen())
-                msgs.append({"role": "assistant", "content": response})
+                st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "assistant", "content": response})
             except Exception as e:
-                st.error(f"Error: {str(e)}")
-        st.session_state.pending_generation = False
+                st.error(f"Error: {e}")
+        st.session_state.pending = False
         st.rerun()
+
+    # Chat input
+    if prompt := st.chat_input("Ask anything about MNIT Jaipur..."):
+        st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+        st.session_state.pending = True
+        st.rerun()
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: SCHEDULE
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "schedule":
+    if st.button("← Back", key="back_sched"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 📅 Weekly Schedule")
+    st.divider()
+    days = {"Monday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Engineering Materials","Lab 1","Dr. Mehta"),("02:00","Thermodynamics","201","Prof. Agarwal")],
+            "Tuesday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("02:00","Fluid Mechanics","105","Dr. Verma")],
+            "Wednesday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Corrosion Science","Lab 2","Dr. Joshi")],
+            "Thursday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("03:00","Engineering Materials","201","Dr. Mehta")],
+            "Friday": [("09:30","Thermodynamics","201","Prof. Agarwal"),("02:00","Fluid Mechanics","105","Dr. Verma")]}
+    for day, classes in days.items():
+        with st.expander(f"📆 {day} — {len(classes)} classes"):
+            for time, subj, room, prof in classes:
+                c1, c2, c3, c4 = st.columns([1,2,1,1])
+                c1.markdown(f"**{time}**")
+                c2.markdown(f"**{subj}**")
+                c3.markdown(f"Room {room}")
+                c4.markdown(f"_{prof}_")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: ACADEMICS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "academics":
+    if st.button("← Back", key="back_acad"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 📚 Academics")
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("CGPA", "8.4", "+0.2 this sem")
+    c2.metric("Credits Completed", "96 / 160", "Sem 6 ongoing")
+    c3.metric("Active Courses", "6", "This semester")
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    st.markdown("### 📖 Current Subjects")
+    subjects = [
+        ("MT-601", "Mineral Processing", "R.K. Sharma", "A", "92%"),
+        ("MT-603", "Engineering Materials", "Dr. Mehta", "B+", "85%"),
+        ("MT-605", "Thermodynamics II", "Prof. Agarwal", "A-", "88%"),
+        ("MT-607", "Phase Transformations", "Prof. Singh", "B", "76%"),
+        ("ME-501", "Fluid Mechanics", "Dr. Verma", "A", "91%"),
+        ("HS-601", "Engineering Economics", "Dr. Gupta", "A+", "95%"),
+    ]
+    for code, name, prof, grade, attend in subjects:
+        with st.expander(f"**{code}** — {name}"):
+            a, b, c, d = st.columns(4)
+            a.markdown(f"👨‍🏫 **Prof:** {prof}")
+            b.markdown(f"📊 **Grade:** {grade}")
+            c.markdown(f"📅 **Attendance:** {attend}")
+            d.markdown(f"📘 **Credits:** 4")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: FEE PORTAL
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "fee":
+    if st.button("← Back", key="back_fee"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 💰 Fee Portal")
+    st.divider()
+    st.warning("⚠️ Fee payment due in **5 days** — ₹18,500 pending")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Fee (Sem 6)", "₹45,000", "")
+    c2.metric("Paid", "₹26,500", "✓ Paid")
+    c3.metric("Remaining", "₹18,500", "Due: 17 Mar 2026")
+    st.markdown("### 💳 Payment Breakdown")
+    items = [("Tuition Fee","₹32,000","✅ Paid"),("Hostel Fee","₹8,000","✅ Paid"),("Mess Fee","₹4,000","⚠️ Pending"),("Library Fee","₹500","⚠️ Pending"),("Sports Fee","₹500","⚠️ Pending")]
+    for item, amount, status in items:
+        c1, c2, c3 = st.columns([3,1,1])
+        c1.markdown(item)
+        c2.markdown(f"**{amount}**")
+        c3.markdown(status)
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    if st.button("💳 Pay Now — ₹18,500", use_container_width=True):
+        st.success("Redirecting to payment gateway...")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: HOSTEL
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "hostel":
+    if st.button("← Back", key="back_hostel"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🏢 Hostel Information")
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Hostel Block", "H-7", "Room 214")
+    c2.metric("Roommate", "Rahul Singh", "2nd Year")
+    c3.metric("Mess Balance", "₹2,400", "Rechargeable")
+    st.markdown("### 🍽️ Mess Timings")
+    timings = [("Breakfast","7:30 AM – 9:00 AM"),("Lunch","12:30 PM – 2:00 PM"),("Snacks","5:00 PM – 6:00 PM"),("Dinner","7:30 PM – 9:30 PM")]
+    for meal, time in timings:
+        c1, c2 = st.columns(2)
+        c1.markdown(f"**{meal}**")
+        c2.markdown(time)
+    st.markdown("### 📋 Important Rules")
+    rules = ["Gate closes at 11:00 PM. Late entry requires warden permission.","Visitors allowed only in visitor's room. Not permitted inside blocks.","Electricals: Iron, heater, induction NOT allowed in rooms.","Ragging strictly prohibited. Report immediately to Warden."]
+    for r in rules:
+        st.markdown(f"• {r}")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: SYLLABUS & NOTES
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "syllabus":
+    if st.button("← Back", key="back_syl"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 📄 Syllabus & Notes")
+    st.divider()
+    sems = st.selectbox("Select Semester", ["Semester 6 (Current)","Semester 5","Semester 4","Semester 3","Semester 2","Semester 1"])
+    st.markdown(f"### 📘 {sems} — Study Materials")
+    subjects = ["Mineral Processing","Engineering Materials","Thermodynamics II","Phase Transformations","Fluid Mechanics","Engineering Economics"]
+    for subj in subjects:
+        with st.expander(f"📗 {subj}"):
+            c1, c2, c3 = st.columns(3)
+            if c1.button(f"📄 Syllabus", key=f"syl_{subj}"): st.success(f"Opening {subj} syllabus...")
+            if c2.button(f"📓 Notes", key=f"notes_{subj}"): st.success(f"Opening {subj} notes...")
+            if c3.button(f"🎥 Lectures", key=f"lec_{subj}"): st.success(f"Opening {subj} lecture videos...")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: PREVIOUS YEAR QS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "pyq":
+    if st.button("← Back", key="back_pyq"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 📝 Previous Year Question Papers")
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        dept = st.selectbox("Department", ["Metallurgical Engineering","Mechanical","Civil","Electrical","CSE","Chemical"])
+    with col2:
+        year = st.selectbox("Year", ["2024-25","2023-24","2022-23","2021-22","2020-21"])
+    st.markdown(f"### 📂 {dept} — {year}")
+    papers = [("Mid-Semester","Mineral Processing",year),("End-Semester","Engineering Materials",year),
+              ("Mid-Semester","Thermodynamics II",year),("End-Semester","Phase Transformations",year)]
+    for exam, subject, yr in papers:
+        c1, c2, c3 = st.columns([2,2,1])
+        c1.markdown(f"**{subject}**")
+        c2.markdown(f"_{exam} · {yr}_")
+        if c3.button("⬇ Download", key=f"dl_{subject}_{exam}"): st.success(f"Downloading {subject} {exam} paper...")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: LIBRARY
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "library":
+    if st.button("← Back", key="back_lib"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🏛️ Library Catalog")
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Books Issued", "2", "Max 4 allowed")
+    c2.metric("Due Date", "18 Mar", "In 6 days")
+    c3.metric("Library Hours", "8AM–10PM", "Mon–Sat")
+    st.markdown("### 🔍 Search Books")
+    query = st.text_input("Search by title, author or subject...", placeholder="e.g. Physical Metallurgy")
+    if query:
+        st.info(f"Searching for: **{query}**")
+        books = [f"Physical Metallurgy — Reed Hill",f"Introduction to Materials Science — Shackelford",f"Metallurgy Fundamentals — Brandt"]
+        for b in books:
+            c1, c2 = st.columns([3,1])
+            c1.markdown(f"📖 {b}")
+            if c2.button("Reserve", key=f"res_{b}"): st.success(f"Reserved: {b}")
+    st.markdown("### 📚 My Issued Books")
+    issued = [("Physical Metallurgy","Reed Hill","12 Mar","18 Mar"),("Fluid Mechanics","Frank White","10 Mar","16 Mar")]
+    for title, author, issued_d, due in issued:
+        with st.expander(f"📖 {title} — {author}"):
+            st.markdown(f"📅 Issued: {issued_d} · Due: {due}")
+            if st.button("🔄 Renew", key=f"renew_{title}"): st.success("Renewed for 7 more days!")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: NOTICES
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "notices":
+    if st.button("← Back", key="back_notices"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 📌 Latest Notices")
+    st.divider()
+    notices = [
+        ("🔴 Urgent","Academic","Mid-Semester Examination Schedule Released","The mid-semester exams will be held from March 20–27, 2026. Detailed schedule available on the academic portal. Students must carry ID cards.","Today"),
+        ("🔵 Events","Student Activities","Techfest 2025 — Registrations Open","MNIT's annual technical festival registrations are now live. Events include coding, robotics, paper presentations & more. Last date: 20th March.","Yesterday"),
+        ("🟢 Admin","Administration","Online Bonafide Certificate Portal Live","Students can now apply for Bonafide Certificates online via the Student Portal. No physical visits needed. Processing time: 48 hours.","2 days ago"),
+        ("🟡 Hostel","Hostel Office","Revised Mess Menu & New Timings","Mess committee has revised the weekly menu. New timings effective from March 15. Dinner now till 9:30 PM. Feedback: mess@mnit.ac.in","3 days ago"),
+        ("🔵 Placement","Training & Placement","Amazon, Google & Infosys Visiting Next Month","Major recruiters scheduled for April 2026. Pre-placement talks in last week of March. Register on placement portal.","4 days ago"),
+    ]
+    for tag, category, title, body, when in notices:
+        with st.expander(f"{tag} **{title}**  ·  {when}"):
+            st.markdown(f"🏷️ **Category:** {category}")
+            st.markdown(f"📝 {body}")
+            st.caption(f"🕐 Posted: {when}")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: EXAM SCHEDULE
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "exam":
+    if st.button("← Back", key="back_exam"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🗓️ Exam Schedule")
+    st.divider()
+    st.info("📢 Mid-Semester Exams: **March 20 – 27, 2026**")
+    st.markdown("### 📋 Mid-Semester Schedule")
+    exams = [("20 Mar","09:30 AM","Mineral Processing","MT-601","Hall A"),
+             ("21 Mar","09:30 AM","Engineering Materials","MT-603","Hall B"),
+             ("22 Mar","02:00 PM","Thermodynamics II","MT-605","Hall A"),
+             ("24 Mar","09:30 AM","Phase Transformations","MT-607","Hall C"),
+             ("25 Mar","02:00 PM","Fluid Mechanics","ME-501","Hall D"),
+             ("27 Mar","09:30 AM","Engineering Economics","HS-601","Hall B")]
+    for date, time, subj, code, hall in exams:
+        c1, c2, c3, c4, c5 = st.columns([1.2,1,2,1,1])
+        c1.markdown(f"**{date}**")
+        c2.markdown(time)
+        c3.markdown(f"**{subj}**")
+        c4.markdown(code)
+        c5.markdown(f"📍 {hall}")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: RESULTS & GRADES
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "results":
+    if st.button("← Back", key="back_results"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🏆 Results & Grades")
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("CGPA", "8.4 / 10", "+0.2 this sem")
+    c2.metric("SGPA (Last Sem)", "8.7 / 10", "Semester 5")
+    c3.metric("Class Rank", "#12 / 65", "Metallurgy Dept")
+    st.markdown("### 📊 Semester-wise Performance")
+    semesters = [("Sem 1","7.8"),("Sem 2","8.1"),("Sem 3","8.3"),("Sem 4","8.2"),("Sem 5","8.7"),("Sem 6","In Progress")]
+    for sem, sgpa in semesters:
+        c1, c2 = st.columns([2,1])
+        c1.markdown(f"**{sem}**")
+        c2.markdown(f"SGPA: **{sgpa}**")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: EVENTS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "events":
+    if st.button("← Back", key="back_events"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🎉 Events & Fests")
+    st.divider()
+    events = [
+        ("🔵 Upcoming","Techfest 2025","March 22–24, 2026","MNIT Campus","Annual technical festival with 40+ events — coding, robotics, hackathon, paper presentations."),
+        ("🟢 Open","Cultural Fest — Bliss","April 5–7, 2026","Open Air Theatre","3-day cultural extravaganza with music, dance, drama, and celebrity performances."),
+        ("🟡 Upcoming","Research Symposium","March 28, 2026","Seminar Hall","Annual research paper presentation by B.Tech, M.Tech and PhD students."),
+        ("🔴 Deadline","Hackathon 2026","Register by Mar 20","Online + Campus","48-hour national-level hackathon. Prizes worth ₹2 Lakhs. Teams of 3-5."),
+    ]
+    for tag, name, date, venue, desc in events:
+        with st.expander(f"{tag}  **{name}**  —  {date}"):
+            st.markdown(f"📍 **Venue:** {venue}")
+            st.markdown(f"📝 {desc}")
+            if st.button(f"Register for {name}", key=f"reg_{name}"): st.success(f"Registered for {name}!")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: SPORTS & CLUBS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "sports":
+    if st.button("← Back", key="back_sports"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🏋️ Sports & Clubs")
+    st.divider()
+    st.markdown("### 🏅 Sports Facilities")
+    sports_list = [("⚽","Football","Ground A","7AM–8PM"),("🏀","Basketball","Court 1","6AM–9PM"),("🏸","Badminton","Hall 3","6AM–10PM"),("🏊","Swimming Pool","Sports Complex","6AM–8PM"),("🎾","Tennis","Court 2","7AM–7PM"),("🏋️","Gym","Sports Block","5AM–10PM")]
+    for icon, sport, venue, timing in sports_list:
+        c1, c2, c3 = st.columns([0.3, 2, 1])
+        c1.markdown(icon)
+        c2.markdown(f"**{sport}** — {venue}")
+        c3.markdown(timing)
+    st.divider()
+    st.markdown("### 🎭 Technical & Cultural Clubs")
+    clubs = [("💻","Coding Club","Weekly sessions, competitive programming"),("🤖","Robotics Club","Build & compete in national robotics events"),("🎵","Music Club","Jam sessions, fests, recordings"),("📸","Photography Club","Campus shoots, exhibitions"),("♟️","Chess Club","Daily practice, inter-college tournaments")]
+    for icon, club, desc in clubs:
+        with st.expander(f"{icon} {club}"):
+            st.markdown(desc)
+            if st.button(f"Join {club}", key=f"join_{club}"): st.success(f"Request sent to join {club}!")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: PLACEMENTS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "placements":
+    if st.button("← Back", key="back_place"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 💼 Placements")
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Avg Package (2025)", "₹12.4 LPA", "+8% YoY")
+    c2.metric("Highest Package", "₹48 LPA", "Amazon")
+    c3.metric("Placement Rate", "94%", "Batch 2025")
+    st.markdown("### 🏢 Upcoming Recruiters (April 2026)")
+    companies = [("Amazon","SDE","₹32–48 LPA","Apr 5"),("Tata Steel","Metallurgist","₹8–12 LPA","Apr 8"),("SAIL","Graduate Engineer","₹9 LPA","Apr 10"),("Google","SWE Intern","₹2L/month","Apr 12"),("Infosys","Systems Eng","₹6.5 LPA","Apr 15")]
+    for company, role, pkg, date in companies:
+        c1, c2, c3, c4 = st.columns([2,2,1.5,1])
+        c1.markdown(f"**{company}**")
+        c2.markdown(role)
+        c3.markdown(f"💰 {pkg}")
+        if c4.button("Apply", key=f"apply_{company}"): st.success(f"Applied to {company}!")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: RESEARCH & LABS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "research":
+    if st.button("← Back", key="back_research"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🔬 Research & Labs")
+    st.divider()
+    labs = [("Metallography Lab","Equipment: SEM, XRD, Optical Microscope. Timings: 9AM–5PM","Dr. Mehta"),
+            ("Heat Treatment Lab","Furnaces, quenching tanks, hardness testers. 9AM–6PM","Prof. Singh"),
+            ("Corrosion Lab","Salt spray, electrochemical workstations. 10AM–5PM","Dr. Joshi"),
+            ("Casting Lab","Sand casting, die casting equipment. 9AM–4PM","Prof. Sharma")]
+    for lab, desc, incharge in labs:
+        with st.expander(f"🧪 {lab}"):
+            st.markdown(f"🔧 {desc}")
+            st.markdown(f"👨‍🔬 **In-charge:** {incharge}")
+            if st.button(f"Book Slot in {lab}", key=f"book_{lab}"): st.success(f"Slot booking request sent for {lab}!")
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: NOTIFICATIONS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "notifications":
+    if st.button("← Back", key="back_notif"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# 🔔 Notifications")
+    st.divider()
+    notifs = [("🔴","Fee payment due in 5 days — ₹18,500 pending","2 hours ago"),
+              ("🔵","Mid-sem exam schedule released","Today, 9 AM"),
+              ("🟢","Library book renewal successful","Yesterday"),
+              ("🟡","New mess menu from March 15","Yesterday"),
+              ("🔵","Techfest registrations open","2 days ago")]
+    for dot, msg, time in notifs:
+        c1, c2, c3 = st.columns([0.2,4,1])
+        c1.markdown(dot)
+        c2.markdown(msg)
+        c3.caption(time)
+        st.divider()
+
+
+# ══════════════════════════════════════════════════════
+# PAGE: SETTINGS
+# ══════════════════════════════════════════════════════
+elif st.session_state.page == "settings":
+    if st.button("← Back", key="back_settings"): st.session_state.page = "dashboard"; st.rerun()
+    st.markdown("# ⚙️ Settings")
+    st.divider()
+    st.markdown("### 👤 Profile")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.text_input("Full Name", value="Sumit Chaudhary")
+        st.text_input("Roll Number", value="2022UMT1234")
+        st.text_input("Branch", value="B.Tech Metallurgical Engineering")
+    with c2:
+        st.text_input("Email", value="sumit.22@mnit.ac.in")
+        st.text_input("Phone", value="+91 98765 43210")
+        st.text_input("Semester", value="6th Semester")
+    st.divider()
+    st.markdown("### 🔔 Notification Preferences")
+    st.checkbox("Fee due reminders", value=True)
+    st.checkbox("Class schedule alerts", value=True)
+    st.checkbox("Notice board updates", value=True)
+    st.checkbox("Placement alerts", value=False)
+    st.divider()
+    if st.button("💾 Save Changes", use_container_width=False):
+        st.success("✅ Settings saved successfully!")
+
+
+# ══════════════════════════════════════════════════════
+# DEFAULT FALLBACK
+# ══════════════════════════════════════════════════════
+else:
+    st.session_state.page = "dashboard"
+    st.rerun()

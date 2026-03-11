@@ -40,7 +40,7 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Fixed Sidebar - Minimalist)
+# 4. CSS (Fixed Sidebar with Navigation Text)
 # ==========================================
 sidebar_width = "280px"
 
@@ -48,14 +48,14 @@ dashboard_style = f"""
     <style>
     html, body {{ overflow-x: hidden; }}
     
-    /* Shift main content to the right of the fixed sidebar */
+    /* Main Dashboard Area - Shifted Right */
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
         margin-left: {sidebar_width} !important;
         width: calc(100% - {sidebar_width}) !important;
     }}
     
-    /* FIXED LEFT SIDEBAR */
+    /* PERMANENT FIXED SIDEBAR */
     .custom-sidebar {{
         position: fixed;
         top: 0;
@@ -66,10 +66,24 @@ dashboard_style = f"""
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9999; 
+        padding-top: 30px; /* Space for Navigation text */
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }}
 
-    /* LIGHT GREY TOP HEADER BAR - Offset by sidebar width */
+    .custom-sidebar-title {{ 
+        color: white; 
+        font-family: 'Inter', sans-serif; 
+        font-weight: 800; 
+        font-size: 1.6rem; 
+        text-align: left; 
+        margin-left: 25px;
+        margin-right: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        letter-spacing: 1px;
+    }}
+
+    /* HEADER BAR */
     .top-header-bar {{
         position: fixed;
         top: 0;
@@ -121,17 +135,21 @@ else:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Render the Custom Sidebar
-    st.markdown('<div class="custom-sidebar"></div>', unsafe_allow_html=True)
+    # Sidebar with Navigation text
+    st.markdown('''
+        <div class="custom-sidebar">
+            <div class="custom-sidebar-title">Navigation</div>
+        </div>
+    ''', unsafe_allow_html=True)
     
-    # Render the Top Header
+    # Top Header
     st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
     
-    # Dashboard body is currently empty as requested
+    # Body is currently empty
     pass
 
 else:
-    # CHATBOT VIEW (Standard)
+    # CHATBOT VIEW
     with st.sidebar:
         if st.button("⬅️ Back to Dashboard", use_container_width=True):
             st.session_state.page_view = "dashboard"

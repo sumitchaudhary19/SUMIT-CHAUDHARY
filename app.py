@@ -40,7 +40,7 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Fixed Sidebar with New Tab)
+# 4. CSS (Redrawing Sidebar as per Image)
 # ==========================================
 sidebar_width = "280px"
 
@@ -48,7 +48,6 @@ dashboard_style = f"""
     <style>
     html, body {{ overflow-x: hidden; }}
     
-    /* Main Dashboard Area - Shifted Right */
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
         margin-left: {sidebar_width} !important;
@@ -62,7 +61,7 @@ dashboard_style = f"""
         left: 0;
         width: {sidebar_width};
         height: 100vh;
-        background: rgba(20, 10, 40, 0.95);
+        background: rgba(20, 10, 40, 0.98);
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9999; 
@@ -84,27 +83,33 @@ dashboard_style = f"""
         margin-bottom: 20px;
     }}
 
-    /* POSITIONING THE BUTTON INSIDE THE SIDEBAR */
-    div.stButton > button[help="sidebar_new_tab"] {{
+    /* POSITIONING SIDEBAR BUTTONS TO STAY INSIDE */
+    div.stButton > button[help="sidebar_nav_btn"] {{
         position: fixed !important;
-        top: 100px !important; /* Positioned directly under Navigation header */
         left: 20px !important;
         width: 240px !important;
-        background: #E5E7EB !important; /* LIGHT GREY */
-        color: #1A0B2E !important; 
+        background: rgba(255, 255, 255, 0.08) !important;
+        color: white !important; 
         text-align: left !important;
-        font-weight: 800 !important;
-        border-radius: 10px !important;
-        border: none !important;
+        font-weight: 500 !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
         z-index: 10000 !important;
         padding: 10px 15px !important;
-        transition: 0.2s all ease !important;
+        transition: 0.3s all ease !important;
+        display: block !important;
     }}
     
-    div.stButton > button[help="sidebar_new_tab"]:hover {{
-        filter: brightness(0.9) !important;
-        transform: scale(1.02) !important;
+    div.stButton > button[help="sidebar_nav_btn"]:hover {{
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-color: rgba(211, 179, 255, 0.5) !important;
     }}
+
+    /* Fixed top positions for the 4 sidebar buttons */
+    #btn_chatbot {{ top: 110px !important; }}
+    #btn_academics {{ top: 165px !important; }}
+    #btn_tools {{ top: 220px !important; }}
+    #btn_admission {{ top: 275px !important; }}
 
     /* HEADER BAR */
     .top-header-bar {{
@@ -153,22 +158,40 @@ else:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Sidebar UI
+    # Custom Sidebar UI Injection
     st.markdown('''
         <div class="custom-sidebar">
             <div class="custom-sidebar-title">Navigation</div>
         </div>
     ''', unsafe_allow_html=True)
     
-    # NEW TAB Button inside sidebar
-    if st.button("NEW TAB", help="sidebar_new_tab", key="btn_new_tab"):
-        st.toast("New Tab Clicked!")
+    # Sidebar Navigation Tabs - Drawn as per requested image
+    st.markdown('<div id="btn_chatbot">', unsafe_allow_html=True)
+    if st.button("💬 Chatbot View", help="sidebar_nav_btn", key="dash_btn_chatbot"):
+        st.session_state.page_view = "chatbot"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Top Header
+    st.markdown('<div id="btn_academics">', unsafe_allow_html=True)
+    if st.button("📚 Academics", help="sidebar_nav_btn", key="dash_btn_academics"):
+        st.toast("Academics coming soon!")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div id="btn_tools">', unsafe_allow_html=True)
+    if st.button("⚙️ University Tools", help="sidebar_nav_btn", key="dash_btn_tools"):
+        st.toast("Tools coming soon!")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div id="btn_admission">', unsafe_allow_html=True)
+    if st.button("💸 Admission - Fee", help="sidebar_nav_btn", key="dash_btn_admission"):
+        st.toast("Fee Section coming soon!")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Top Header Persists
     st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
-    
+
 else:
-    # CHATBOT VIEW
+    # CHATBOT VIEW (Standard)
     with st.sidebar:
         if st.button("⬅️ Back to Dashboard", use_container_width=True):
             st.session_state.page_view = "dashboard"

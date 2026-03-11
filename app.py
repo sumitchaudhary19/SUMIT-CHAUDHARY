@@ -174,51 +174,9 @@ summary {
 
 hr { border-color: rgba(255,255,255,0.07) !important; margin: 10px 0 !important; }
 
-/* ══════════════════════════════════════
-   UPDATED CHAT INPUT — WITH BORDER
-══════════════════════════════════════ */
-[data-testid="stChatInput"] {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-}
-[data-testid="stChatInput"] > div {
-    background: rgba(12, 17, 32, 0.9) !important;
-    border: 1px solid rgba(80, 90, 160, 0.30) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 4px 28px rgba(0,0,0,0.35) !important;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-}
-[data-testid="stChatInput"] > div:focus-within {
-    border-color: rgba(59, 130, 246, 0.42) !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.07), 0 4px 28px rgba(0,0,0,0.35) !important;
-}
-[data-testid="stChatInput"] textarea {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-    color: #F1F5F9 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-size: 0.88rem !important;
-    box-shadow: none !important;
-    padding: 14px 16px !important;
-}
-[data-testid="stChatInput"] textarea:focus {
-    border: none !important;
-    box-shadow: none !important;
-}
+/* Chat input base — detailed styling handled inline on AI page */
 [data-testid="stChatInput"] textarea::placeholder {
-    color: rgba(241,245,249,0.28) !important;
-}
-[data-testid="stChatInput"] button {
-    background: linear-gradient(135deg, #3B82F6, #6D28D9) !important;
-    border-radius: 9px !important;
-    border: none !important;
-    transition: all 0.18s !important;
-}
-[data-testid="stChatInput"] button:hover {
-    opacity: 0.88 !important;
-    box-shadow: 0 2px 14px rgba(59,130,246,0.4) !important;
+    color: rgba(241,245,249,0.25) !important;
 }
 
 /* Chat messages */
@@ -606,83 +564,108 @@ elif st.session_state.page == "ai":
         st.rerun()
 
     # ══════════════════════════════════════
-    # UPDATED CHAT INPUT — with icons & disclaimer
+    # CHAT INPUT — CSS-injected icons into real st.chat_input
     # ══════════════════════════════════════
 
-    # Paperclip + Mic icons rendered above input via HTML (visual only — wired for future JS)
+    # Inject icons into the actual Streamlit chat input using CSS pseudo-elements + background-image SVGs
     st.markdown("""
-    <div style="
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 4px 6px 2px;
-    ">
-        <div style="
-            display:flex; align-items:center; gap:6px;
-            background: rgba(12,17,32,0.9);
-            border: 1px solid rgba(80,90,160,0.30);
-            border-radius: 14px;
-            padding: 8px 12px;
-            width: 100%;
-            box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 4px 28px rgba(0,0,0,0.35);
-        ">
-            <!-- Paperclip icon -->
-            <button title="Attach file" style="
-                background:none; border:none; cursor:pointer;
-                color:rgba(148,163,184,0.45); display:flex; align-items:center;
-                padding:4px 6px 4px 2px; border-radius:7px; flex-shrink:0;
-                transition: color 0.15s;
-            " onmouseover="this.style.color='rgba(148,163,184,0.85)'"
-               onmouseout="this.style.color='rgba(148,163,184,0.45)'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                </svg>
-            </button>
-            <!-- Spacer text hint -->
-            <span style="
-                flex:1; font-family:'Plus Jakarta Sans',sans-serif;
-                font-size:0.84rem; color:rgba(241,245,249,0.22);
-                pointer-events:none; user-select:none;
-            ">Ask anything about MNIT Jaipur...</span>
-            <!-- Mic icon -->
-            <button title="Voice input" style="
-                background:none; border:none; cursor:pointer;
-                color:rgba(148,163,184,0.45); display:flex; align-items:center;
-                padding:4px 5px; border-radius:7px; flex-shrink:0;
-                transition: all 0.15s;
-            " onmouseover="this.style.color='rgba(148,163,184,0.85)'; this.style.background='rgba(255,255,255,0.05)'"
-               onmouseout="this.style.color='rgba(148,163,184,0.45)'; this.style.background='none'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-            </button>
-            <!-- Send icon -->
-            <button title="Send" style="
-                background: linear-gradient(135deg,#3B82F6,#6D28D9);
-                border:none; cursor:pointer; color:white;
-                width:30px; height:30px; border-radius:9px;
-                display:flex; align-items:center; justify-content:center;
-                flex-shrink:0; box-shadow: 0 2px 12px rgba(59,130,246,0.3);
-                transition: all 0.18s;
-            " onmouseover="this.style.opacity='0.85'; this.style.transform='scale(1.05)'"
-               onmouseout="this.style.opacity='1'; this.style.transform='scale(1)'">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="19" x2="12" y2="5"/>
-                    <polyline points="5 12 12 5 19 12"/>
-                </svg>
-            </button>
-        </div>
-    </div>
+    <style>
+    /* Wrapper styling */
+    [data-testid="stChatInput"] {
+        position: relative !important;
+    }
+    [data-testid="stChatInput"] > div {
+        background: rgba(10, 14, 26, 0.95) !important;
+        border: 1px solid rgba(80, 90, 160, 0.32) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 4px 28px rgba(0,0,0,0.4) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+        padding-left: 42px !important;
+        padding-right: 96px !important;
+    }
+    [data-testid="stChatInput"] > div:focus-within {
+        border-color: rgba(59,130,246,0.45) !important;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.08), 0 4px 28px rgba(0,0,0,0.4) !important;
+    }
+    [data-testid="stChatInput"] textarea {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #F1F5F9 !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 0.875rem !important;
+        padding: 14px 0px !important;
+        caret-color: #3B82F6 !important;
+    }
+    [data-testid="stChatInput"] textarea:focus {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+    [data-testid="stChatInput"] textarea::placeholder {
+        color: rgba(241,245,249,0.25) !important;
+    }
+
+    /* Send button styling */
+    [data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {
+        background: linear-gradient(135deg, #3B82F6, #6D28D9) !important;
+        border-radius: 9px !important;
+        border: none !important;
+        width: 34px !important;
+        height: 34px !important;
+        box-shadow: 0 2px 12px rgba(59,130,246,0.35) !important;
+        transition: all 0.18s !important;
+        margin-right: 2px !important;
+    }
+    [data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"]:hover {
+        opacity: 0.88 !important;
+        transform: scale(1.05) !important;
+        box-shadow: 0 4px 18px rgba(59,130,246,0.45) !important;
+    }
+
+    /* Paperclip icon — injected on the LEFT via ::before on the wrapper */
+    [data-testid="stChatInput"] > div::before {
+        content: "";
+        position: absolute;
+        left: 13px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        opacity: 0.4;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+        pointer-events: none;
+        z-index: 10;
+    }
+    [data-testid="stChatInput"] > div:focus-within::before {
+        opacity: 0.65;
+    }
+
+    /* Mic icon — injected on the RIGHT via ::after, sits left of the send button */
+    [data-testid="stChatInput"] > div::after {
+        content: "";
+        position: absolute;
+        right: 54px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        opacity: 0.38;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 10v2a7 7 0 0 1-14 0v-2'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+        pointer-events: none;
+        z-index: 10;
+    }
+    [data-testid="stChatInput"] > div:focus-within::after {
+        opacity: 0.6;
+    }
+    </style>
     """, unsafe_allow_html=True)
 
-    # Real Streamlit chat input (hidden visually but functional)
-    # We overlay the above HTML purely for visual polish
+    # The ONE real functional chat input
     if prompt := st.chat_input("Ask anything about MNIT Jaipur...", key="main_chat_input"):
         st.session_state.chat_sessions[st.session_state.current_chat].append(
             {"role": "user", "content": prompt}
@@ -695,8 +678,8 @@ elif st.session_state.page == "ai":
     <p style="
         text-align: center;
         font-size: 0.665rem;
-        color: rgba(100,116,139,0.60);
-        margin-top: 6px;
+        color: rgba(100,116,139,0.55);
+        margin-top: 8px;
         margin-bottom: 0;
         letter-spacing: 0.01em;
         line-height: 1.5;

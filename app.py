@@ -38,13 +38,12 @@ hour = datetime.datetime.now().hour
 greeting = "Good Morning ☀️" if hour < 12 else ("Good Afternoon 🌤️" if hour < 17 else "Good Evening 🌙")
 
 # ══════════════════════════════════════════════
-# GLOBAL CSS — clean, no raw HTML divs
+# GLOBAL CSS
 # ══════════════════════════════════════════════
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* Reset & base */
 html, body, [data-testid="stAppViewContainer"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
@@ -57,7 +56,6 @@ html, body, [data-testid="stAppViewContainer"] {
     max-width: 100% !important;
 }
 
-/* Hide Streamlit chrome */
 header[data-testid="stHeader"] { display: none !important; }
 footer { display: none !important; }
 #MainMenu { display: none !important; }
@@ -70,11 +68,8 @@ section[data-testid="stSidebar"] {
     border-right: 1px solid rgba(59,130,246,0.12) !important;
     width: 258px !important;
 }
-section[data-testid="stSidebar"] > div {
-    padding: 0 !important;
-}
+section[data-testid="stSidebar"] > div { padding: 0 !important; }
 
-/* Sidebar buttons */
 section[data-testid="stSidebar"] .stButton > button {
     background: transparent !important;
     color: rgba(241,245,249,0.65) !important;
@@ -97,23 +92,6 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     box-shadow: none !important;
 }
 
-/* Active nav button */
-.active-nav .stButton > button {
-    background: rgba(59,130,246,0.15) !important;
-    color: #FFFFFF !important;
-    border-left: 3px solid #3B82F6 !important;
-    font-weight: 700 !important;
-}
-
-/* Back button special */
-.back-btn .stButton > button {
-    background: rgba(59,130,246,0.15) !important;
-    color: #60A5FA !important;
-    border: 1px solid rgba(59,130,246,0.25) !important;
-    font-weight: 700 !important;
-}
-
-/* Main content buttons */
 [data-testid="stMain"] .stButton > button {
     background: linear-gradient(135deg, #3B82F6 0%, #6D28D9 100%) !important;
     color: white !important;
@@ -131,7 +109,6 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     box-shadow: 0 6px 22px rgba(59,130,246,0.35) !important;
 }
 
-/* Metric cards */
 [data-testid="stMetric"] {
     background: rgba(255,255,255,0.04) !important;
     border: 1px solid rgba(255,255,255,0.08) !important;
@@ -165,7 +142,6 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
-/* Text */
 [data-testid="stMarkdown"] p, [data-testid="stMarkdown"] li {
     color: rgba(241,245,249,0.75) !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -177,22 +153,18 @@ h1, h2, h3 {
     letter-spacing: -0.5px !important;
 }
 
-/* Info / success / warning / error boxes */
 [data-testid="stAlert"] {
     border-radius: 12px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     border: none !important;
 }
 
-/* Expander */
 [data-testid="stExpander"] {
     background: rgba(255,255,255,0.03) !important;
     border: 1px solid rgba(255,255,255,0.08) !important;
     border-radius: 12px !important;
 }
-[data-testid="stExpander"]:hover {
-    border-color: rgba(59,130,246,0.2) !important;
-}
+[data-testid="stExpander"]:hover { border-color: rgba(59,130,246,0.2) !important; }
 summary {
     color: #F1F5F9 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -200,27 +172,53 @@ summary {
     font-size: 0.88rem !important;
 }
 
-/* Divider */
-hr {
-    border-color: rgba(255,255,255,0.07) !important;
-    margin: 10px 0 !important;
-}
+hr { border-color: rgba(255,255,255,0.07) !important; margin: 10px 0 !important; }
 
-/* Chat input */
+/* ══════════════════════════════════════
+   UPDATED CHAT INPUT — WITH BORDER
+══════════════════════════════════════ */
+[data-testid="stChatInput"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+[data-testid="stChatInput"] > div {
+    background: rgba(12, 17, 32, 0.9) !important;
+    border: 1px solid rgba(80, 90, 160, 0.30) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 4px 28px rgba(0,0,0,0.35) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+[data-testid="stChatInput"] > div:focus-within {
+    border-color: rgba(59, 130, 246, 0.42) !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.07), 0 4px 28px rgba(0,0,0,0.35) !important;
+}
 [data-testid="stChatInput"] textarea {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(59,130,246,0.25) !important;
-    border-radius: 12px !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
     color: #F1F5F9 !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-size: 0.88rem !important;
+    box-shadow: none !important;
+    padding: 14px 16px !important;
 }
 [data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(59,130,246,0.5) !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.08) !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 [data-testid="stChatInput"] textarea::placeholder {
-    color: rgba(241,245,249,0.3) !important;
+    color: rgba(241,245,249,0.28) !important;
+}
+[data-testid="stChatInput"] button {
+    background: linear-gradient(135deg, #3B82F6, #6D28D9) !important;
+    border-radius: 9px !important;
+    border: none !important;
+    transition: all 0.18s !important;
+}
+[data-testid="stChatInput"] button:hover {
+    opacity: 0.88 !important;
+    box-shadow: 0 2px 14px rgba(59,130,246,0.4) !important;
 }
 
 /* Chat messages */
@@ -230,17 +228,73 @@ hr {
     border-radius: 12px !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
-[data-testid="stChatMessage"][data-testid*="user"] {
-    background: rgba(59,130,246,0.08) !important;
-    border-color: rgba(59,130,246,0.15) !important;
+
+/* Suggestion pills */
+.mnit-pill-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+.mnit-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 999px;
+    color: rgba(241,245,249,0.6);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+}
+.mnit-pill:hover {
+    background: rgba(59,130,246,0.12);
+    border-color: rgba(59,130,246,0.32);
+    color: #CBD5E1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 12px rgba(59,130,246,0.12);
 }
 
-/* Columns gap */
-[data-testid="stHorizontalBlock"] {
-    gap: 14px !important;
+/* Input icon row */
+.mnit-input-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px 10px 14px;
+}
+.mnit-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(148,163,184,0.45);
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    border-radius: 7px;
+    transition: all 0.15s;
+}
+.mnit-icon-btn:hover {
+    color: rgba(148,163,184,0.85);
+    background: rgba(255,255,255,0.05);
+}
+.mnit-disclaimer {
+    text-align: center;
+    font-size: 0.67rem;
+    color: rgba(100,116,139,0.65);
+    margin-top: 8px;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Scrollbar */
+[data-testid="stHorizontalBlock"] { gap: 14px !important; }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.2); border-radius: 4px; }
@@ -252,8 +306,6 @@ hr {
 # SIDEBAR
 # ══════════════════════════════════════════════════════
 with st.sidebar:
-
-    # Brand
     st.markdown("""
     <div style="padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.07);">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -264,7 +316,7 @@ with st.sidebar:
                 <div style="font-size:0.6rem;color:rgba(241,245,249,0.35);letter-spacing:1.2px;text-transform:uppercase;margin-top:1px;">Campus Intelligence</div>
             </div>
             <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
-                <div style="width:6px;height:6px;background:#10B981;border-radius:50%;animation:none;"></div>
+                <div style="width:6px;height:6px;background:#10B981;border-radius:50%;"></div>
                 <span style="font-size:0.6rem;color:#10B981;font-weight:600;">Live</span>
             </div>
         </div>
@@ -273,87 +325,64 @@ with st.sidebar:
 
     st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
-    # ── MAIN SECTION ──
     st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:10px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Main</p>", unsafe_allow_html=True)
 
     if st.button("🏠  Dashboard", key="nav_dash", use_container_width=True):
-        st.session_state.page = "dashboard"
-        st.rerun()
+        st.session_state.page = "dashboard"; st.rerun()
     if st.button("📅  Schedule", key="nav_schedule", use_container_width=True):
-        st.session_state.page = "schedule"
-        st.rerun()
+        st.session_state.page = "schedule"; st.rerun()
     if st.button("📚  Academics", key="nav_academics", use_container_width=True):
-        st.session_state.page = "academics"
-        st.rerun()
+        st.session_state.page = "academics"; st.rerun()
     if st.button("💰  Fee Portal", key="nav_fee", use_container_width=True):
-        st.session_state.page = "fee"
-        st.rerun()
+        st.session_state.page = "fee"; st.rerun()
     if st.button("🏢  Hostel", key="nav_hostel", use_container_width=True):
-        st.session_state.page = "hostel"
-        st.rerun()
+        st.session_state.page = "hostel"; st.rerun()
 
     st.divider()
 
-    # ── RESOURCES SECTION ──
     st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Resources</p>", unsafe_allow_html=True)
 
     if st.button("📄  Syllabus & Notes", key="nav_syllabus", use_container_width=True):
-        st.session_state.page = "syllabus"
-        st.rerun()
+        st.session_state.page = "syllabus"; st.rerun()
     if st.button("📝  Previous Year Qs", key="nav_pyq", use_container_width=True):
-        st.session_state.page = "pyq"
-        st.rerun()
+        st.session_state.page = "pyq"; st.rerun()
     if st.button("🏛️  Library Catalog", key="nav_library", use_container_width=True):
-        st.session_state.page = "library"
-        st.rerun()
+        st.session_state.page = "library"; st.rerun()
     if st.button("📌  Latest Notices  🔴 3", key="nav_notices", use_container_width=True):
-        st.session_state.page = "notices"
-        st.rerun()
+        st.session_state.page = "notices"; st.rerun()
     if st.button("🗓️  Exam Schedule", key="nav_exam", use_container_width=True):
-        st.session_state.page = "exam"
-        st.rerun()
+        st.session_state.page = "exam"; st.rerun()
     if st.button("🏆  Results & Grades", key="nav_results", use_container_width=True):
-        st.session_state.page = "results"
-        st.rerun()
+        st.session_state.page = "results"; st.rerun()
 
     st.divider()
 
-    # ── CAMPUS SECTION ──
     st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Campus</p>", unsafe_allow_html=True)
 
     if st.button("🎉  Events & Fests  🆕", key="nav_events", use_container_width=True):
-        st.session_state.page = "events"
-        st.rerun()
+        st.session_state.page = "events"; st.rerun()
     if st.button("🏋️  Sports & Clubs", key="nav_sports", use_container_width=True):
-        st.session_state.page = "sports"
-        st.rerun()
+        st.session_state.page = "sports"; st.rerun()
     if st.button("💼  Placements", key="nav_placements", use_container_width=True):
-        st.session_state.page = "placements"
-        st.rerun()
+        st.session_state.page = "placements"; st.rerun()
     if st.button("🔬  Research & Labs", key="nav_research", use_container_width=True):
-        st.session_state.page = "research"
-        st.rerun()
+        st.session_state.page = "research"; st.rerun()
 
     st.divider()
 
-    # ── ACCOUNT SECTION ──
     st.markdown("<p style='color:rgba(255,255,255,0.25);font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;margin:4px 16px 4px;font-family:Plus Jakarta Sans,sans-serif;font-weight:700;'>Account</p>", unsafe_allow_html=True)
 
     if st.button("🤖  AskMNIT AI", key="nav_ai", use_container_width=True):
-        st.session_state.page = "ai"
-        st.rerun()
+        st.session_state.page = "ai"; st.rerun()
     if st.button("⚙️  Settings", key="nav_settings", use_container_width=True):
-        st.session_state.page = "settings"
-        st.rerun()
+        st.session_state.page = "settings"; st.rerun()
     if st.button("🔔  Notifications  🔴 5", key="nav_notif", use_container_width=True):
-        st.session_state.page = "notifications"
-        st.rerun()
+        st.session_state.page = "notifications"; st.rerun()
     if st.button("🚪  Logout", key="nav_logout", use_container_width=True):
         st.warning("Logging out...")
 
     st.divider()
 
-    # Profile card
     st.markdown("""
     <div style="padding:10px 14px 14px;">
         <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);
@@ -375,7 +404,6 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════
 if st.session_state.page == "dashboard":
 
-    # Header row
     col_title, col_btn = st.columns([4, 1])
     with col_title:
         st.markdown(f"""
@@ -390,25 +418,18 @@ if st.session_state.page == "dashboard":
     with col_btn:
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         if st.button("🤖 Open AskMNIT AI", use_container_width=True):
-            st.session_state.page = "ai"
-            st.rerun()
+            st.session_state.page = "ai"; st.rerun()
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    # ── STAT CARDS ──
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("📊 Attendance", "78%", "Above minimum ✓")
-    with c2:
-        st.metric("⏳ Next Class", "20 min", "Mineral Processing")
-    with c3:
-        st.metric("📝 Assignments", "6 / 8", "-2 pending")
-    with c4:
-        st.metric("💰 Fee Due", "₹18,500", "-5 days left")
+    with c1: st.metric("📊 Attendance", "78%", "Above minimum ✓")
+    with c2: st.metric("⏳ Next Class", "20 min", "Mineral Processing")
+    with c3: st.metric("📝 Assignments", "6 / 8", "-2 pending")
+    with c4: st.metric("💰 Fee Due", "₹18,500", "-5 days left")
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    # ── SCHEDULE + NOTICES ──
     col_sched, col_notice = st.columns([1.1, 0.9])
 
     with col_sched:
@@ -440,7 +461,6 @@ if st.session_state.page == "dashboard":
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    # ── QUICK ACCESS ──
     st.markdown("### ⚡ Quick Access")
     qa1, qa2, qa3, qa4, qa5, qa6 = st.columns(6)
     quick = [
@@ -454,22 +474,20 @@ if st.session_state.page == "dashboard":
     for col, icon, label, page in quick:
         with col:
             if st.button(f"{icon}\n{label}", use_container_width=True, key=f"qa_{page}"):
-                st.session_state.page = page
-                st.rerun()
+                st.session_state.page = page; st.rerun()
 
 
 # ══════════════════════════════════════════════════════
-# PAGE: AskMNIT AI (Full chat page)
+# PAGE: AskMNIT AI  ← FULLY UPDATED SECTION
 # ══════════════════════════════════════════════════════
 elif st.session_state.page == "ai":
 
-    # Header
+    # ── Header ──
     col_h1, col_h2, col_h3 = st.columns([0.5, 3, 1])
     with col_h1:
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         if st.button("←", key="back_ai"):
-            st.session_state.page = "dashboard"
-            st.rerun()
+            st.session_state.page = "dashboard"; st.rerun()
     with col_h2:
         st.markdown("""
         <div style="display:flex;align-items:center;gap:12px;padding-top:4px;">
@@ -493,27 +511,61 @@ elif st.session_state.page == "ai":
 
     st.divider()
 
-    # Suggested prompts
-    st.markdown("<p style='color:rgba(241,245,249,0.35);font-size:0.7rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;'>💡 Try asking</p>", unsafe_allow_html=True)
-    sp1, sp2, sp3, sp4, sp5 = st.columns(5)
+    # ══════════════════════════════════════
+    # UPDATED SUGGESTION PILLS
+    # ══════════════════════════════════════
+    st.markdown("<p style='color:rgba(241,245,249,0.28);font-size:0.65rem;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;font-family:Plus Jakarta Sans,sans-serif;font-weight:600;'>💡 Try asking</p>", unsafe_allow_html=True)
+
     suggestions = [
-        (sp1, "📅 Mid-sem dates?"),
-        (sp2, "💰 Fee due dates"),
-        (sp3, "🏛️ Library hours"),
-        (sp4, "🏢 Hostel rules"),
-        (sp5, "💼 Placements info"),
+        ("📚", "Mineral Processing PYQs"),
+        ("🧪", "Metallurgy Lab Schedule"),
+        ("📥", "Download Academic Calendar"),
+        ("🏢", "Hostel Rules"),
+        ("💼", "Placements info"),
     ]
-    for col, text in suggestions:
-        with col:
-            if st.button(text, use_container_width=True, key=f"sug_{text}"):
-                clean = text.split(" ", 1)[1] if " " in text else text
-                st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "user", "content": clean})
+
+    # Render pills as Streamlit buttons styled via CSS
+    pill_cols = st.columns(len(suggestions))
+    for idx, (icon, label) in enumerate(suggestions):
+        with pill_cols[idx]:
+            # We use a custom HTML pill that triggers via a hidden st.button trick
+            pill_key = f"pill_{idx}"
+            if st.button(f"{icon} {label}", key=pill_key, use_container_width=True):
+                st.session_state.chat_sessions[st.session_state.current_chat].append(
+                    {"role": "user", "content": label}
+                )
                 st.session_state.pending = True
                 st.rerun()
 
+    # Override pill button styles specifically
+    st.markdown("""
+    <style>
+    /* Pill buttons override — only inside AI page suggestion row */
+    div[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type .stButton > button {
+        background: rgba(255,255,255,0.04) !important;
+        border: 1px solid rgba(255,255,255,0.10) !important;
+        border-radius: 999px !important;
+        color: rgba(241,245,249,0.60) !important;
+        font-size: 0.74rem !important;
+        font-weight: 500 !important;
+        padding: 7px 12px !important;
+        box-shadow: none !important;
+        transition: all 0.15s ease !important;
+        letter-spacing: 0.01em !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type .stButton > button:hover {
+        background: rgba(59,130,246,0.12) !important;
+        border-color: rgba(59,130,246,0.32) !important;
+        color: #CBD5E1 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 12px rgba(59,130,246,0.12) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
-    # Chat history
+    # ── Chat history ──
     msgs = st.session_state.chat_sessions[st.session_state.current_chat]
     if not msgs:
         st.markdown("""
@@ -528,9 +580,8 @@ elif st.session_state.page == "ai":
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-    # Handle pending AI response
+    # ── Handle pending AI response ──
     if st.session_state.pending and msgs:
-        last_q = msgs[-1]["content"]
         with st.chat_message("assistant"):
             try:
                 stream = client.chat.completions.create(
@@ -546,17 +597,114 @@ elif st.session_state.page == "ai":
                         c = chunk.choices[0].delta.content
                         if c: yield c
                 response = st.write_stream(gen())
-                st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "assistant", "content": response})
+                st.session_state.chat_sessions[st.session_state.current_chat].append(
+                    {"role": "assistant", "content": response}
+                )
             except Exception as e:
                 st.error(f"Error: {e}")
         st.session_state.pending = False
         st.rerun()
 
-    # Chat input
-    if prompt := st.chat_input("Ask anything about MNIT Jaipur..."):
-        st.session_state.chat_sessions[st.session_state.current_chat].append({"role": "user", "content": prompt})
+    # ══════════════════════════════════════
+    # UPDATED CHAT INPUT — with icons & disclaimer
+    # ══════════════════════════════════════
+
+    # Paperclip + Mic icons rendered above input via HTML (visual only — wired for future JS)
+    st.markdown("""
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 4px 6px 2px;
+    ">
+        <div style="
+            display:flex; align-items:center; gap:6px;
+            background: rgba(12,17,32,0.9);
+            border: 1px solid rgba(80,90,160,0.30);
+            border-radius: 14px;
+            padding: 8px 12px;
+            width: 100%;
+            box-shadow: 0 0 0 1px rgba(59,130,246,0.04), 0 4px 28px rgba(0,0,0,0.35);
+        ">
+            <!-- Paperclip icon -->
+            <button title="Attach file" style="
+                background:none; border:none; cursor:pointer;
+                color:rgba(148,163,184,0.45); display:flex; align-items:center;
+                padding:4px 6px 4px 2px; border-radius:7px; flex-shrink:0;
+                transition: color 0.15s;
+            " onmouseover="this.style.color='rgba(148,163,184,0.85)'"
+               onmouseout="this.style.color='rgba(148,163,184,0.45)'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+            </button>
+            <!-- Spacer text hint -->
+            <span style="
+                flex:1; font-family:'Plus Jakarta Sans',sans-serif;
+                font-size:0.84rem; color:rgba(241,245,249,0.22);
+                pointer-events:none; user-select:none;
+            ">Ask anything about MNIT Jaipur...</span>
+            <!-- Mic icon -->
+            <button title="Voice input" style="
+                background:none; border:none; cursor:pointer;
+                color:rgba(148,163,184,0.45); display:flex; align-items:center;
+                padding:4px 5px; border-radius:7px; flex-shrink:0;
+                transition: all 0.15s;
+            " onmouseover="this.style.color='rgba(148,163,184,0.85)'; this.style.background='rgba(255,255,255,0.05)'"
+               onmouseout="this.style.color='rgba(148,163,184,0.45)'; this.style.background='none'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </button>
+            <!-- Send icon -->
+            <button title="Send" style="
+                background: linear-gradient(135deg,#3B82F6,#6D28D9);
+                border:none; cursor:pointer; color:white;
+                width:30px; height:30px; border-radius:9px;
+                display:flex; align-items:center; justify-content:center;
+                flex-shrink:0; box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+                transition: all 0.18s;
+            " onmouseover="this.style.opacity='0.85'; this.style.transform='scale(1.05)'"
+               onmouseout="this.style.opacity='1'; this.style.transform='scale(1)'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5"/>
+                    <polyline points="5 12 12 5 19 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Real Streamlit chat input (hidden visually but functional)
+    # We overlay the above HTML purely for visual polish
+    if prompt := st.chat_input("Ask anything about MNIT Jaipur...", key="main_chat_input"):
+        st.session_state.chat_sessions[st.session_state.current_chat].append(
+            {"role": "user", "content": prompt}
+        )
         st.session_state.pending = True
         st.rerun()
+
+    # ── Disclaimer ──
+    st.markdown("""
+    <p style="
+        text-align: center;
+        font-size: 0.665rem;
+        color: rgba(100,116,139,0.60);
+        margin-top: 6px;
+        margin-bottom: 0;
+        letter-spacing: 0.01em;
+        line-height: 1.5;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    ">
+        AskMNIT can make mistakes. Please verify important information with the official admin.
+    </p>
+    """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════
@@ -566,11 +714,13 @@ elif st.session_state.page == "schedule":
     if st.button("← Back", key="back_sched"): st.session_state.page = "dashboard"; st.rerun()
     st.markdown("# 📅 Weekly Schedule")
     st.divider()
-    days = {"Monday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Engineering Materials","Lab 1","Dr. Mehta"),("02:00","Thermodynamics","201","Prof. Agarwal")],
-            "Tuesday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("02:00","Fluid Mechanics","105","Dr. Verma")],
-            "Wednesday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Corrosion Science","Lab 2","Dr. Joshi")],
-            "Thursday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("03:00","Engineering Materials","201","Dr. Mehta")],
-            "Friday": [("09:30","Thermodynamics","201","Prof. Agarwal"),("02:00","Fluid Mechanics","105","Dr. Verma")]}
+    days = {
+        "Monday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Engineering Materials","Lab 1","Dr. Mehta"),("02:00","Thermodynamics","201","Prof. Agarwal")],
+        "Tuesday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("02:00","Fluid Mechanics","105","Dr. Verma")],
+        "Wednesday": [("09:30","Mineral Processing","302","R.K. Sharma"),("11:30","Corrosion Science","Lab 2","Dr. Joshi")],
+        "Thursday": [("10:00","Phase Transformations","LT-3","Prof. Singh"),("03:00","Engineering Materials","201","Dr. Mehta")],
+        "Friday": [("09:30","Thermodynamics","201","Prof. Agarwal"),("02:00","Fluid Mechanics","105","Dr. Verma")]
+    }
     for day, classes in days.items():
         with st.expander(f"📆 {day} — {len(classes)} classes"):
             for time, subj, room, prof in classes:
@@ -595,12 +745,12 @@ elif st.session_state.page == "academics":
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     st.markdown("### 📖 Current Subjects")
     subjects = [
-        ("MT-601", "Mineral Processing", "R.K. Sharma", "A", "92%"),
-        ("MT-603", "Engineering Materials", "Dr. Mehta", "B+", "85%"),
-        ("MT-605", "Thermodynamics II", "Prof. Agarwal", "A-", "88%"),
-        ("MT-607", "Phase Transformations", "Prof. Singh", "B", "76%"),
-        ("ME-501", "Fluid Mechanics", "Dr. Verma", "A", "91%"),
-        ("HS-601", "Engineering Economics", "Dr. Gupta", "A+", "95%"),
+        ("MT-601","Mineral Processing","R.K. Sharma","A","92%"),
+        ("MT-603","Engineering Materials","Dr. Mehta","B+","85%"),
+        ("MT-605","Thermodynamics II","Prof. Agarwal","A-","88%"),
+        ("MT-607","Phase Transformations","Prof. Singh","B","76%"),
+        ("ME-501","Fluid Mechanics","Dr. Verma","A","91%"),
+        ("HS-601","Engineering Economics","Dr. Gupta","A+","95%"),
     ]
     for code, name, prof, grade, attend in subjects:
         with st.expander(f"**{code}** — {name}"):
@@ -713,7 +863,7 @@ elif st.session_state.page == "library":
     query = st.text_input("Search by title, author or subject...", placeholder="e.g. Physical Metallurgy")
     if query:
         st.info(f"Searching for: **{query}**")
-        books = [f"Physical Metallurgy — Reed Hill",f"Introduction to Materials Science — Shackelford",f"Metallurgy Fundamentals — Brandt"]
+        books = ["Physical Metallurgy — Reed Hill","Introduction to Materials Science — Shackelford","Metallurgy Fundamentals — Brandt"]
         for b in books:
             c1, c2 = st.columns([3,1])
             c1.markdown(f"📖 {b}")
@@ -756,12 +906,14 @@ elif st.session_state.page == "exam":
     st.divider()
     st.info("📢 Mid-Semester Exams: **March 20 – 27, 2026**")
     st.markdown("### 📋 Mid-Semester Schedule")
-    exams = [("20 Mar","09:30 AM","Mineral Processing","MT-601","Hall A"),
-             ("21 Mar","09:30 AM","Engineering Materials","MT-603","Hall B"),
-             ("22 Mar","02:00 PM","Thermodynamics II","MT-605","Hall A"),
-             ("24 Mar","09:30 AM","Phase Transformations","MT-607","Hall C"),
-             ("25 Mar","02:00 PM","Fluid Mechanics","ME-501","Hall D"),
-             ("27 Mar","09:30 AM","Engineering Economics","HS-601","Hall B")]
+    exams = [
+        ("20 Mar","09:30 AM","Mineral Processing","MT-601","Hall A"),
+        ("21 Mar","09:30 AM","Engineering Materials","MT-603","Hall B"),
+        ("22 Mar","02:00 PM","Thermodynamics II","MT-605","Hall A"),
+        ("24 Mar","09:30 AM","Phase Transformations","MT-607","Hall C"),
+        ("25 Mar","02:00 PM","Fluid Mechanics","ME-501","Hall D"),
+        ("27 Mar","09:30 AM","Engineering Economics","HS-601","Hall B")
+    ]
     for date, time, subj, code, hall in exams:
         c1, c2, c3, c4, c5 = st.columns([1.2,1,2,1,1])
         c1.markdown(f"**{date}**")
@@ -820,7 +972,7 @@ elif st.session_state.page == "sports":
     st.markdown("### 🏅 Sports Facilities")
     sports_list = [("⚽","Football","Ground A","7AM–8PM"),("🏀","Basketball","Court 1","6AM–9PM"),("🏸","Badminton","Hall 3","6AM–10PM"),("🏊","Swimming Pool","Sports Complex","6AM–8PM"),("🎾","Tennis","Court 2","7AM–7PM"),("🏋️","Gym","Sports Block","5AM–10PM")]
     for icon, sport, venue, timing in sports_list:
-        c1, c2, c3 = st.columns([0.3, 2, 1])
+        c1, c2, c3 = st.columns([0.3,2,1])
         c1.markdown(icon)
         c2.markdown(f"**{sport}** — {venue}")
         c3.markdown(timing)
@@ -861,10 +1013,12 @@ elif st.session_state.page == "research":
     if st.button("← Back", key="back_research"): st.session_state.page = "dashboard"; st.rerun()
     st.markdown("# 🔬 Research & Labs")
     st.divider()
-    labs = [("Metallography Lab","Equipment: SEM, XRD, Optical Microscope. Timings: 9AM–5PM","Dr. Mehta"),
-            ("Heat Treatment Lab","Furnaces, quenching tanks, hardness testers. 9AM–6PM","Prof. Singh"),
-            ("Corrosion Lab","Salt spray, electrochemical workstations. 10AM–5PM","Dr. Joshi"),
-            ("Casting Lab","Sand casting, die casting equipment. 9AM–4PM","Prof. Sharma")]
+    labs = [
+        ("Metallography Lab","Equipment: SEM, XRD, Optical Microscope. Timings: 9AM–5PM","Dr. Mehta"),
+        ("Heat Treatment Lab","Furnaces, quenching tanks, hardness testers. 9AM–6PM","Prof. Singh"),
+        ("Corrosion Lab","Salt spray, electrochemical workstations. 10AM–5PM","Dr. Joshi"),
+        ("Casting Lab","Sand casting, die casting equipment. 9AM–4PM","Prof. Sharma")
+    ]
     for lab, desc, incharge in labs:
         with st.expander(f"🧪 {lab}"):
             st.markdown(f"🔧 {desc}")
@@ -879,11 +1033,13 @@ elif st.session_state.page == "notifications":
     if st.button("← Back", key="back_notif"): st.session_state.page = "dashboard"; st.rerun()
     st.markdown("# 🔔 Notifications")
     st.divider()
-    notifs = [("🔴","Fee payment due in 5 days — ₹18,500 pending","2 hours ago"),
-              ("🔵","Mid-sem exam schedule released","Today, 9 AM"),
-              ("🟢","Library book renewal successful","Yesterday"),
-              ("🟡","New mess menu from March 15","Yesterday"),
-              ("🔵","Techfest registrations open","2 days ago")]
+    notifs = [
+        ("🔴","Fee payment due in 5 days — ₹18,500 pending","2 hours ago"),
+        ("🔵","Mid-sem exam schedule released","Today, 9 AM"),
+        ("🟢","Library book renewal successful","Yesterday"),
+        ("🟡","New mess menu from March 15","Yesterday"),
+        ("🔵","Techfest registrations open","2 days ago")
+    ]
     for dot, msg, time in notifs:
         c1, c2, c3 = st.columns([0.2,4,1])
         c1.markdown(dot)
@@ -916,12 +1072,12 @@ elif st.session_state.page == "settings":
     st.checkbox("Notice board updates", value=True)
     st.checkbox("Placement alerts", value=False)
     st.divider()
-    if st.button("💾 Save Changes", use_container_width=False):
+    if st.button("💾 Save Changes"):
         st.success("✅ Settings saved successfully!")
 
 
 # ══════════════════════════════════════════════════════
-# DEFAULT FALLBACK
+# FALLBACK
 # ══════════════════════════════════════════════════════
 else:
     st.session_state.page = "dashboard"

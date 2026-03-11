@@ -40,7 +40,7 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Fixed Sidebar with Navigation Text)
+# 4. CSS (Fixed Sidebar with New Tab)
 # ==========================================
 sidebar_width = "280px"
 
@@ -66,7 +66,7 @@ dashboard_style = f"""
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 9999; 
-        padding-top: 30px; /* Space for Navigation text */
+        padding-top: 30px;
         box-shadow: 5px 0 15px rgba(0,0,0,0.5);
     }}
 
@@ -81,6 +81,29 @@ dashboard_style = f"""
         padding-bottom: 15px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         letter-spacing: 1px;
+        margin-bottom: 20px;
+    }}
+
+    /* POSITIONING THE BUTTON INSIDE THE SIDEBAR */
+    div.stButton > button[help="sidebar_new_tab"] {{
+        position: fixed !important;
+        top: 100px !important; /* Positioned directly under Navigation header */
+        left: 20px !important;
+        width: 240px !important;
+        background: #E5E7EB !important; /* LIGHT GREY */
+        color: #1A0B2E !important; 
+        text-align: left !important;
+        font-weight: 800 !important;
+        border-radius: 10px !important;
+        border: none !important;
+        z-index: 10000 !important;
+        padding: 10px 15px !important;
+        transition: 0.2s all ease !important;
+    }}
+    
+    div.stButton > button[help="sidebar_new_tab"]:hover {{
+        filter: brightness(0.9) !important;
+        transform: scale(1.02) !important;
     }}
 
     /* HEADER BAR */
@@ -100,17 +123,12 @@ dashboard_style = f"""
     }}
 
     .header-logo {{
-        height: 50px; 
-        width: 50px;
+        height: 50px; width: 50px;
         background-image: url("data:image/png;base64,{logo_base64}");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        border-radius: 50%;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        background-size: contain; background-repeat: no-repeat; background-position: center;
+        border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
 
-    /* Hide default Streamlit elements */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     header {{ display: none !important; }}
     footer {{ display: none !important; }}
@@ -135,19 +153,20 @@ else:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Sidebar with Navigation text
+    # Sidebar UI
     st.markdown('''
         <div class="custom-sidebar">
             <div class="custom-sidebar-title">Navigation</div>
         </div>
     ''', unsafe_allow_html=True)
     
+    # NEW TAB Button inside sidebar
+    if st.button("NEW TAB", help="sidebar_new_tab", key="btn_new_tab"):
+        st.toast("New Tab Clicked!")
+
     # Top Header
     st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
     
-    # Body is currently empty
-    pass
-
 else:
     # CHATBOT VIEW
     with st.sidebar:

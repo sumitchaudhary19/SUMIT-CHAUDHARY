@@ -40,27 +40,46 @@ local_logo_path = "mnit_logo.png"
 logo_base64 = get_base64_of_bin_file(local_logo_path)
 
 # ==========================================
-# 4. CSS (Clean Dashboard - Minimalist)
+# 4. CSS (Fixed Sidebar - Minimalist)
 # ==========================================
+sidebar_width = "280px"
+
 dashboard_style = f"""
     <style>
-    html, body {{ overflow: hidden; }}
+    html, body {{ overflow-x: hidden; }}
     
+    /* Shift main content to the right of the fixed sidebar */
     [data-testid="stAppViewContainer"] {{
         background: radial-gradient(circle at center, #4B2C85 0%, #1A0B2E 100%) !important;
+        margin-left: {sidebar_width} !important;
+        width: calc(100% - {sidebar_width}) !important;
     }}
     
-    /* LIGHT GREY TOP HEADER BAR */
-    .top-header-bar {{
+    /* FIXED LEFT SIDEBAR */
+    .custom-sidebar {{
         position: fixed;
         top: 0;
         left: 0;
-        width: 100vw;
+        width: {sidebar_width};
+        height: 100vh;
+        background: rgba(20, 10, 40, 0.95);
+        backdrop-filter: blur(15px);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 9999; 
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+    }}
+
+    /* LIGHT GREY TOP HEADER BAR - Offset by sidebar width */
+    .top-header-bar {{
+        position: fixed;
+        top: 0;
+        left: {sidebar_width};
+        width: calc(100vw - {sidebar_width});
         height: 70px;
         background-color: rgba(211, 211, 211, 0.15);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 9999; 
+        z-index: 9998; 
         display: flex;
         align-items: center;
         padding-left: 40px; 
@@ -77,7 +96,7 @@ dashboard_style = f"""
         box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }}
 
-    /* Hide everything else */
+    /* Hide default Streamlit elements */
     section[data-testid="stSidebar"] {{ display: none !important; }}
     header {{ display: none !important; }}
     footer {{ display: none !important; }}
@@ -89,7 +108,7 @@ chatbot_style = """
     [data-testid="stAppViewContainer"] { background-color: #FFFFFF !important; }
     section[data-testid="stSidebar"] { background-color: #F0F2F6 !important; border-right: 1px solid #DDDDDD !important; display: block !important; }
     .stButton>button { background: linear-gradient(135deg, #8A63FF 0%, #6A3DE8 100%) !important; color: white !important; border-radius: 10px !important;}
-    .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; text-align: center; }
+    .signature-box-3d { margin-top: 40px; padding: 18px; border-radius: 12px; background: #2C2C2C; border-bottom: 4px solid #1A1A1A; box-shadow: 0 10px 20px rgba(0,0,0,0.2); text-align: center; }
     </style>
 """
 
@@ -102,10 +121,13 @@ else:
 # 5. MAIN CONTENT ROUTING
 # ==========================================
 if st.session_state.page_view == "dashboard":
-    # Header persists
+    # Render the Custom Sidebar
+    st.markdown('<div class="custom-sidebar"></div>', unsafe_allow_html=True)
+    
+    # Render the Top Header
     st.markdown(f'''<div class="top-header-bar"><div class="header-logo"></div></div>''', unsafe_allow_html=True)
     
-    # Dashboard is now empty as per request.
+    # Dashboard body is currently empty as requested
     pass
 
 else:

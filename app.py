@@ -1,28 +1,12 @@
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║      AskMNIT  —  Premium AI Chat  +  Student Dashboard (Single File)         ║
-# ║                                                                              ║
-# ║  VIEWS (all driven by st.session_state — no URL changes):                    ║
-# ║                                                                              ║
-# ║   "dashboard"  → Full student dashboard  (sidebar + main area)               ║
-# ║   "chat"       → Standalone AI chatbot   (NO sidebar)                        ║
-# ║                                                                              ║
-# ║  CHAT SHIFT EFFECT:                                                          ║
-# ║   chat_messages = []   → Centered hero layout (logo + middle input)          ║
-# ║   chat_messages = [...] → Bottom-anchored input, history scrolls above       ║
-# ║                                                                              ║
-# ║  CONSTRAINTS:                                                                ║
-# ║   • No st.sidebar in chat view                                               ║
-# ║   • No "Welcome" / "Professional Dashboard" anywhere                         ║
-# ║   • All HTML fragments pre-built before st.markdown()                        ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+# AskMNIT — Premium AI Chat + Student Dashboard
+# ROOT CAUSE FIX: All HTML comments <!-- --> removed from st.markdown() blocks.
+# Streamlit renders HTML comment strings as visible text. Never use them inside
+# st.markdown() calls. All HTML is pre-built as plain Python strings only.
 
 import streamlit as st
 import datetime
 import random
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PAGE CONFIG — must be first Streamlit call
-# ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AskMNIT",
     page_icon="🎓",
@@ -30,9 +14,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # SUBJECT DATABASE
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 COMMON_SUBJECTS = [
     "Mathematics I/II", "Physics", "Chemistry", "Computer Programming",
     "Basic Electrical", "Basic Electronics", "Basic Mechanical",
@@ -51,19 +35,19 @@ SEMESTERS = [f"Semester {i}" for i in range(1, 9)]
 DAYS      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 
 
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # PDF SCHEDULE PLACEHOLDER
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 def process_schedule_pdf(file, branch: str) -> dict:
-    """Simulates PDF extraction. Replace with pdfplumber in production."""
     branch_subj = BRANCH_SUBJECTS.get(branch, [])
     pool = COMMON_SUBJECTS[:4] + branch_subj
     random.seed(42)
     sched: dict[str, list[dict]] = {}
     for day in DAYS[:6]:
-        times = random.sample(["08:00","09:30","11:00","12:00","14:00","15:30"],
-                               k=random.randint(2, 4))
-        times.sort()
+        times = sorted(random.sample(
+            ["08:00","09:30","11:00","12:00","14:00","15:30"],
+            k=random.randint(2, 4)
+        ))
         sched[day] = [
             {"time": t,
              "subject": random.choice(pool),
@@ -73,10 +57,8 @@ def process_schedule_pdf(file, branch: str) -> dict:
         ]
     return sched
 
-
 def get_today_slots(full_sched: dict) -> list[dict]:
     return full_sched.get(datetime.datetime.now().strftime("%A"), [])
-
 
 def get_next_class(slots: list[dict]) -> dict | None:
     now = datetime.datetime.now()
@@ -84,18 +66,17 @@ def get_next_class(slots: list[dict]) -> dict | None:
         h, m = map(int, slot["time"].split(":"))
         dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
         if dt > now:
-            diff_min = int((dt - now).total_seconds() // 60)
-            return {**slot, "minutes_away": diff_min}
+            return {**slot, "minutes_away": int((dt - now).total_seconds() // 60)}
     return None
 
 
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 def subjects_for_branch(b: str) -> list[str]:
     return COMMON_SUBJECTS + BRANCH_SUBJECTS.get(b, [])
 
-def blank_attendance(subjects: list[str]) -> dict:
+def blank_att(subjects: list[str]) -> dict:
     return {s: {"present": 0, "total": 0} for s in subjects}
 
 def att_pct(rec: dict) -> float:
@@ -122,105 +103,89 @@ def branch_hex(b: str) -> str:
             "Civil":"#F59E0B","Metallurgy":"#10B981"}.get(b, "#6366F1")
 
 
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # SESSION STATE
-# ═════════════════════════════════════════════════════════════════════════════
-_default_branch   = "CSE"
-_default_subjects = subjects_for_branch(_default_branch)
-
+# ─────────────────────────────────────────────────────────────────────────────
+_def_branch = "CSE"
 _DEFAULTS = {
-    # View routing: "dashboard" | "chat"
-    "view":              "dashboard",
-    # Dashboard nav
-    "nav_page":          "My Dashboard",
-    # Profile
-    "student_name":      "Sumit Chaudhary",
-    "college_id":        "2022UMT1234",
-    "semester":          "Semester 6",
-    "branch":            _default_branch,
-    "editing_profile":   False,
-    # Attendance
-    "attendance":        blank_attendance(_default_subjects),
-    # PDF Schedule
-    "schedule_loaded":   False,
-    "full_schedule":     {},
-    "pdf_filename":      "",
-    # Manual planner overrides
-    "planner_overrides": {},
-    # Notes
-    "notes_text":        "• Mid-sem revision starts Monday\n• Submit fee by 17 Mar\n• Collect hall ticket from ERP",
-    # Quick links feedback
-    "ql_feedback":       "",
-    # Chat state
-    "chat_messages":     [],   # [] = centered hero; non-empty = bottom input
-    "chat_pending":      False,
-    # Chat history sessions
-    "chat_sessions":     [],
-    # Chat settings panel visibility
+    "view":               "dashboard",
+    "nav_page":           "My Dashboard",
+    "student_name":       "Sumit Chaudhary",
+    "college_id":         "2022UMT1234",
+    "semester":           "Semester 6",
+    "branch":             _def_branch,
+    "editing_profile":    False,
+    "attendance":         blank_att(subjects_for_branch(_def_branch)),
+    "schedule_loaded":    False,
+    "full_schedule":      {},
+    "pdf_filename":       "",
+    "planner_overrides":  {},
+    "notes_text":         "• Mid-sem revision starts Monday\n• Submit fee by 17 Mar\n• Collect hall ticket from ERP",
+    "ql_feedback":        "",
+    "chat_messages":      [],
+    "chat_pending":       False,
+    "chat_sessions":      [],
     "show_chat_settings": False,
     "show_chat_history":  False,
 }
-
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# ██████████████████  GLOBAL CSS  ██████████████████████████████████████████
-# Aesthetic: Precision dark — Fraunces (display) + DM Mono (code) + Outfit (body)
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
+# GLOBAL CSS
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700;9..144,900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --bg:        #060A12;
-    --surface:   #0B1120;
-    --surface2:  #101929;
-    --surface3:  #141F32;
-    --border:    rgba(255,255,255,0.07);
-    --border2:   rgba(255,255,255,0.12);
-    --accent:    #3B82F6;
-    --accent2:   #6366F1;
-    --cyan:      #22D3EE;
-    --green:     #10B981;
-    --amber:     #F59E0B;
-    --red:       #EF4444;
-    --text:      #E2E8F0;
-    --muted:     rgba(148,163,184,0.55);
-    --display:   'Fraunces', serif;
-    --mono:      'DM Mono', monospace;
-    --sans:      'Outfit', sans-serif;
+    --bg:      #060A12;
+    --surf:    #0B1120;
+    --surf2:   #101929;
+    --border:  rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent:  #3B82F6;
+    --cyan:    #22D3EE;
+    --green:   #10B981;
+    --amber:   #F59E0B;
+    --red:     #EF4444;
+    --text:    #E2E8F0;
+    --muted:   rgba(148,163,184,0.55);
+    --display: 'Fraunces', serif;
+    --mono:    'DM Mono', monospace;
+    --sans:    'Outfit', sans-serif;
 }
 
-*,html,body { box-sizing:border-box; margin:0; padding:0; }
-html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"] {
+*, html, body { box-sizing: border-box; margin: 0; padding: 0; }
+html, body,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"] {
     font-family: var(--sans) !important;
     background: var(--bg) !important;
     color: var(--text) !important;
 }
 
-/* ── Remove default chrome ── */
-header[data-testid="stHeader"],footer,#MainMenu,
-[data-testid="stToolbar"],[data-testid="stDecoration"] {
-    display:none !important;
+header[data-testid="stHeader"], footer, #MainMenu,
+[data-testid="stToolbar"], [data-testid="stDecoration"] {
+    display: none !important;
 }
 [data-testid="stMainBlockContainer"] {
     padding: 0 !important;
     max-width: 100% !important;
 }
 
-/* ── Sidebar ── */
+/* Sidebar */
 [data-testid="stSidebar"] {
-    background: var(--surface) !important;
+    background: var(--surf) !important;
     border-right: 1px solid rgba(59,130,246,0.16) !important;
     min-width: 210px !important;
     max-width: 210px !important;
 }
 [data-testid="stSidebar"] > div { padding: 0 !important; }
 
-/* ── Inputs ── */
+/* Inputs */
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea {
     background: rgba(255,255,255,0.04) !important;
@@ -263,266 +228,332 @@ header[data-testid="stHeader"],footer,#MainMenu,
     border-radius: 12px !important;
 }
 
-/* ── Default button ── */
+/* Base button */
 .stButton > button {
     background: linear-gradient(135deg,#2563EB,#4F46E5) !important;
-    color: #fff !important; border: none !important;
+    color: #fff !important;
+    border: none !important;
     border-radius: 9px !important;
     font-family: var(--sans) !important;
-    font-weight: 600 !important; font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    font-size: 0.82rem !important;
     padding: 9px 16px !important;
     box-shadow: 0 3px 14px rgba(37,99,235,0.20) !important;
     transition: all 0.16s ease !important;
 }
-.stButton > button:hover { opacity:.88 !important; transform:translateY(-1px) !important; }
-.stButton > button:active { transform:scale(0.97) !important; }
+.stButton > button:hover { opacity: .88 !important; transform: translateY(-1px) !important; }
+.stButton > button:active { transform: scale(0.97) !important; }
 
-/* ── Nav buttons (sidebar) ── */
+/* Nav */
 .nav-btn .stButton > button {
-    background: transparent !important; color: rgba(148,163,184,.65) !important;
-    border: none !important; box-shadow: none !important;
-    text-align:left !important; justify-content:flex-start !important;
-    padding:10px 14px !important; font-size:0.83rem !important;
-    font-weight:500 !important; border-radius:8px !important;
+    background: transparent !important;
+    color: rgba(148,163,184,.65) !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 10px 14px !important;
+    font-size: 0.83rem !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
 }
 .nav-btn .stButton > button:hover {
     background: rgba(59,130,246,.10) !important;
-    color:#BAE6FD !important; transform:none !important;
+    color: #BAE6FD !important;
+    transform: none !important;
 }
 .nav-btn-active .stButton > button {
     background: rgba(59,130,246,.14) !important;
-    color:#60A5FA !important;
-    border-left:2px solid #3B82F6 !important;
-    font-weight:700 !important; box-shadow:none !important;
+    color: #60A5FA !important;
+    border-left: 2px solid #3B82F6 !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
 }
 
-/* ── Ghost ── */
+/* Ghost */
 .ghost-btn .stButton > button {
-    background:rgba(255,255,255,.05) !important;
-    border:1px solid var(--border2) !important;
-    color:rgba(226,232,240,.55) !important; box-shadow:none !important;
+    background: rgba(255,255,255,.05) !important;
+    border: 1px solid var(--border2) !important;
+    color: rgba(226,232,240,.55) !important;
+    box-shadow: none !important;
 }
 .ghost-btn .stButton > button:hover {
-    background:rgba(59,130,246,.10) !important; color:var(--text) !important;
+    background: rgba(59,130,246,.10) !important;
+    color: var(--text) !important;
 }
 
-/* ── Present (green) ── */
+/* Present */
 .present-btn .stButton > button {
-    background:linear-gradient(135deg,#065F46,#10B981) !important;
-    box-shadow:0 2px 10px rgba(16,185,129,.18) !important;
-    padding:6px 11px !important; font-size:0.75rem !important;
-    border-radius:7px !important;
+    background: linear-gradient(135deg,#065F46,#10B981) !important;
+    box-shadow: 0 2px 10px rgba(16,185,129,.18) !important;
+    padding: 6px 11px !important;
+    font-size: 0.75rem !important;
+    border-radius: 7px !important;
 }
-/* ── Absent (red) ── */
+
+/* Absent */
 .absent-btn .stButton > button {
-    background:linear-gradient(135deg,#7F1D1D,#EF4444) !important;
-    box-shadow:0 2px 10px rgba(239,68,68,.16) !important;
-    padding:6px 11px !important; font-size:0.75rem !important;
-    border-radius:7px !important;
+    background: linear-gradient(135deg,#7F1D1D,#EF4444) !important;
+    box-shadow: 0 2px 10px rgba(239,68,68,.16) !important;
+    padding: 6px 11px !important;
+    font-size: 0.75rem !important;
+    border-radius: 7px !important;
 }
-/* ── Save (amber) ── */
+
+/* Save amber */
 .save-btn .stButton > button {
-    background:linear-gradient(135deg,#92400E,#F59E0B) !important;
-    box-shadow:0 2px 10px rgba(245,158,11,.18) !important;
-    padding:7px 13px !important; font-size:0.77rem !important;
+    background: linear-gradient(135deg,#92400E,#F59E0B) !important;
+    box-shadow: 0 2px 10px rgba(245,158,11,.18) !important;
+    padding: 7px 13px !important;
+    font-size: 0.77rem !important;
 }
-/* ── Edit (subtle) ── */
+
+/* Edit subtle */
 .edit-btn .stButton > button {
-    background:rgba(255,255,255,.05) !important;
-    border:1px solid var(--border2) !important;
-    color:rgba(148,163,184,.65) !important;
-    box-shadow:none !important; font-size:0.72rem !important;
-    padding:4px 10px !important;
+    background: rgba(255,255,255,.05) !important;
+    border: 1px solid var(--border2) !important;
+    color: rgba(148,163,184,.65) !important;
+    box-shadow: none !important;
+    font-size: 0.72rem !important;
+    padding: 4px 10px !important;
 }
 .edit-btn .stButton > button:hover {
-    color:#BAE6FD !important; background:rgba(59,130,246,.10) !important;
+    color: #BAE6FD !important;
+    background: rgba(59,130,246,.10) !important;
 }
-/* ── Quick links ── */
+
+/* Quick links */
 .ql-btn .stButton > button {
-    background:rgba(255,255,255,.03) !important;
-    border:1px solid var(--border2) !important;
-    color:rgba(186,230,253,.65) !important;
-    box-shadow:none !important;
-    text-align:left !important; justify-content:flex-start !important;
-    font-size:0.80rem !important; padding:9px 14px !important;
-    border-radius:9px !important;
+    background: rgba(255,255,255,.03) !important;
+    border: 1px solid var(--border2) !important;
+    color: rgba(186,230,253,.65) !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    font-size: 0.80rem !important;
+    padding: 9px 14px !important;
+    border-radius: 9px !important;
 }
 .ql-btn .stButton > button:hover {
-    background:rgba(59,130,246,.10) !important;
-    border-color:rgba(59,130,246,.28) !important; color:#BAE6FD !important;
-    transform:none !important;
+    background: rgba(59,130,246,.10) !important;
+    border-color: rgba(59,130,246,.28) !important;
+    color: #BAE6FD !important;
+    transform: none !important;
 }
-/* ── Logout ── */
-.logout-btn .stButton > button {
-    background:rgba(239,68,68,.09) !important;
-    border:1px solid rgba(239,68,68,.20) !important;
-    color:#FCA5A5 !important; box-shadow:none !important;
-    font-size:0.80rem !important;
-}
-.logout-btn .stButton > button:hover { background:rgba(239,68,68,.18) !important; }
 
-/* ── Chat action pill (top bar) ── */
+/* Logout */
+.logout-btn .stButton > button {
+    background: rgba(239,68,68,.09) !important;
+    border: 1px solid rgba(239,68,68,.20) !important;
+    color: #FCA5A5 !important;
+    box-shadow: none !important;
+    font-size: 0.80rem !important;
+}
+.logout-btn .stButton > button:hover { background: rgba(239,68,68,.18) !important; }
+
+/* Chat pill */
 .chat-pill .stButton > button {
-    background:rgba(255,255,255,.05) !important;
-    border:1px solid rgba(255,255,255,.10) !important;
-    border-radius:999px !important;
-    color:rgba(226,232,240,.62) !important;
-    box-shadow:none !important; font-size:0.78rem !important;
-    font-weight:500 !important; padding:7px 16px !important;
+    background: rgba(255,255,255,.05) !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-radius: 999px !important;
+    color: rgba(226,232,240,.62) !important;
+    box-shadow: none !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    padding: 7px 16px !important;
 }
 .chat-pill .stButton > button:hover {
-    background:rgba(59,130,246,.13) !important;
-    border-color:rgba(59,130,246,.32) !important;
-    color:#BAE6FD !important; transform:none !important;
+    background: rgba(59,130,246,.13) !important;
+    border-color: rgba(59,130,246,.32) !important;
+    color: #BAE6FD !important;
+    transform: none !important;
 }
 
-/* ── Back-to-dashboard button ── */
+/* Back button */
 .back-btn .stButton > button {
-    background:rgba(255,255,255,.06) !important;
-    border:1px solid rgba(255,255,255,.11) !important;
-    border-radius:10px !important;
-    color:rgba(226,232,240,.62) !important;
-    box-shadow:none !important; font-size:0.80rem !important;
-    font-weight:600 !important; padding:8px 18px !important;
+    background: rgba(255,255,255,.06) !important;
+    border: 1px solid rgba(255,255,255,.11) !important;
+    border-radius: 10px !important;
+    color: rgba(226,232,240,.62) !important;
+    box-shadow: none !important;
+    font-size: 0.80rem !important;
+    font-weight: 600 !important;
+    padding: 8px 18px !important;
 }
 .back-btn .stButton > button:hover {
-    background:rgba(59,130,246,.13) !important;
-    color:#BAE6FD !important; border-color:rgba(59,130,246,.28) !important;
+    background: rgba(59,130,246,.13) !important;
+    color: #BAE6FD !important;
+    border-color: rgba(59,130,246,.28) !important;
 }
 
-/* ── Open Chat (dashboard CTA) ── */
+/* Open chat CTA */
 .open-chat-btn .stButton > button {
-    background:linear-gradient(135deg,#059669,#10B981) !important;
-    border-radius:12px !important;
-    font-weight:700 !important; font-size:0.88rem !important;
-    padding:11px 22px !important;
-    box-shadow:0 5px 24px rgba(16,185,129,.36) !important;
+    background: linear-gradient(135deg,#059669,#10B981) !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    padding: 11px 22px !important;
+    box-shadow: 0 5px 24px rgba(16,185,129,.36) !important;
     font-family: var(--mono) !important;
 }
 .open-chat-btn .stButton > button:hover {
-    box-shadow:0 7px 32px rgba(16,185,129,.50) !important;
-    transform:translateY(-2px) !important;
+    box-shadow: 0 7px 32px rgba(16,185,129,.50) !important;
+    transform: translateY(-2px) !important;
 }
 
-/* ── Chat input (bottom) ── */
+/* Suggestion chip buttons — invisible button over a visual chip */
+.sug-btn .stButton > button {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.09) !important;
+    border-radius: 999px !important;
+    color: rgba(186,230,253,0.70) !important;
+    font-size: 0.76rem !important;
+    font-weight: 500 !important;
+    padding: 8px 16px !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+.sug-btn .stButton > button:hover {
+    background: rgba(59,130,246,0.13) !important;
+    border-color: rgba(59,130,246,0.32) !important;
+    color: #BAE6FD !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Chat input */
 [data-testid="stChatInput"] > div {
-    background:rgba(11,17,32,.98) !important;
-    border:1px solid rgba(59,130,246,.30) !important;
-    border-radius:16px !important;
+    background: rgba(11,17,32,.98) !important;
+    border: 1px solid rgba(59,130,246,.30) !important;
+    border-radius: 16px !important;
 }
 [data-testid="stChatInput"] textarea {
-    background:transparent !important; color:var(--text) !important;
-    font-family:var(--sans) !important; font-size:0.92rem !important;
+    background: transparent !important;
+    color: var(--text) !important;
+    font-family: var(--sans) !important;
+    font-size: 0.92rem !important;
 }
 [data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {
-    background:linear-gradient(135deg,#2563EB,#4F46E5) !important;
-    border-radius:9px !important;
+    background: linear-gradient(135deg,#2563EB,#4F46E5) !important;
+    border-radius: 9px !important;
 }
 
-/* ── Chat messages ── */
+/* Chat messages */
 [data-testid="stChatMessage"] {
-    background:rgba(255,255,255,.025) !important;
-    border:1px solid var(--border) !important;
-    border-radius:14px !important;
-    font-family:var(--sans) !important;
+    background: rgba(255,255,255,.025) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    font-family: var(--sans) !important;
 }
 
-/* ── Progress bar ── */
+/* Progress */
 [data-testid="stProgress"] > div > div {
-    border-radius:99px !important;
-    background:linear-gradient(90deg,#2563EB,#22D3EE) !important;
+    border-radius: 99px !important;
+    background: linear-gradient(90deg,#2563EB,#22D3EE) !important;
 }
 [data-testid="stProgress"] > div {
-    background:rgba(255,255,255,.07) !important;
-    border-radius:99px !important; height:5px !important;
+    background: rgba(255,255,255,.07) !important;
+    border-radius: 99px !important;
+    height: 5px !important;
 }
 
-/* ── Expander ── */
+/* Expander */
 [data-testid="stExpander"] {
-    background:rgba(255,255,255,.018) !important;
-    border:1px solid var(--border) !important;
-    border-radius:12px !important;
+    background: rgba(255,255,255,.018) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
 }
-summary { font-family:var(--sans) !important; font-weight:600 !important; }
+summary { font-family: var(--sans) !important; font-weight: 600 !important; }
 
-/* ── Misc ── */
-h1,h2,h3,h4 { font-family:var(--mono) !important; font-weight:500 !important; }
-[data-testid="stMarkdown"] p,[data-testid="stMarkdown"] li {
-    color:rgba(226,232,240,.72) !important; font-family:var(--sans) !important;
+/* Typography */
+h1, h2, h3, h4 { font-family: var(--mono) !important; font-weight: 500 !important; }
+[data-testid="stMarkdown"] p,
+[data-testid="stMarkdown"] li {
+    color: rgba(226,232,240,.72) !important;
+    font-family: var(--sans) !important;
 }
-hr { border-color:var(--border) !important; }
-::-webkit-scrollbar { width:4px; height:4px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:rgba(59,130,246,.22); border-radius:4px; }
-[data-testid="column"] { padding:0 5px !important; }
+hr { border-color: var(--border) !important; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,.22); border-radius: 4px; }
+[data-testid="column"] { padding: 0 5px !important; }
+
+/* Hero fade-in animation */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.hero-anim { animation: fadeUp 0.50s ease both; }
+
+/* Active chat: fix input to bottom */
+.chat-input-fixed [data-testid="stChatInput"] {
+    position: fixed !important;
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(780px, calc(100vw - 80px)) !important;
+    z-index: 1000 !important;
+}
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+[data-testid="stChatMessage"] { animation: msgIn 0.20s ease both !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ██████████████████████  VIEW ROUTER  ████████████████████████████████████
+# VIEW ROUTER
 # ═════════════════════════════════════════════════════════════════════════════
 view = st.session_state.view
 
 
-##############################################################################
-# ████████████████████  CHAT VIEW  ████████████████████████████████████████
-##############################################################################
+###############################################################################
+#  CHAT VIEW
+###############################################################################
 if view == "chat":
 
-    # The chat view deliberately has NO st.sidebar — it is a standalone screen.
-    # Streamlit still renders the sidebar expand arrow; we hide it via CSS.
+    # Hide sidebar completely in chat view
     st.markdown("""
     <style>
     [data-testid="stSidebar"],
     [data-testid="stSidebarCollapseButton"],
-    [data-testid="stSidebarUserContent"],
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
-    /* Full-width content in chat view */
-    [data-testid="stMainBlockContainer"] {
-        padding: 0 !important;
-        max-width: 100% !important;
-    }
+    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
     </style>
     """, unsafe_allow_html=True)
 
     has_messages = len(st.session_state.chat_messages) > 0
 
-    # ── TOP BAR (always visible) ─────────────────────────────────────────────
-    tb_wrap = st.container()
-    with tb_wrap:
-        st.markdown("""
-        <div style="background:rgba(6,10,18,0.96);
-                    border-bottom:1px solid rgba(59,130,246,0.14);
-                    padding:12px 28px;
-                    display:flex;align-items:center;justify-content:space-between;
-                    position:sticky;top:0;z-index:999;backdrop-filter:blur(12px);">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:28px;height:28px;border-radius:7px;
-                            background:linear-gradient(135deg,#2563EB,#4F46E5);
-                            display:flex;align-items:center;justify-content:center;
-                            font-size:0.85rem;font-weight:700;color:white;
-                            box-shadow:0 3px 10px rgba(37,99,235,0.28);">A</div>
-                <span style="font-family:'DM Mono',monospace;font-size:0.88rem;
-                             color:#E2E8F0;letter-spacing:0.1px;">AskMNIT</span>
-                <span style="font-size:0.60rem;color:#10B981;font-weight:600;
-                             margin-left:2px;">&#9679; AI</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    # ── Sticky top bar ────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="background:rgba(6,10,18,0.97);'
+        'border-bottom:1px solid rgba(59,130,246,0.14);'
+        'padding:11px 24px;'
+        'display:flex;align-items:center;gap:10px;">'
+        '<div style="width:26px;height:26px;border-radius:7px;'
+        'background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;'
+        'font-size:0.82rem;font-weight:700;color:white;">A</div>'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.86rem;'
+        'color:#E2E8F0;">AskMNIT</span>'
+        '<span style="font-size:0.58rem;color:#10B981;font-weight:600;">'
+        '&#9679; AI</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
-    # ── TOP-RIGHT ACTION ROW ─────────────────────────────────────────────────
-    # Layout: pills row pinned to top-right
-    pill_spacer, pill_area = st.columns([3, 2])
+    # ── Action pills row (top-right) ─────────────────────────────────────────
+    _, pill_area = st.columns([2.5, 2])
     with pill_area:
-        st.markdown("<div style='padding:8px 24px 0 0;'>", unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns([1.2, 1, 1, 1.4])
+        p1, p2, p3, p4 = st.columns([1.2, 1, 1, 1.5])
 
-        with c1:
+        with p1:
             st.markdown('<div class="chat-pill">', unsafe_allow_html=True)
-            if st.button("➕  New Chat", key="chat_new", use_container_width=True):
+            if st.button("➕ New Chat", key="chat_new", use_container_width=True):
                 if st.session_state.chat_messages:
                     first_user = next(
                         (m["content"][:38] for m in st.session_state.chat_messages
@@ -537,47 +568,44 @@ if view == "chat":
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with c2:
+        with p2:
             st.markdown('<div class="chat-pill">', unsafe_allow_html=True)
-            if st.button("⏱  History", key="chat_hist", use_container_width=True):
+            if st.button("⏱ History", key="chat_hist", use_container_width=True):
                 st.session_state.show_chat_history  = not st.session_state.show_chat_history
                 st.session_state.show_chat_settings = False
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with c3:
+        with p3:
             st.markdown('<div class="chat-pill">', unsafe_allow_html=True)
-            if st.button("⚙  Settings", key="chat_sett", use_container_width=True):
+            if st.button("⚙ Settings", key="chat_sett", use_container_width=True):
                 st.session_state.show_chat_settings = not st.session_state.show_chat_settings
                 st.session_state.show_chat_history  = False
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with c4:
+        with p4:
             st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("🔙 Dashboard", key="back_to_dash", use_container_width=True):
-                st.session_state.view = "dashboard"
+                st.session_state.view               = "dashboard"
                 st.session_state.show_chat_history  = False
                 st.session_state.show_chat_settings = False
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── DROPDOWN PANELS ──────────────────────────────────────────────────────
+    # ── Dropdown panels ───────────────────────────────────────────────────────
     if st.session_state.show_chat_history:
-        _, panel_col, _ = st.columns([1, 3, 1])
-        with panel_col:
+        _, panel, _ = st.columns([1, 3, 1])
+        with panel:
             sessions = st.session_state.chat_sessions
             if not sessions:
                 st.info("No saved sessions yet. Click **➕ New Chat** to save the current one.")
             else:
                 st.markdown(
-                    '<div style="background:var(--surface2);'
-                    'border:1px solid var(--border2);border-radius:14px;'
-                    'padding:16px 18px;margin-bottom:8px;">'
-                    '<div style="font-family:\'DM Mono\',monospace;font-size:0.60rem;'
-                    'color:rgba(148,163,184,.48);text-transform:uppercase;'
+                    '<div style="background:#101929;border:1px solid rgba(255,255,255,0.12);'
+                    'border-radius:14px;padding:16px 18px;margin-bottom:8px;">'
+                    '<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;'
+                    'color:rgba(148,163,184,.45);text-transform:uppercase;'
                     'letter-spacing:1.2px;margin-bottom:12px;">Chat History</div>',
                     unsafe_allow_html=True,
                 )
@@ -586,8 +614,8 @@ if view == "chat":
                     hc1, hc2 = st.columns([5, 1])
                     with hc1:
                         st.markdown(
-                            '<div style="font-size:0.78rem;color:rgba(148,163,184,.65);'
-                            'padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
+                            '<div style="font-size:0.77rem;color:rgba(148,163,184,.62);'
+                            'padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
                             + str(idx + 1) + '.  ' + sess["label"] + '</div>',
                             unsafe_allow_html=True,
                         )
@@ -601,129 +629,89 @@ if view == "chat":
                 st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.show_chat_settings:
-        _, panel_col, _ = st.columns([1, 3, 1])
-        with panel_col:
+        _, panel, _ = st.columns([1, 3, 1])
+        with panel:
             st.markdown(
-                '<div style="background:var(--surface2);'
-                'border:1px solid var(--border2);border-radius:14px;'
-                'padding:16px 18px;margin-bottom:8px;">'
-                '<div style="font-family:\'DM Mono\',monospace;font-size:0.60rem;'
-                'color:rgba(148,163,184,.48);text-transform:uppercase;'
+                '<div style="background:#101929;border:1px solid rgba(255,255,255,0.12);'
+                'border-radius:14px;padding:16px 18px;margin-bottom:8px;">'
+                '<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;'
+                'color:rgba(148,163,184,.45);text-transform:uppercase;'
                 'letter-spacing:1.2px;margin-bottom:10px;">Bot Settings</div>'
-                '<div style="font-size:0.80rem;color:rgba(148,163,184,.58);line-height:1.75;">'
+                '<div style="font-size:0.80rem;color:rgba(148,163,184,.56);line-height:1.75;">'
                 'Model: LLaMA 3.3 70B (via Groq)<br>'
-                'Context window: 8 k tokens<br>'
-                'Student context: ' + st.session_state.student_name
-                + ' · ' + st.session_state.branch + '<br>'
-                'Language: English<br>'
-                'Response style: Concise + actionable'
+                'Context: ' + st.session_state.student_name
+                + ' &nbsp;·&nbsp; ' + st.session_state.branch + '<br>'
+                'Language: English &nbsp;·&nbsp; Response: Concise'
                 '</div>'
-                '<div style="font-size:0.62rem;color:rgba(100,116,139,.38);margin-top:8px;">'
+                '<div style="font-size:0.60rem;color:rgba(100,116,139,.36);margin-top:8px;">'
                 'Full settings available after GROQ_API_KEY is configured.'
                 '</div></div>',
                 unsafe_allow_html=True,
             )
 
-    # ════════════════════════════════════════════════════════════════════════
+    # ══════════════════════════════════════════════════════════════════════════
     # CHAT SHIFT EFFECT
-    # ════════════════════════════════════════════════════════════════════════
-
+    # ══════════════════════════════════════════════════════════════════════════
     if not has_messages:
-        # ─────────────────────────────────────────────────────────────────
-        # INITIAL STATE  —  Centered hero, input in the middle
-        # ─────────────────────────────────────────────────────────────────
-        st.markdown("""
-        <style>
-        /* Push the hero section to vertical center of viewport */
-        .chat-hero-wrapper {
-            min-height: 68vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 16px 20px;
-        }
-        @keyframes fadeUp {
-            from { opacity:0; transform:translateY(18px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-        .chat-hero-inner { animation: fadeUp 0.55s ease both; }
-        </style>
-        """, unsafe_allow_html=True)
+        # ── INITIAL STATE: centered hero + middle input ──────────────────────
 
-        st.markdown('<div class="chat-hero-wrapper">', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="chat-hero-inner" style="text-align:center;max-width:580px;">
+        # Vertical spacer to push content to mid-screen
+        st.markdown("<div style='height:8vh'></div>", unsafe_allow_html=True)
 
-            <!-- Logo mark -->
-            <div style="width:72px;height:72px;margin:0 auto 20px;
-                        border-radius:20px;
-                        background:linear-gradient(135deg,#2563EB 0%,#4F46E5 50%,#059669 100%);
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:2rem;
-                        box-shadow:0 0 0 1px rgba(59,130,246,0.3),
-                                   0 12px 40px rgba(37,99,235,0.35),
-                                   0 0 80px rgba(59,130,246,0.12);">
-                &#129302;
-            </div>
+        # Hero logo + heading + subtext — all one clean HTML block, NO comments
+        _, hero_col, _ = st.columns([1, 3, 1])
+        with hero_col:
+            st.markdown(
+                '<div class="hero-anim" style="text-align:center;padding:0 0 24px;">'
 
-            <!-- Display heading -->
-            <div style="font-family:'Fraunces',serif;font-size:2.6rem;font-weight:900;
-                        color:#E2E8F0;letter-spacing:-1.5px;line-height:1.08;
-                        margin-bottom:10px;">
-                AskMNIT <span style="font-weight:300;color:#60A5FA;">AI</span>
-            </div>
+                '<div style="width:72px;height:72px;margin:0 auto 20px;'
+                'border-radius:20px;'
+                'background:linear-gradient(135deg,#2563EB 0%,#4F46E5 50%,#059669 100%);'
+                'display:flex;align-items:center;justify-content:center;font-size:2rem;'
+                'box-shadow:0 0 0 1px rgba(59,130,246,0.28),'
+                '0 12px 40px rgba(37,99,235,0.32),'
+                '0 0 80px rgba(59,130,246,0.10);">&#129302;</div>'
 
-            <!-- Sub text -->
-            <div style="font-size:0.85rem;color:rgba(148,163,184,0.55);
-                        line-height:1.65;margin-bottom:32px;max-width:400px;margin-left:auto;margin-right:auto;">
-                Your campus intelligence layer — attendance analysis,
-                PYQ search, schedule queries, and exam prep, all in one place.
-            </div>
+                '<div style="font-family:\'Fraunces\',serif;font-size:2.6rem;font-weight:900;'
+                'color:#E2E8F0;letter-spacing:-1.5px;line-height:1.08;margin-bottom:10px;">'
+                'AskMNIT '
+                '<span style="font-weight:300;color:#60A5FA;">AI</span>'
+                '</div>'
 
-            <!-- Suggestion chips -->
-            <div style="display:flex;flex-wrap:wrap;gap:8px;
-                        justify-content:center;margin-bottom:32px;">
-        """, unsafe_allow_html=True)
+                '<div style="font-size:0.84rem;color:rgba(148,163,184,0.52);'
+                'line-height:1.65;margin-bottom:28px;max-width:380px;'
+                'margin-left:auto;margin-right:auto;">'
+                'Your campus intelligence layer — attendance analysis, '
+                'PYQ search, schedule queries, and exam prep.'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
-        # Quick suggestion pills
-        SUGGESTIONS = [
-            "📊 Analyse my attendance",
-            "📅 What's next on my schedule?",
-            "📂 Find PYQs for my branch",
-            "💰 Check my fee status",
-            "📚 Subjects for " + st.session_state.branch,
-            "⏰ Exam schedule tips",
-        ]
-        chip_cols = st.columns(len(SUGGESTIONS))
-        for i, suggestion in enumerate(SUGGESTIONS):
-            with chip_cols[i]:
-                st.markdown(
-                    '<div style="display:inline-block;padding:7px 14px;'
-                    'background:rgba(255,255,255,0.04);'
-                    'border:1px solid rgba(255,255,255,0.09);border-radius:999px;'
-                    'font-size:0.73rem;color:rgba(186,230,253,0.65);'
-                    'cursor:pointer;white-space:nowrap;'
-                    'font-family:\'Outfit\',sans-serif;">'
-                    + suggestion + '</div>',
-                    unsafe_allow_html=True,
-                )
-                if st.button(suggestion, key="sug_" + str(i),
-                             use_container_width=True,
-                             help="Ask this question"):
-                    st.session_state.chat_messages.append(
-                        {"role": "user", "content": suggestion}
-                    )
-                    st.session_state.chat_pending = True
-                    st.rerun()
+        # Suggestion chips — rendered as proper Streamlit buttons styled as pills
+        _, chips_col, _ = st.columns([0.3, 4, 0.3])
+        with chips_col:
+            SUGGESTIONS = [
+                "📊 Analyse my attendance",
+                "📅 What's next on my schedule?",
+                "📂 Find PYQs for my branch",
+                "💰 Check my fee status",
+                "📚 Subjects for " + st.session_state.branch,
+                "⏰ Exam schedule tips",
+            ]
+            chip_cols = st.columns(len(SUGGESTIONS))
+            for i, sug in enumerate(SUGGESTIONS):
+                with chip_cols[i]:
+                    st.markdown('<div class="sug-btn">', unsafe_allow_html=True)
+                    if st.button(sug, key="sug_" + str(i), use_container_width=True):
+                        st.session_state.chat_messages.append({"role": "user", "content": sug})
+                        st.session_state.chat_pending = True
+                        st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("""
-            </div><!-- chips -->
-        </div><!-- hero-inner -->
-        """, unsafe_allow_html=True)
-        st.markdown('</div><!-- hero-wrapper -->', unsafe_allow_html=True)
+        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
 
-        # ── Centered input bar ────────────────────────────────────────────
+        # Centered input bar
         _, input_col, _ = st.columns([1, 3.5, 1])
         with input_col:
             if prompt := st.chat_input(
@@ -735,12 +723,9 @@ if view == "chat":
                 st.rerun()
 
     else:
-        # ─────────────────────────────────────────────────────────────────
-        # ACTIVE STATE  —  Messages above, input anchored at bottom
-        # ─────────────────────────────────────────────────────────────────
+        # ── ACTIVE STATE: messages above, input fixed at bottom ──────────────
         st.markdown("""
         <style>
-        /* Anchor chat input to bottom of viewport */
         [data-testid="stChatInput"] {
             position: fixed !important;
             bottom: 16px !important;
@@ -748,31 +733,18 @@ if view == "chat":
             transform: translateX(-50%) !important;
             width: min(780px, calc(100vw - 80px)) !important;
             z-index: 1000 !important;
-            background: transparent !important;
         }
-        /* Padding so last message isn't hidden behind fixed input */
-        [data-testid="stVerticalBlock"] {
-            padding-bottom: 110px !important;
-        }
-        @keyframes msgIn {
-            from { opacity:0; transform:translateY(8px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-        [data-testid="stChatMessage"] {
-            animation: msgIn 0.22s ease both !important;
-        }
+        [data-testid="stVerticalBlock"] { padding-bottom: 110px !important; }
         </style>
         """, unsafe_allow_html=True)
 
-        # Constrain message width to feel like a chat app
         _, msg_col, _ = st.columns([0.5, 4, 0.5])
         with msg_col:
-            # Render all messages
             for msg in st.session_state.chat_messages:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
 
-        # ── AI response generation ────────────────────────────────────────
+        # AI response
         if st.session_state.chat_pending and st.session_state.chat_messages:
             last  = st.session_state.chat_messages[-1]["content"]
             lower = last.lower()
@@ -781,116 +753,82 @@ if view == "chat":
 
             with msg_col:
                 with st.chat_message("assistant"):
-                    if "attendance" in lower or "present" in lower or "absent" in lower or "%" in lower:
+                    if any(w in lower for w in ["attendance","present","absent","%"]):
                         ov = overall_pct(att)
                         low_subs = [(s, att_pct(r)) for s, r in att.items()
                                     if att_pct(r) < 75 and r["total"] > 0]
-                        resp = (
-                            "**Attendance Overview — " + st.session_state.student_name + "**\n\n"
-                            "Overall: **" + str(ov) + "%**\n\n"
-                        )
+                        resp = "**Attendance Overview — " + st.session_state.student_name + "**\n\nOverall: **" + str(ov) + "%**\n\n"
                         if low_subs:
-                            resp += "⚠️ **Subjects below 75%:**\n"
+                            resp += "⚠️ **Below 75%:**\n"
                             for s, p in low_subs:
-                                tot  = att[s]["total"]
-                                need = max(0, int((0.75 * tot - att[s]["present"]) / 0.25) + 1)
-                                resp += f"- **{s}**: {p}% → attend {need} more to recover\n"
+                                need = max(0, int((0.75 * att[s]["total"] - att[s]["present"]) / 0.25) + 1)
+                                resp += f"- **{s}**: {p}% → attend **{need}** more to recover\n"
                         else:
-                            resp += "✅ All subjects are above the 75% minimum. Stay consistent!"
+                            resp += "✅ All subjects above 75%. Keep it steady!"
 
-                    elif "schedule" in lower or "class" in lower or "next" in lower or "today" in lower:
+                    elif any(w in lower for w in ["schedule","class","next","today"]):
                         if st.session_state.schedule_loaded:
                             today_slots = get_today_slots(st.session_state.full_schedule)
                             nxt = get_next_class(today_slots)
                             today_name = datetime.datetime.now().strftime("%A")
                             resp = "**Today's Classes (" + today_name + ")**\n\n"
                             for slot in today_slots:
-                                resp += (f"- **{slot['time']}** — {slot['subject']} "
-                                         f"in {slot['room']} _({slot['type']})_\n")
-                            if nxt:
-                                resp += (f"\n⏰ **Next:** {nxt['subject']} "
-                                         f"in **{nxt['minutes_away']} minutes**")
-                            else:
-                                resp += "\n✅ No more classes scheduled today."
+                                resp += f"- **{slot['time']}** — {slot['subject']} in {slot['room']} _({slot['type']})_\n"
+                            resp += ("\n⏰ **Next:** " + nxt["subject"] + " in **" + str(nxt["minutes_away"]) + " min**" if nxt
+                                     else "\n✅ No more classes today.")
                         else:
-                            resp = ("No schedule loaded yet.\n\n"
-                                    "Head to **🔙 Dashboard → Edit Profile** "
-                                    "and upload your Weekly Schedule PDF to activate the planner.")
+                            resp = "No schedule loaded yet.\n\nGo to **🔙 Dashboard → Edit Profile** and upload your Weekly Schedule PDF."
 
-                    elif "pyq" in lower or "previous year" in lower or "question paper" in lower:
+                    elif any(w in lower for w in ["pyq","previous year","question paper"]):
                         resp = ("**PYQ Resources for " + br + "**\n\n"
-                                "Access previous year papers from the **📂 PYQs** section in the dashboard sidebar. "
-                                "You can also add direct links using the Quick Links panel.\n\n"
-                                "**Your branch subjects:** " +
-                                ", ".join(BRANCH_SUBJECTS.get(br, [])))
+                                "Access previous year papers from **📂 PYQs** in the sidebar.\n\n"
+                                "Your branch subjects: " + ", ".join(BRANCH_SUBJECTS.get(br, [])))
 
-                    elif "fee" in lower or "pay" in lower or "due" in lower:
-                        resp = ("Fee details and payment history are in the **💰 Fee Portal** section.\n\n"
-                                "Navigate via the dashboard sidebar to view dues and make payments.")
+                    elif any(w in lower for w in ["fee","pay","due"]):
+                        resp = "Fee details are in the **💰 Fee Portal** section on the dashboard sidebar."
 
-                    elif "subject" in lower or "syllabus" in lower or "branch" in lower:
-                        common_list = "\n".join(f"- {s}" for s in COMMON_SUBJECTS)
-                        branch_list = "\n".join(f"- {s}" for s in BRANCH_SUBJECTS.get(br, []))
+                    elif any(w in lower for w in ["subject","syllabus","branch"]):
                         resp = (
-                            "**Your Subject List — " + br + " · " + st.session_state.semester + "**\n\n"
-                            "**Common (all branches):**\n" + common_list + "\n\n"
-                            "**" + br + " specific:**\n" + branch_list
+                            "**Subjects — " + br + " · " + st.session_state.semester + "**\n\n"
+                            "**Common:**\n" + "\n".join(f"- {s}" for s in COMMON_SUBJECTS) + "\n\n"
+                            "**" + br + " specific:**\n" + "\n".join(f"- {s}" for s in BRANCH_SUBJECTS.get(br, []))
                         )
 
-                    elif "exam" in lower or "tip" in lower or "strategy" in lower or "prepare" in lower:
+                    elif any(w in lower for w in ["exam","tip","strategy","prepare"]):
+                        first_branch_subj = BRANCH_SUBJECTS.get(br, ["your core subject"])[0]
                         resp = (
                             "**Exam Prep Strategy for " + br + "**\n\n"
-                            "1. **Triage by attendance** — subjects below 75% need extra sessions first.\n"
-                            "2. **PYQ pattern** — solve last 5 years; most questions repeat with variation.\n"
-                            "3. **Daily planner** — use the dashboard planner to block 2-hour deep-work slots.\n"
-                            "4. **Group study** — form a 3–4 person group for " +
-                            (BRANCH_SUBJECTS.get(br, ["your core subjects"])[0]) + ".\n"
-                            "5. **ERP deadlines** — check assignment and lab submission dates weekly."
+                            "1. **Triage by attendance** — below-75% subjects go first.\n"
+                            "2. **PYQ analysis** — last 5 years covers ~70% of patterns.\n"
+                            "3. **Block schedule** — 2-hour deep-work slots in the planner.\n"
+                            "4. **Group study** — 3-person group for " + first_branch_subj + ".\n"
+                            "5. **ERP deadlines** — check assignment submissions weekly."
                         )
 
-                    elif "cgpa" in lower or "grade" in lower or "marks" in lower:
-                        resp = ("CGPA and grade records are available in the **📚 Academics** section.\n\n"
-                                "I'll surface them directly once ERP integration is wired in.")
+                    elif any(w in lower for w in ["cgpa","grade","marks","result"]):
+                        resp = "Academic records are in the **📚 Academics** section on the dashboard."
 
-                    elif "hostel" in lower or "mess" in lower or "food" in lower:
-                        resp = ("The weekly mess menu is in **🍱 Mess Menu** on the dashboard.\n\n"
-                                "For hostel issues, contact your warden or use the student grievance portal.")
-
-                    elif "college" in lower or "mnit" in lower or "campus" in lower:
-                        resp = (
-                            "**About MNIT Jaipur**\n\n"
-                            "Malaviya National Institute of Technology, Jaipur is an NIT under MHRD.\n\n"
-                            "Key links:\n"
-                            "- ERP: erp.mnit.ac.in\n"
-                            "- Academics: mnit.ac.in/academics\n"
-                            "- Library: library.mnit.ac.in\n\n"
-                            "I can help with your specific academic queries too — just ask!"
-                        )
+                    elif any(w in lower for w in ["hostel","mess","food"]):
+                        resp = "Mess menu is under **🍱 Mess Menu** on the dashboard sidebar."
 
                     else:
                         first_name = st.session_state.student_name.split()[0]
                         resp = (
-                            "I'm AskMNIT — built for " + first_name + " · " + br + " · "
-                            + st.session_state.semester + ".\n\n"
-                            "Here's what I can do:\n\n"
-                            "| Topic | Try asking… |\n"
-                            "|---|---|\n"
-                            "| 📊 Attendance | _Analyse my attendance shortfall_ |\n"
-                            "| 📅 Schedule | _What's my next class today?_ |\n"
-                            "| 📂 PYQs | _Find PYQs for Mineral Processing_ |\n"
+                            "I'm AskMNIT — built for **" + first_name + "** · **" + br + "**.\n\n"
+                            "| Topic | Try asking… |\n|---|---|\n"
+                            "| 📊 Attendance | _Analyse my attendance_ |\n"
+                            "| 📅 Schedule | _What's next today?_ |\n"
+                            "| 📂 PYQs | _Find PYQs for my branch_ |\n"
                             "| 📚 Subjects | _List my branch subjects_ |\n"
                             "| 💰 Fees | _Check fee due date_ |\n"
                             "| 🎯 Exams | _Give me an exam prep strategy_ |"
                         )
 
                     st.markdown(resp)
-                    st.session_state.chat_messages.append(
-                        {"role": "assistant", "content": resp}
-                    )
+                    st.session_state.chat_messages.append({"role": "assistant", "content": resp})
             st.session_state.chat_pending = False
             st.rerun()
 
-        # Bottom-anchored input
         if prompt := st.chat_input(
             "Ask about attendance, schedule, PYQs, fees, exams…",
             key="chat_input_active",
@@ -899,48 +837,43 @@ if view == "chat":
             st.session_state.chat_pending = True
             st.rerun()
 
-    # End chat view
     st.stop()
 
 
-##############################################################################
-# ████████████████████  DASHBOARD VIEW  ████████████████████████████████████
-##############################################################################
+###############################################################################
+#  DASHBOARD VIEW
+###############################################################################
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 NAV_ITEMS = [
-    ("⬡", "My Dashboard"), ("📅", "My Schedule"), ("📚", "Academics"),
-    ("📝", "Study Material"), ("📂", "PYQs"), ("💰", "Fee Portal"), ("🍱", "Mess Menu"),
+    ("⬡","My Dashboard"), ("📅","My Schedule"), ("📚","Academics"),
+    ("📝","Study Material"), ("📂","PYQs"), ("💰","Fee Portal"), ("🍱","Mess Menu"),
 ]
 
 with st.sidebar:
-    st.markdown("""
-    <div style="padding:18px 14px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">
-        <div style="display:flex;align-items:center;gap:9px;">
-            <div style="width:30px;height:30px;border-radius:7px;
-                        background:linear-gradient(135deg,#2563EB,#4F46E5);
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:0.9rem;font-weight:700;color:white;
-                        box-shadow:0 3px 12px rgba(37,99,235,0.28);">A</div>
-            <div>
-                <div style="font-family:'DM Mono',monospace;font-size:0.85rem;
-                            color:#E2E8F0;">AskMNIT</div>
-                <div style="font-size:0.56rem;color:rgba(148,163,184,.42);margin-top:1px;">
-                    Student Portal
-                </div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="padding:18px 14px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">'
+        '<div style="display:flex;align-items:center;gap:9px;">'
+        '<div style="width:30px;height:30px;border-radius:7px;'
+        'background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;'
+        'font-size:0.9rem;font-weight:700;color:white;'
+        'box-shadow:0 3px 12px rgba(37,99,235,0.28);">A</div>'
+        '<div>'
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;color:#E2E8F0;">AskMNIT</div>'
+        '<div style="font-size:0.56rem;color:rgba(148,163,184,.40);margin-top:1px;">Student Portal</div>'
+        '</div></div></div>',
+        unsafe_allow_html=True,
+    )
 
-    b_hex = branch_hex(st.session_state.branch)
+    bh = branch_hex(st.session_state.branch)
     st.markdown(
         '<div style="padding:8px 12px 4px;">'
         '<span style="font-size:0.60rem;font-weight:700;padding:2px 9px;'
-        'background:rgba(255,255,255,0.05);border:1px solid ' + b_hex + '44;'
-        'border-radius:5px;color:' + b_hex + ';letter-spacing:0.4px;">'
+        'background:rgba(255,255,255,0.05);border:1px solid ' + bh + '44;'
+        'border-radius:5px;color:' + bh + ';letter-spacing:0.4px;">'
         + st.session_state.branch + '</span></div>',
         unsafe_allow_html=True,
     )
@@ -955,17 +888,17 @@ with st.sidebar:
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("""
-    <div style="position:fixed;bottom:18px;width:182px;
-                padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div style="position:fixed;bottom:18px;width:182px;'
+        'padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">',
+        unsafe_allow_html=True,
+    )
     st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
     if st.button("🚪  Logout", key="sidebar_logout", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -985,19 +918,18 @@ if dash_page != "My Dashboard":
     st.markdown(
         '<div style="padding:24px;">'
         '<div style="display:flex;align-items:center;gap:10px;'
-        'border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;'
-        'margin-bottom:24px;">'
+        'border-bottom:1px solid rgba(255,255,255,0.06);'
+        'padding-bottom:14px;margin-bottom:24px;">'
         '<span style="font-size:1.2rem;">' + icon + '</span>'
-        '<span style="font-family:\'DM Mono\',monospace;font-size:0.95rem;'
-        'color:#E2E8F0;">' + title.upper() + '</span>'
-        '</div>'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.95rem;color:#E2E8F0;">'
+        + title.upper() + '</span></div>'
         '<div style="background:linear-gradient(160deg,#0B1120,#060A12);'
         'border:1px dashed rgba(59,130,246,0.18);border-radius:16px;'
         'padding:60px 40px;text-align:center;">'
-        '<div style="font-size:2.8rem;margin-bottom:14px;opacity:.28;">' + icon + '</div>'
+        '<div style="font-size:2.8rem;margin-bottom:14px;opacity:.26;">' + icon + '</div>'
         '<div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;'
         'color:#E2E8F0;margin-bottom:8px;">' + title.upper() + '</div>'
-        '<div style="font-size:0.76rem;color:rgba(148,163,184,.46);'
+        '<div style="font-size:0.76rem;color:rgba(148,163,184,.44);'
         'max-width:280px;margin:0 auto;line-height:1.65;">' + desc + '</div>'
         '</div></div>',
         unsafe_allow_html=True,
@@ -1006,55 +938,52 @@ if dash_page != "My Dashboard":
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MAIN DASHBOARD — padding wrapper
+# MY DASHBOARD — content wrapper
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown("<div style='padding:0 24px 80px;'>", unsafe_allow_html=True)
+st.markdown("<div style='padding:0 22px 80px;'>", unsafe_allow_html=True)
 
-# ── TOP HEADER ───────────────────────────────────────────────────────────────
+# ── Header bar ───────────────────────────────────────────────────────────────
 h1, h2, h3 = st.columns([2, 5, 2])
 with h1:
     st.markdown(
-        '<div style="display:flex;align-items:center;gap:9px;padding:14px 0 10px;">'
-        '<div style="width:32px;height:32px;border-radius:8px;'
+        '<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;">'
+        '<div style="width:30px;height:30px;border-radius:7px;'
         'background:linear-gradient(135deg,#2563EB,#4F46E5);'
         'display:flex;align-items:center;justify-content:center;'
-        'font-size:0.88rem;font-weight:700;color:white;'
-        'box-shadow:0 3px 12px rgba(37,99,235,0.26);">M</div>'
+        'font-size:0.85rem;font-weight:700;color:white;">M</div>'
         '<div>'
-        '<div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;color:#E2E8F0;">'
-        'MNIT Jaipur</div>'
-        '<div style="font-size:0.54rem;color:rgba(148,163,184,.38);">[ MNIT LOGO ]</div>'
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div>'
+        '<div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div>'
         '</div></div>',
         unsafe_allow_html=True,
     )
 with h2:
     now_str = datetime.datetime.now().strftime("%a, %d %b %Y  ·  %H:%M")
     st.markdown(
-        '<div style="padding:14px 0 10px;text-align:center;">'
-        '<span style="font-family:\'DM Mono\',monospace;font-size:0.78rem;'
+        '<div style="padding:13px 0 9px;text-align:center;">'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.76rem;'
         'color:#60A5FA;letter-spacing:0.8px;">MY DASHBOARD</span>'
-        '<br><span style="font-size:0.58rem;color:rgba(148,163,184,.40);">'
-        + now_str + '</span></div>',
+        '<br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">' + now_str + '</span>'
+        '</div>',
         unsafe_allow_html=True,
     )
 with h3:
     init_str = initials(st.session_state.student_name)
     st.markdown(
         '<div style="display:flex;align-items:center;justify-content:flex-end;'
-        'gap:9px;padding:14px 0 10px;">'
-        '<div title="Notifications" style="width:30px;height:30px;border-radius:7px;'
+        'gap:8px;padding:13px 0 9px;">'
+        '<div style="width:30px;height:30px;border-radius:7px;'
         'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);'
-        'display:flex;align-items:center;justify-content:center;font-size:0.88rem;'
-        'cursor:pointer;position:relative;">&#128276;'
+        'display:flex;align-items:center;justify-content:center;font-size:0.86rem;'
+        'position:relative;">&#128276;'
         '<span style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;'
         'border-radius:50%;background:#EF4444;border:1.5px solid #060A12;"></span>'
         '</div>'
-        '<div title="Profile" style="width:30px;height:30px;border-radius:7px;'
+        '<div style="width:30px;height:30px;border-radius:7px;'
         'background:linear-gradient(135deg,#2563EB,#4F46E5);'
         'display:flex;align-items:center;justify-content:center;'
-        'font-size:0.68rem;font-weight:700;color:white;'
-        'font-family:\'DM Mono\',monospace;cursor:pointer;'
-        'box-shadow:0 2px 8px rgba(37,99,235,0.22);">'
+        'font-size:0.66rem;font-weight:700;color:white;'
+        'font-family:\'DM Mono\',monospace;">'
         + init_str + '</div></div>',
         unsafe_allow_html=True,
     )
@@ -1071,14 +1000,13 @@ st.markdown(
 # ══════════════════════════════════════════════════════════════════════════════
 c_profile, c_att = st.columns([1, 1.9], gap="large")
 
-# ── PROFILE CARD ─────────────────────────────────────────────────────────────
 with c_profile:
     st.markdown(
         '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
         'border:1px solid rgba(59,130,246,0.22);border-radius:16px;'
         'padding:18px 18px 14px;">'
         '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
-        'color:rgba(148,163,184,.42);text-transform:uppercase;'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;'
         'letter-spacing:1.4px;margin-bottom:12px;">// STUDENT PROFILE</div>',
         unsafe_allow_html=True,
     )
@@ -1094,9 +1022,10 @@ with c_profile:
                                  index=BRANCHES.index(st.session_state.branch)
                                        if st.session_state.branch in BRANCHES else 0,
                                  key="ep_branch")
+
         st.markdown(
             '<div style="margin-top:8px;margin-bottom:4px;'
-            'font-size:0.58rem;color:rgba(148,163,184,.48);'
+            'font-size:0.58rem;color:rgba(148,163,184,.46);'
             'text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">'
             'Upload Weekly Schedule PDF</div>',
             unsafe_allow_html=True,
@@ -1106,7 +1035,7 @@ with c_profile:
         if uploaded_pdf is not None:
             with st.spinner("Analysing PDF…"):
                 extracted = process_schedule_pdf(uploaded_pdf, new_br)
-            st.session_state.full_schedule  = extracted
+            st.session_state.full_schedule   = extracted
             st.session_state.schedule_loaded = True
             st.session_state.pdf_filename    = uploaded_pdf.name
             st.success("Loaded: " + uploaded_pdf.name)
@@ -1121,10 +1050,10 @@ with c_profile:
                 st.session_state.semester      = new_sem
                 st.session_state.branch        = new_br
                 if branch_changed:
-                    new_subjs = subjects_for_branch(new_br)
-                    old_att   = st.session_state.attendance
+                    old_att = st.session_state.attendance
                     st.session_state.attendance = {
-                        s: old_att.get(s, {"present": 0, "total": 0}) for s in new_subjs
+                        s: old_att.get(s, {"present": 0, "total": 0})
+                        for s in subjects_for_branch(new_br)
                     }
                 st.session_state.editing_profile = False
                 st.rerun()
@@ -1135,10 +1064,13 @@ with c_profile:
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
     else:
-        init_str  = initials(st.session_state.student_name)
-        b_hex_val = branch_hex(st.session_state.branch)
-        att_all   = st.session_state.attendance
+        init_str   = initials(st.session_state.student_name)
+        bh_val     = branch_hex(st.session_state.branch)
+        att_all    = st.session_state.attendance
         ov_pct_val = overall_pct(att_all)
+        ov_c       = att_color(ov_pct_val)
+        n_subj     = len(att_all)
+        low_cnt    = sum(1 for r in att_all.values() if att_pct(r) < 75 and r["total"] > 0)
 
         st.markdown(
             '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">'
@@ -1146,30 +1078,25 @@ with c_profile:
             'background:linear-gradient(135deg,#2563EB,#4F46E5);'
             'display:flex;align-items:center;justify-content:center;'
             'font-family:\'DM Mono\',monospace;font-size:1.0rem;color:white;'
-            'box-shadow:0 4px 14px rgba(37,99,235,0.28);">'
-            + init_str + '</div>'
+            'box-shadow:0 4px 14px rgba(37,99,235,0.28);">' + init_str + '</div>'
             '<div style="min-width:0;flex:1;">'
-            '<div style="font-weight:700;font-size:0.95rem;color:#E2E8F0;'
+            '<div style="font-weight:700;font-size:0.94rem;color:#E2E8F0;'
             'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
             'font-family:\'Outfit\',sans-serif;margin-bottom:2px;">'
             + st.session_state.student_name + '</div>'
-            '<div style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
-            'color:rgba(148,163,184,.52);">' + st.session_state.college_id + '</div>'
+            '<div style="font-family:\'DM Mono\',monospace;font-size:0.61rem;'
+            'color:rgba(148,163,184,.50);">' + st.session_state.college_id + '</div>'
             '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'
-            '<span style="font-size:0.60rem;padding:2px 8px;border-radius:4px;'
+            '<span style="font-size:0.59rem;padding:2px 8px;border-radius:4px;'
             'background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);'
-            'color:rgba(186,230,253,.65);">' + st.session_state.semester + '</span>'
-            '<span style="font-size:0.60rem;padding:2px 8px;border-radius:4px;'
-            'background:rgba(255,255,255,.05);border:1px solid ' + b_hex_val + '44;'
-            'color:' + b_hex_val + ';font-weight:700;">' + st.session_state.branch + '</span>'
+            'color:rgba(186,230,253,.62);">' + st.session_state.semester + '</span>'
+            '<span style="font-size:0.59rem;padding:2px 8px;border-radius:4px;'
+            'background:rgba(255,255,255,.05);border:1px solid ' + bh_val + '44;'
+            'color:' + bh_val + ';font-weight:700;">' + st.session_state.branch + '</span>'
             '</div></div></div>',
             unsafe_allow_html=True,
         )
 
-        # Mini stats
-        n_subj = len(att_all)
-        low_cnt = sum(1 for r in att_all.values() if att_pct(r) < 75 and r["total"] > 0)
-        ov_c = att_color(ov_pct_val)
         st.markdown(
             '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;'
             'gap:6px;margin-bottom:12px;">' +
@@ -1179,7 +1106,7 @@ with c_profile:
                 'border-radius:8px;padding:8px 9px;text-align:center;">'
                 '<div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;'
                 'font-weight:600;color:' + vc + ';margin-bottom:1px;">' + str(vv) + '</div>'
-                '<div style="font-size:0.56rem;color:rgba(148,163,184,.42);'
+                '<div style="font-size:0.55rem;color:rgba(148,163,184,.40);'
                 'text-transform:uppercase;letter-spacing:0.5px;">' + lb + '</div>'
                 '</div>'
                 for vv, vc, lb in [
@@ -1187,8 +1114,7 @@ with c_profile:
                     (n_subj, "#60A5FA", "Subjects"),
                     (low_cnt, "#EF4444" if low_cnt else "#10B981", "Low Att"),
                 ]
-            ) +
-            '</div>',
+            ) + '</div>',
             unsafe_allow_html=True,
         )
 
@@ -1196,13 +1122,12 @@ with c_profile:
             st.markdown(
                 '<div style="background:rgba(16,185,129,.07);'
                 'border:1px solid rgba(16,185,129,.18);border-radius:7px;'
-                'padding:6px 11px;margin-bottom:10px;font-size:0.70rem;'
+                'padding:6px 11px;margin-bottom:10px;font-size:0.68rem;'
                 'color:#34D399;display:flex;gap:6px;align-items:center;">'
                 '&#128196; ' + st.session_state.pdf_filename + '</div>',
                 unsafe_allow_html=True,
             )
 
-        # Edit + Open Chat buttons
         st.markdown('<div class="edit-btn">', unsafe_allow_html=True)
         if st.button("✏  Edit Profile  +  Upload Schedule",
                      key="edit_profile_btn", use_container_width=True):
@@ -1212,12 +1137,11 @@ with c_profile:
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-        # ── Open AskMNIT AI button ────────────────────────────────────
         st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
         if st.button("🤖  AskMNIT AI", key="open_chat_from_dash", use_container_width=True):
-            st.session_state.view            = "chat"
-            st.session_state.chat_messages   = []
-            st.session_state.chat_pending    = False
+            st.session_state.view          = "chat"
+            st.session_state.chat_messages = []
+            st.session_state.chat_pending  = False
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1238,23 +1162,22 @@ with c_att:
         '<div style="display:flex;align-items:center;justify-content:space-between;'
         'margin-bottom:12px;">'
         '<span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
-        'color:rgba(148,163,184,.42);text-transform:uppercase;letter-spacing:1.4px;">'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">'
         '// ATTENDANCE METER</span>'
-        '<span style="font-size:0.64rem;font-weight:700;padding:3px 10px;'
+        '<span style="font-size:0.63rem;font-weight:700;padding:3px 10px;'
         'border-radius:999px;background:' + s_bg + ';color:' + s_tc + ';'
         'border:1px solid ' + s_tc + '44;">' + s_lbl + '</span>'
         '</div>',
         unsafe_allow_html=True,
     )
-
     st.markdown(
         '<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;">'
         '<div style="font-family:\'DM Mono\',monospace;font-size:2.3rem;'
         'color:' + ov_c + ';letter-spacing:-2px;line-height:1;">'
-        + str(ov) + '<span style="font-size:1rem;">%</span></div>'
+        + str(ov) + '<span style="font-size:1.0rem;">%</span></div>'
         '<div>'
-        '<div style="font-size:0.68rem;color:rgba(148,163,184,.50);">Overall Attendance</div>'
-        '<div style="font-size:0.60rem;color:rgba(100,116,139,.40);margin-top:2px;">'
+        '<div style="font-size:0.67rem;color:rgba(148,163,184,.48);">Overall Attendance</div>'
+        '<div style="font-size:0.59rem;color:rgba(100,116,139,.40);margin-top:2px;">'
         'Min 75%  ·  ' + str(len(att_all)) + ' subjects  ·  ' + st.session_state.branch
         + '</div></div></div>',
         unsafe_allow_html=True,
@@ -1271,7 +1194,6 @@ with c_att:
             sc   = att_color(spct)
             kp   = prefix + "_p_" + str(i)
             ka   = prefix + "_a_" + str(i)
-
             st.markdown(
                 '<div style="background:rgba(255,255,255,0.02);'
                 'border:1px solid rgba(255,255,255,0.055);'
@@ -1281,11 +1203,11 @@ with c_att:
             r1, r2, r3, r4 = st.columns([4, 1.5, 1.1, 1.1])
             with r1:
                 st.markdown(
-                    '<div style="font-size:0.77rem;font-weight:600;color:#E2E8F0;'
+                    '<div style="font-size:0.76rem;font-weight:600;color:#E2E8F0;'
                     'margin-bottom:2px;white-space:nowrap;overflow:hidden;'
                     'text-overflow:ellipsis;">' + subj + '</div>'
-                    '<div style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
-                    'color:rgba(148,163,184,.45);">'
+                    '<div style="font-family:\'DM Mono\',monospace;font-size:0.61rem;'
+                    'color:rgba(148,163,184,.44);">'
                     + str(rec["present"]) + '/' + str(rec["total"]) + '</div>',
                     unsafe_allow_html=True,
                 )
@@ -1310,17 +1232,14 @@ with c_att:
                     st.session_state.attendance[subj]["total"] += 1
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-
             st.markdown("</div>", unsafe_allow_html=True)
 
     branch_only = BRANCH_SUBJECTS.get(st.session_state.branch, [])
-
     with st.expander("📘  Common Subjects  (" + str(len(COMMON_SUBJECTS)) + ")", expanded=True):
         render_subj_rows(COMMON_SUBJECTS, "cmn")
-
     if branch_only:
-        with st.expander("🔬  " + st.session_state.branch + " Subjects  ("
-                         + str(len(branch_only)) + ")", expanded=True):
+        with st.expander("🔬  " + st.session_state.branch + " Subjects  (" +
+                         str(len(branch_only)) + ")", expanded=True):
             render_subj_rows(branch_only, "brnch")
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1332,7 +1251,6 @@ st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 # ROW 2 — TODAY'S PLANNER
 # ══════════════════════════════════════════════════════════════════════════════
 today_name = datetime.datetime.now().strftime("%A")
-
 st.markdown(
     '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
     'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
@@ -1340,10 +1258,10 @@ st.markdown(
     '<div style="display:flex;align-items:center;justify-content:space-between;'
     'margin-bottom:12px;">'
     '<span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
-    'color:rgba(148,163,184,.42);text-transform:uppercase;letter-spacing:1.4px;">'
+    'color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">'
     "// TODAY'S PLANNER</span>"
-    '<span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
-    'color:rgba(96,165,250,.65);">' + today_name.upper() + '</span>'
+    '<span style="font-family:\'DM Mono\',monospace;font-size:0.61rem;'
+    'color:rgba(96,165,250,.62);">' + today_name.upper() + '</span>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -1351,13 +1269,12 @@ st.markdown(
 if st.session_state.schedule_loaded:
     today_slots = get_today_slots(st.session_state.full_schedule)
     nxt = get_next_class(today_slots)
-
     if nxt:
-        mins = nxt["minutes_away"]
-        hrs  = mins // 60
-        rem  = mins % 60
-        cd_str  = (f"{hrs}h {rem}m" if hrs else f"{rem} min") + " away"
-        urg_c   = "#EF4444" if mins < 15 else "#F59E0B" if mins < 45 else "#22D3EE"
+        mins   = nxt["minutes_away"]
+        hrs    = mins // 60
+        rem    = mins % 60
+        cd_str = (f"{hrs}h {rem}m" if hrs else f"{rem} min") + " away"
+        urg_c  = "#EF4444" if mins < 15 else "#F59E0B" if mins < 45 else "#22D3EE"
         st.markdown(
             '<div style="background:linear-gradient(90deg,'
             'rgba(34,211,238,.05),rgba(37,99,235,.05));'
@@ -1365,26 +1282,26 @@ if st.session_state.schedule_loaded:
             'padding:10px 14px;margin-bottom:12px;'
             'display:flex;align-items:center;justify-content:space-between;">'
             '<div>'
-            '<div style="font-size:0.58rem;color:rgba(148,163,184,.48);'
+            '<div style="font-size:0.57rem;color:rgba(148,163,184,.46);'
             'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div>'
-            '<div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">'
-            + nxt["subject"] +
-            '  <span style="font-size:0.68rem;color:rgba(148,163,184,.50);">in ' + nxt["room"] + '</span>'
+            '<div style="font-weight:700;font-size:0.85rem;color:#E2E8F0;">'
+            + nxt["subject"]
+            + '  <span style="font-size:0.67rem;color:rgba(148,163,184,.48);">in ' + nxt["room"] + '</span>'
             '</div></div>'
-            '<div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;'
+            '<div style="font-family:\'DM Mono\',monospace;font-size:0.95rem;'
             'font-weight:600;color:' + urg_c + ';text-align:right;">'
-            + cd_str +
-            '<div style="font-size:0.58rem;color:rgba(148,163,184,.44);'
+            + cd_str
+            + '<div style="font-size:0.57rem;color:rgba(148,163,184,.42);'
             'font-weight:400;margin-top:1px;">' + nxt["time"] + '</div>'
             '</div></div>',
             unsafe_allow_html=True,
         )
 
     now_hm = datetime.datetime.now().hour * 60 + datetime.datetime.now().minute
-    t_col, s_col = st.columns([1, 2])
-    with t_col:
+    tc_col, ts_col = st.columns([1, 2])
+    with tc_col:
         st.markdown(
-            '<div style="font-size:0.58rem;color:rgba(148,163,184,.42);'
+            '<div style="font-size:0.57rem;color:rgba(148,163,184,.40);'
             'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Time</div>',
             unsafe_allow_html=True,
         )
@@ -1392,16 +1309,16 @@ if st.session_state.schedule_loaded:
             sh, sm = map(int, slot["time"].split(":"))
             is_past = (sh * 60 + sm) < now_hm
             st.markdown(
-                '<div style="font-family:\'DM Mono\',monospace;font-size:0.70rem;'
-                'color:' + ('rgba(148,163,184,.32)' if is_past else '#60A5FA') + ';'
+                '<div style="font-family:\'DM Mono\',monospace;font-size:0.69rem;'
+                'color:' + ('rgba(148,163,184,.30)' if is_past else '#60A5FA') + ';'
                 'padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);'
                 'text-decoration:' + ('line-through' if is_past else 'none') + ';">'
                 + slot["time"] + '</div>',
                 unsafe_allow_html=True,
             )
-    with s_col:
+    with ts_col:
         st.markdown(
-            '<div style="font-size:0.58rem;color:rgba(148,163,184,.42);'
+            '<div style="font-size:0.57rem;color:rgba(148,163,184,.40);'
             'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">'
             'Subject / Room / Type</div>',
             unsafe_allow_html=True,
@@ -1413,11 +1330,11 @@ if st.session_state.schedule_loaded:
             tc = type_colors.get(slot["type"], "#60A5FA")
             st.markdown(
                 '<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">'
-                '<span style="font-size:0.77rem;font-weight:600;color:'
-                + ('rgba(148,163,184,.36)' if is_past else '#E2E8F0') + ';">'
+                '<span style="font-size:0.76rem;font-weight:600;color:'
+                + ('rgba(148,163,184,.34)' if is_past else '#E2E8F0') + ';">'
                 + slot["subject"] + '</span>'
-                '  <span style="font-size:0.62rem;color:rgba(148,163,184,.44);">' + slot["room"] + '</span>'
-                '  <span style="font-size:0.58rem;padding:1px 6px;border-radius:4px;'
+                '  <span style="font-size:0.61rem;color:rgba(148,163,184,.42);">' + slot["room"] + '</span>'
+                '  <span style="font-size:0.57rem;padding:1px 6px;border-radius:4px;'
                 'background:' + tc + '18;color:' + tc + ';font-weight:600;">'
                 + slot["type"] + '</span>'
                 '</div>',
@@ -1427,10 +1344,10 @@ else:
     st.markdown(
         '<div style="background:rgba(59,130,246,.04);'
         'border:1px dashed rgba(59,130,246,.20);border-radius:9px;'
-        'padding:9px 13px;margin-bottom:12px;font-size:0.74rem;'
-        'color:rgba(148,163,184,.50);display:flex;gap:7px;align-items:center;">'
-        '&#128196;  Upload Weekly Schedule PDF in <b>Edit Profile</b> to activate the planner.'
-        '</div>',
+        'padding:9px 13px;margin-bottom:12px;font-size:0.73rem;'
+        'color:rgba(148,163,184,.48);display:flex;gap:7px;align-items:center;">'
+        '&#128196;  Upload your Weekly Schedule PDF in '
+        '<b>Edit Profile</b> to activate the planner.</div>',
         unsafe_allow_html=True,
     )
     MANUAL_SLOTS = ["08:00","09:30","11:00","12:00","14:00","15:30"]
@@ -1439,7 +1356,7 @@ else:
         mp1, mp2, mp3, mp4 = st.columns([1.2, 4, 0.8, 2.2])
         with mp1:
             st.markdown(
-                '<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;'
+                '<div style="font-family:\'DM Mono\',monospace;font-size:0.67rem;'
                 'color:#60A5FA;padding-top:10px;white-space:nowrap;">' + st_time + '</div>',
                 unsafe_allow_html=True,
             )
@@ -1456,9 +1373,9 @@ else:
             saved = st.session_state.planner_overrides.get(st_time, "")
             if saved:
                 st.markdown(
-                    '<div style="font-size:0.68rem;color:#34D399;'
+                    '<div style="font-size:0.67rem;color:#34D399;'
                     'background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);'
-                    'border-radius:7px;padding:5px 9px;margin-top:2px;'
+                    'border-radius:7px;padding:4px 9px;margin-top:2px;'
                     'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
                     '✓ ' + saved + '</div>',
                     unsafe_allow_html=True,
@@ -1478,7 +1395,7 @@ with q_col:
         'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
         'padding:18px 18px 14px;height:100%;">'
         '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
-        'color:rgba(148,163,184,.42);text-transform:uppercase;'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;'
         'letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>',
         unsafe_allow_html=True,
     )
@@ -1497,7 +1414,7 @@ with q_col:
             '<div style="background:rgba(59,130,246,.06);'
             'border:1px solid rgba(59,130,246,.18);border-radius:8px;'
             'padding:7px 11px;margin-top:7px;font-size:0.70rem;'
-            'color:rgba(186,230,253,.60);line-height:1.5;">'
+            'color:rgba(186,230,253,.58);line-height:1.5;">'
             + st.session_state.ql_feedback + '</div>',
             unsafe_allow_html=True,
         )
@@ -1509,7 +1426,7 @@ with n_col:
         'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
         'padding:18px 18px 14px;height:100%;">'
         '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
-        'color:rgba(148,163,184,.42);text-transform:uppercase;'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;'
         'letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>',
         unsafe_allow_html=True,
     )
@@ -1532,7 +1449,7 @@ with n_col:
     if st.session_state.notes_text.strip():
         lines = st.session_state.notes_text.strip().split("\n")
         preview = "".join(
-            '<div style="font-size:0.72rem;color:rgba(148,163,184,.60);'
+            '<div style="font-size:0.71rem;color:rgba(148,163,184,.58);'
             'padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.55;">'
             + (ln if ln.strip().startswith("•") else "• " + ln) + '</div>'
             for ln in lines if ln.strip()
@@ -1546,15 +1463,15 @@ with n_col:
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Footer ─────────────────────────────────────────────────────────────────
+# Footer
 st.markdown("""
-<div style="text-align:center;margin-top:30px;padding:10px 0;
+<div style="text-align:center;margin-top:28px;padding:10px 0;
             border-top:1px solid rgba(255,255,255,0.05);">
-    <span style="font-family:'DM Mono',monospace;font-size:0.54rem;
-                 color:rgba(148,163,184,0.26);letter-spacing:1.2px;">
-        ASKMNT  ·  MNIT JAIPUR  ·  SESSION-STATE ONLY  ·  NO BACKEND
+    <span style="font-family:'DM Mono',monospace;font-size:0.52rem;
+                 color:rgba(148,163,184,0.24);letter-spacing:1.2px;">
+        ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; SESSION-STATE ONLY
     </span>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)   # padding wrapper
+st.markdown("</div>", unsafe_allow_html=True)

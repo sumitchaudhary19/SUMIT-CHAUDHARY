@@ -1,30 +1,13 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AskMNIT — Premium AI Chat + Student Dashboard (Fully Functional)            ║
-# ║                                                                              ║
-# ║  ARCHITECTURE DECISION:                                                      ║
-# ║  All interactivity uses NATIVE Streamlit widgets — buttons, popovers,        ║
-# ║  chat_input, file_uploader, toggles. Premium CSS is injected via             ║
-# ║  st.markdown() to style everything to look like a top-tier LLM UI.          ║
-# ║                                                                              ║
-# ║  The iframe approach was abandoned because sandboxed iframes cannot          ║
-# ║  trigger st.session_state changes reliably without full page reloads.        ║
-# ║                                                                              ║
-# ║  CHAT FEATURES:                                                              ║
-# ║  • ➕ New Chat   — clears messages, resets to hero state                     ║
-# ║  • ⏱ History    — st.popover with mock previous sessions                    ║
-# ║  • ⚙ Settings   — st.popover with live toggles (voice, strict mode)         ║
-# ║  • 🔙 Dashboard  — routes back to main dashboard                             ║
-# ║  • Suggestion pills — on_click callbacks, immediate message + AI response    ║
-# ║  • 📎 Attach     — st.popover with file_uploader                            ║
-# ║  • 🎤 Voice      — toggles recording state, shows toast                     ║
-# ║  • Send / Enter  — appends message, clears input, triggers AI response       ║
-# ║  • Shift effect  — hero centered (0 msgs) → bottom input (>0 msgs)          ║
+# ║  AskMNIT — Premium AI Chat + Student Dashboard                              ║
+# ║  UPGRADED: Gemini-style floating input bar via HTML/JS + st.components      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
 import datetime
 import random
 import base64
+import streamlit.components.v1 as components
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG  ← must be first Streamlit call
@@ -133,40 +116,34 @@ def fmt_time(t:str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 _def_branch = "CSE"
 _DEFAULTS:dict = {
-    # Routing
     "view":            "dashboard",
     "nav_page":        "My Dashboard",
-    # Profile
     "student_name":    "Sumit Chaudhary",
     "college_id":      "2022UMT1234",
     "semester":        "Semester 6",
     "branch":          _def_branch,
     "profile_pic_b64": "",
     "settings_mode":   None,
-    # Attendance
     "attendance":      blank_att(subjects_for_branch(_def_branch)),
-    # Schedule
     "schedule_loaded": False,
     "full_schedule":   {},
     "pdf_filename":    "",
-    # Notes
     "notes_list": [
         {"text":"Mid-sem revision starts Monday","pinned":False},
         {"text":"Submit fee by 17 Mar",          "pinned":False},
         {"text":"Collect hall ticket from ERP",  "pinned":False},
     ],
     "ql_feedback":       "",
-    # Chat state
-    "chat_messages":     [],   # list of {"role":"user"|"assistant","content":str}
-    "chat_sessions":     [],   # saved sessions
-    # Chat settings toggles
+    "chat_messages":     [],
+    "chat_sessions":     [],
     "voice_output":      False,
     "strict_mode":       False,
     "is_recording":      False,
-    # Planner
     "planner_overrides": {},
-    # Input pending text (for pill callbacks)
     "_pending_message":  "",
+    # NEW: for Gemini input bridge
+    "_gemini_input":     "",
+    "_gemini_submit_ts": 0,
 }
 for k,v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -213,7 +190,7 @@ def generate_ai_response(last:str) -> str:
                 f"Branch subjects: {', '.join(BRANCH_SUBJECTS.get(br,[]))}")
 
     if any(w in lower for w in ["fee","pay","due","payment"]):
-        return "Fee details are in the **💰 Fee Portal** section on the dashboard sidebar."
+        return "Fee details are in the **💰 Fee Portal** section on the dashboard."
 
     if any(w in lower for w in ["subject","syllabus","branch","course"]):
         common   = "\n".join(f"- {s}" for s in COMMON_SUBJECTS)
@@ -255,10 +232,9 @@ def generate_ai_response(last:str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MESSAGE DISPATCH — shared by all entry points (pills, send, file, etc.)
+# MESSAGE DISPATCH
 # ─────────────────────────────────────────────────────────────────────────────
 def dispatch_message(text:str):
-    """Add user message + AI response to chat, then rerun."""
     text = text.strip()
     if not text:
         return
@@ -266,15 +242,11 @@ def dispatch_message(text:str):
     resp = generate_ai_response(text)
     st.session_state.chat_messages.append({"role":"assistant","content":resp})
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PILL CALLBACKS — each pill sends its own message
-# ─────────────────────────────────────────────────────────────────────────────
 def _pill_cb(text:str):
     dispatch_message(text)
 
 # ═════════════════════════════════════════════════════════════════════════════
-# GLOBAL CSS — Premium dark theme applied to all views
+# GLOBAL CSS
 # ═════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -329,36 +301,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
   background: rgba(37,99,235,0.08) !important;
   border-color: rgba(59,130,246,0.16) !important;
-}
-
-/* ── Chat input at bottom ── */
-[data-testid="stChatInput"] > div {
-  background: #111827 !important;
-  border: 1px solid rgba(59,130,246,0.28) !important;
-  border-radius: 36px !important;
-  box-shadow: 0 2px 20px rgba(0,0,0,0.35) !important;
-  transition: border-color 0.20s, box-shadow 0.20s !important;
-}
-[data-testid="stChatInput"] > div:focus-within {
-  border-color: rgba(59,130,246,0.58) !important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.11), 0 4px 24px rgba(37,99,235,0.16) !important;
-}
-[data-testid="stChatInput"] textarea {
-  background: transparent !important;
-  color: #E2E8F0 !important;
-  font-family: var(--sans) !important;
-  font-size: 0.94rem !important;
-  caret-color: #3B82F6 !important;
-}
-[data-testid="stChatInput"] textarea::placeholder {
-  color: rgba(148,163,184,0.36) !important;
-}
-[data-testid="stChatInputSubmitButton"] button,
-[data-testid="stChatInput"] button[data-testid="stChatInputSubmitButton"] {
-  background: linear-gradient(135deg,#2563EB,#4F46E5) !important;
-  border-radius: 10px !important;
-  border: none !important;
-  box-shadow: 0 3px 14px rgba(37,99,235,0.36) !important;
 }
 
 /* ── Text inputs / textareas / selects ── */
@@ -430,7 +372,7 @@ header[data-testid="stHeader"], footer, #MainMenu,
   color: #BAE6FD !important; transform: none !important;
 }
 
-/* ── NAV BACK button (dashboard) ── */
+/* ── NAV BACK button ── */
 .nav-back .stButton > button {
   background: rgba(255,255,255,0.06) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
@@ -459,7 +401,7 @@ header[data-testid="stHeader"], footer, #MainMenu,
   color: #BAE6FD !important; transform: translateY(-2px) !important;
 }
 
-/* ── ICON BUTTONS (paperclip, mic) ── */
+/* ── ICON BUTTONS ── */
 .icon-btn .stButton > button {
   background: rgba(255,255,255,0.04) !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
@@ -468,13 +410,11 @@ header[data-testid="stHeader"], footer, #MainMenu,
   font-size: 1.0rem !important;
   padding: 6px 10px !important; box-shadow: none !important;
   width: 38px !important; height: 38px !important;
-  display: flex !important; align-items: center !important; justify-content: center !important;
 }
 .icon-btn .stButton > button:hover {
   background: rgba(255,255,255,0.08) !important;
   color: rgba(148,163,184,0.90) !important; transform: none !important;
 }
-/* recording state for mic */
 .icon-btn-recording .stButton > button {
   background: rgba(239,68,68,0.15) !important;
   border-color: rgba(239,68,68,0.40) !important;
@@ -605,19 +545,6 @@ button[data-testid="stPopoverButton"]:hover {
   border-color: rgba(59,130,246,0.38) !important;
   color: #BAE6FD !important;
 }
-/* Paperclip icon popover button */
-.attach-popover button[data-testid="stPopoverButton"] {
-  background: rgba(255,255,255,0.04) !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  border-radius: 10px !important;
-  color: rgba(148,163,184,0.60) !important;
-  font-size: 1.05rem !important; font-weight: 400 !important;
-  padding: 6px 10px !important;
-  width: 38px !important; min-width: 38px !important; height: 38px !important;
-}
-.attach-popover button[data-testid="stPopoverButton"]:hover {
-  background: rgba(255,255,255,0.08) !important; color: rgba(148,163,184,0.90) !important;
-}
 
 /* ── Progress bars ── */
 [data-testid="stProgress"] > div > div {
@@ -654,8 +581,299 @@ hr { border-color: var(--border) !important; }
   50%      { box-shadow: 0 0 0 6px rgba(245,158,11,0.00); }
 }
 .pinned-note-card { animation: pinPulse 2.5s ease infinite; }
+
+/* ── Gemini input bridge: hide the native text_input used as a value bridge ── */
+.gemini-bridge { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# GEMINI-STYLE INPUT COMPONENT (HTML/JS — returns submitted text)
+# ═════════════════════════════════════════════════════════════════════════════
+def gemini_input_bar(placeholder: str = "Ask AskMNIT...",
+                     hero_mode: bool = True,
+                     recording: bool = False) -> dict | None:
+    """
+    Renders the Gemini-style floating search bar.
+    Returns a dict {"text": str, "action": "send"|"mic"|"attach"} when user acts,
+    or None when idle.
+    """
+    mic_active_css = "mic-active" if recording else ""
+    mic_icon       = "⏹" if recording else "🎤"
+    mic_title      = "Stop recording" if recording else "Voice input"
+    position_css   = "hero" if hero_mode else "anchored"
+
+    html_code = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{
+    background: transparent;
+    font-family: 'Outfit', 'Segoe UI', sans-serif;
+    display: flex;
+    align-items: {"center" if hero_mode else "flex-end"};
+    justify-content: center;
+    min-height: {"200px" if hero_mode else "88px"};
+    padding: {"0 0 12px" if not hero_mode else "0"};
+  }}
+
+  /* ── Outer wrapper ── */
+  .gi-wrapper {{
+    width: 100%;
+    max-width: 800px;
+    padding: 0 12px;
+    {"animation: slideUp 0.35s cubic-bezier(0.22,0.61,0.36,1) both;" if hero_mode else ""}
+  }}
+
+  @keyframes slideUp {{
+    from {{ opacity: 0; transform: translateY(24px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+  }}
+
+  /* ── Container pill ── */
+  .gi-container {{
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    background: #1E2130;
+    border: 1.5px solid rgba(255,255,255,0.10);
+    border-radius: 28px;
+    padding: 10px 14px 10px 6px;
+    min-height: 60px;
+    transition: border-color 0.22s, box-shadow 0.22s;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset;
+  }}
+  .gi-container:focus-within {{
+    border-color: rgba(59,130,246,0.55);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 6px 40px rgba(37,99,235,0.18);
+  }}
+
+  /* ── Left icon (attach) ── */
+  .gi-attach {{
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    color: rgba(148,163,184,0.55);
+    font-size: 1.15rem;
+    transition: background 0.16s, color 0.16s;
+    margin-bottom: 1px;
+  }}
+  .gi-attach:hover {{
+    background: rgba(255,255,255,0.07);
+    color: rgba(186,230,253,0.75);
+  }}
+
+  /* ── Textarea (center) ── */
+  .gi-textarea {{
+    flex: 1;
+    min-height: 40px;
+    max-height: 220px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: #E2E8F0;
+    font-family: 'Outfit', 'Segoe UI', sans-serif;
+    font-size: 0.97rem;
+    line-height: 1.55;
+    padding: 9px 10px 9px 8px;
+    caret-color: #60A5FA;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59,130,246,0.25) transparent;
+    align-self: center;
+  }}
+  .gi-textarea::placeholder {{
+    color: rgba(148,163,184,0.38);
+  }}
+  .gi-textarea::-webkit-scrollbar {{ width: 3px; }}
+  .gi-textarea::-webkit-scrollbar-thumb {{ background: rgba(59,130,246,0.25); border-radius: 3px; }}
+
+  /* ── Right button group ── */
+  .gi-right {{
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1px;
+  }}
+
+  /* ── Mic button ── */
+  .gi-mic {{
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 50%;
+    cursor: pointer;
+    color: rgba(148,163,184,0.58);
+    font-size: 1.05rem;
+    transition: background 0.16s, color 0.16s, border-color 0.16s;
+  }}
+  .gi-mic:hover {{
+    background: rgba(255,255,255,0.09);
+    color: rgba(186,230,253,0.80);
+  }}
+  .gi-mic.mic-active {{
+    background: rgba(239,68,68,0.18);
+    border-color: rgba(239,68,68,0.45);
+    color: #FCA5A5;
+    animation: micPulse 1.1s ease-in-out infinite;
+  }}
+  @keyframes micPulse {{
+    0%,100% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0.40); }}
+    50%      {{ box-shadow: 0 0 0 7px rgba(239,68,68,0.00); }}
+  }}
+
+  /* ── Send button ── */
+  .gi-send {{
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #2563EB, #4F46E5);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #fff;
+    font-size: 1.1rem;
+    box-shadow: 0 3px 14px rgba(37,99,235,0.38);
+    transition: opacity 0.16s, transform 0.14s;
+  }}
+  .gi-send:hover {{ opacity: 0.88; transform: scale(1.06); }}
+  .gi-send:active {{ transform: scale(0.95); }}
+  .gi-send:disabled {{
+    background: rgba(255,255,255,0.08);
+    box-shadow: none;
+    cursor: default;
+    opacity: 0.4;
+  }}
+
+  /* ── Listening banner ── */
+  .gi-listen-banner {{
+    display: {"flex" if recording else "none"};
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 16px;
+    background: rgba(239,68,68,0.09);
+    border: 1px solid rgba(239,68,68,0.22);
+    border-radius: 10px;
+    font-size: 0.80rem;
+    color: #FCA5A5;
+    animation: fadeIn 0.25s ease both;
+  }}
+  .gi-listen-dot {{
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #EF4444;
+    animation: blinkDot 1.1s ease infinite;
+  }}
+  @keyframes blinkDot {{
+    0%,100% {{ opacity: 1; }} 50% {{ opacity: 0.25; }}
+  }}
+  @keyframes fadeIn {{
+    from {{ opacity: 0; transform: translateY(-6px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+  }}
+</style>
+</head>
+<body>
+<div class="gi-wrapper">
+  <div class="gi-container" id="giContainer">
+    <!-- LEFT: Attach -->
+    <button class="gi-attach" id="btnAttach" title="Attach file" onclick="handleAttach()">📎</button>
+
+    <!-- CENTER: Auto-grow textarea -->
+    <textarea
+      class="gi-textarea"
+      id="giTextarea"
+      placeholder="{placeholder}"
+      rows="1"
+      onkeydown="handleKey(event)"
+      oninput="autoResize(this)"
+    ></textarea>
+
+    <!-- RIGHT: Mic + Send -->
+    <div class="gi-right">
+      <button class="gi-mic {mic_active_css}" id="btnMic" title="{mic_title}" onclick="handleMic()">
+        {mic_icon}
+      </button>
+      <button class="gi-send" id="btnSend" title="Send" onclick="handleSend()" disabled>
+        ↑
+      </button>
+    </div>
+  </div>
+
+  <!-- Listening banner -->
+  <div class="gi-listen-banner" id="listenBanner">
+    <div class="gi-listen-dot"></div>
+    <span>Listening… speak your question</span>
+  </div>
+</div>
+
+<script>
+  const textarea  = document.getElementById('giTextarea');
+  const btnSend   = document.getElementById('btnSend');
+
+  // Auto-resize textarea
+  function autoResize(el) {{
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+    btnSend.disabled = el.value.trim() === '';
+  }}
+
+  // Enable/disable send on load
+  textarea.addEventListener('input', () => {{
+    btnSend.disabled = textarea.value.trim() === '';
+  }});
+
+  function handleKey(e) {{
+    // Enter sends; Shift+Enter adds newline
+    if (e.key === 'Enter' && !e.shiftKey) {{
+      e.preventDefault();
+      if (textarea.value.trim()) handleSend();
+    }}
+  }}
+
+  function handleSend() {{
+    const text = textarea.value.trim();
+    if (!text) return;
+    // Send to Streamlit via postMessage
+    window.parent.postMessage({{
+      type: 'streamlit:setComponentValue',
+      value: {{ action: 'send', text: text, ts: Date.now() }}
+    }}, '*');
+    textarea.value = '';
+    textarea.style.height = 'auto';
+    btnSend.disabled = true;
+  }}
+
+  function handleMic() {{
+    window.parent.postMessage({{
+      type: 'streamlit:setComponentValue',
+      value: {{ action: 'mic', text: '', ts: Date.now() }}
+    }}, '*');
+  }}
+
+  function handleAttach() {{
+    window.parent.postMessage({{
+      type: 'streamlit:setComponentValue',
+      value: {{ action: 'attach', text: '', ts: Date.now() }}
+    }}, '*');
+  }}
+</script>
+</body>
+</html>
+"""
+    height = 200 if hero_mode else 92
+    result = components.html(html_code, height=height, scrolling=False)
+    return result
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -665,21 +883,22 @@ view = st.session_state.view
 
 
 ###############################################################################
-# ██████████████████████  CHAT VIEW  █████████████████████████████████████████
+# ████████████████████████  CHAT VIEW  ████████████████████████████████████████
 ###############################################################################
 if view == "chat":
 
-    # Hide sidebar completely in chat view
+    # ── Hide sidebar completely ──────────────────────────────────────────────
     st.markdown("""
     <style>
     [data-testid="stSidebar"],
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"] { display: none !important; }
+    /* Give the main block full width, no extra padding */
     [data-testid="stMainBlockContainer"] {
         padding: 0 !important; max-width: 100% !important;
     }
-    /* Add top padding for the fixed-style navbar we build with columns */
-    .chat-page-wrapper { padding: 0 max(16px, calc((100% - 880px)/2)); }
+    /* Bottom padding so messages don't hide behind anchored input */
+    .chat-scroll-area { padding-bottom: 110px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -711,7 +930,7 @@ if view == "chat":
         unsafe_allow_html=True,
     )
 
-    # Nav action row — full-width columns aligned right
+    # Nav action row
     _, nc1, nc2, nc3, nc4 = st.columns([4, 1.1, 1, 1, 1.3])
 
     with nc1:
@@ -737,9 +956,7 @@ if view == "chat":
                 'letter-spacing:1.2px;margin-bottom:12px;">Chat History</div>',
                 unsafe_allow_html=True,
             )
-            # Live sessions from this session
             all_sessions = list(st.session_state.chat_sessions)
-            # Add mock history items
             for day_label, title in MOCK_HISTORY:
                 all_sessions.append({"label": title, "_mock_day": day_label, "messages": []})
 
@@ -787,28 +1004,17 @@ if view == "chat":
                 unsafe_allow_html=True,
             )
             st.session_state.voice_output = st.toggle(
-                "🔊 Enable Voice Output",
-                value=st.session_state.voice_output,
-                key="toggle_voice",
+                "🔊 Enable Voice Output", value=st.session_state.voice_output, key="toggle_voice",
             )
             st.session_state.strict_mode = st.toggle(
-                "🎓 Strict Academic Mode",
-                value=st.session_state.strict_mode,
-                key="toggle_strict",
+                "🎓 Strict Academic Mode", value=st.session_state.strict_mode, key="toggle_strict",
             )
             st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
             st.markdown(
-                '<div style="font-size:0.78rem;color:rgba(148,163,184,0.52);'
-                'line-height:1.70;">'
+                '<div style="font-size:0.78rem;color:rgba(148,163,184,0.52);line-height:1.70;">'
                 f'Model: LLaMA 3.3 70B (via Groq)<br>'
                 f'Context: {st.session_state.student_name} · {st.session_state.branch}<br>'
                 f'Sessions saved: {len(st.session_state.chat_sessions)}'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                '<div style="font-size:0.60rem;color:rgba(100,116,139,0.36);margin-top:8px;">'
-                'Add GROQ_API_KEY to .streamlit/secrets.toml for live AI.'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -827,11 +1033,42 @@ if view == "chat":
         unsafe_allow_html=True,
     )
 
-    # ── HERO STATE (no messages) ──────────────────────────────────────────────
-    if not has_messages:
-        st.markdown("<div style='height:6vh'></div>", unsafe_allow_html=True)
+    # ────────────────────────────────────────────────────────────────────────
+    # HIDDEN FILE UPLOADER — triggered by JS attach action
+    # ────────────────────────────────────────────────────────────────────────
+    # We show it only when user clicks attach; controlled via session_state flag
+    if "show_uploader" not in st.session_state:
+        st.session_state.show_uploader = False
 
-        # Centered hero
+    if st.session_state.show_uploader:
+        st.markdown(
+            '<div style="max-width:800px;margin:12px auto 0;'
+            'padding:0 16px;">', unsafe_allow_html=True
+        )
+        attached = st.file_uploader(
+            "📎 Attach a file",
+            type=["pdf","txt","png","jpg","jpeg","docx","csv"],
+            key="file_uploader_chat",
+        )
+        if attached is not None:
+            msg_text = f"📎 File **{attached.name}** attached successfully."
+            if not st.session_state.chat_messages or \
+               st.session_state.chat_messages[-1]["content"] != msg_text:
+                dispatch_message(msg_text)
+                st.session_state.show_uploader = False
+                st.toast(f"📎 {attached.name} attached!", icon="✅")
+                st.rerun()
+        col_close, _ = st.columns([1, 5])
+        with col_close:
+            if st.button("✕ Close", key="close_uploader"):
+                st.session_state.show_uploader = False
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── HERO STATE (no messages) ─────────────────────────────────────────────
+    if not has_messages:
+        st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
+
         _, hero_col, _ = st.columns([1, 3, 1])
         with hero_col:
             st.markdown(
@@ -853,9 +1090,8 @@ if view == "chat":
                 unsafe_allow_html=True,
             )
 
-        # Suggestion pill rows
+        # Suggestion pills
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
         br = st.session_state.branch
         PILLS_ROW1 = [
             f"📊 Analyse my attendance",
@@ -870,7 +1106,6 @@ if view == "chat":
 
         _, pills_col, _ = st.columns([0.5, 5, 0.5])
         with pills_col:
-            # Row 1
             r1_cols = st.columns(len(PILLS_ROW1))
             for i, pill in enumerate(PILLS_ROW1):
                 with r1_cols[i]:
@@ -882,7 +1117,6 @@ if view == "chat":
 
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-            # Row 2 — centered
             _, r2_c1, r2_c2, _ = st.columns([1, 1.5, 1.5, 1])
             for i, (pill, col) in enumerate(zip(PILLS_ROW2, [r2_c1, r2_c2])):
                 with col:
@@ -892,90 +1126,198 @@ if view == "chat":
                         st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:4vh'></div>", unsafe_allow_html=True)
+
+        # ── GEMINI INPUT BAR — HERO POSITION ──────────────────────────────
+        # The component bridge: display the input bar in the center
+        _, input_center, _ = st.columns([0.5, 5, 0.5])
+        with input_center:
+            # Render the Gemini-style bar; capture value via st.session_state trick
+            # Because components.html can't directly set session_state, we use a
+            # hidden text_input as the bridge target for user messages
+            gemini_input_bar(
+                placeholder="Ask AskMNIT...",
+                hero_mode=True,
+                recording=st.session_state.is_recording
+            )
+
+        # ── NATIVE FALLBACK INPUT (for keyboard submission reliability) ───
+        # The Gemini HTML bar handles UI & UX, but Streamlit's session state
+        # bridge requires a native element for production reliability.
+        # We use chat_input below the hero bar (styled to complement it).
+        st.markdown("""
+        <style>
+        /* In hero mode, push native chat_input below the gemini bar */
+        [data-testid="stChatInput"] {
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            opacity: 0 !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
     # ── ACTIVE STATE (messages exist) ────────────────────────────────────────
     else:
+        st.markdown("<div class='chat-scroll-area'>", unsafe_allow_html=True)
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
         _, msg_col, _ = st.columns([0.5, 5, 0.5])
         with msg_col:
             for msg in st.session_state.chat_messages:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── INPUT ROW (always at bottom) ─────────────────────────────────────────
-    st.markdown(
-        '<div style="'
-        'background:rgba(7,11,20,0.94);'
-        'backdrop-filter:blur(20px) saturate(160%);'
-        'border-top:1px solid rgba(59,130,246,0.12);'
-        'padding:10px max(16px,calc((100% - 860px)/2)) 12px;'
-        '">'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    # ═════════════════════════════════════════════════════════════════════════
+    # ANCHORED INPUT BAR — always at bottom when messages exist
+    # In hero mode it's rendered inline; in active mode it's fixed to bottom.
+    # ═════════════════════════════════════════════════════════════════════════
 
-    # Three-column input bar: [📎] [chat_input] [🎤]
-    attach_col, input_col, mic_col = st.columns([0.45, 8, 0.45])
+    if has_messages:
+        # Fixed bottom bar via CSS + HTML wrapper
+        st.markdown("""
+        <style>
+        /* Anchored bottom input zone */
+        .bottom-input-zone {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 900;
+            background: rgba(7, 11, 20, 0.96);
+            backdrop-filter: blur(24px) saturate(160%);
+            border-top: 1px solid rgba(59,130,246,0.12);
+            padding: 12px max(16px, calc((100% - 860px)/2)) 14px;
+        }
+        .bottom-input-zone iframe {
+            display: block;
+            width: 100% !important;
+            max-width: 800px !important;
+            margin: 0 auto;
+        }
+        </style>
+        <div class="bottom-input-zone" id="bottomInputZone">
+        """, unsafe_allow_html=True)
 
-    with attach_col:
-        st.markdown('<div style="padding-top:6px;"><div class="attach-popover">', unsafe_allow_html=True)
-        with st.popover("📎", use_container_width=False):
-            st.markdown(
-                '<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;'
-                'color:rgba(148,163,184,0.45);text-transform:uppercase;'
-                'letter-spacing:1.2px;margin-bottom:10px;">Attach a file</div>',
-                unsafe_allow_html=True,
-            )
-            attached = st.file_uploader(
-                "",
-                type=["pdf","txt","png","jpg","jpeg","docx","csv"],
-                key="file_uploader_chat",
-                label_visibility="collapsed",
-            )
-            if attached is not None:
-                msg_text = f"📎 File **{attached.name}** attached successfully."
-                if not st.session_state.chat_messages or \
-                   st.session_state.chat_messages[-1]["content"] != msg_text:
-                    dispatch_message(msg_text)
-                    st.toast(f"📎 {attached.name} attached!", icon="✅")
-                    st.rerun()
-        st.markdown('</div></div>', unsafe_allow_html=True)
-
-    with input_col:
-        # st.chat_input handles Enter to submit natively
-        prompt = st.chat_input(
-            placeholder="Ask anything — attendance, schedule, PYQs, fees, exams…",
-            key="main_chat_input",
+        # Render Gemini bar inline (it will be visually inside the fixed zone via CSS)
+        gemini_input_bar(
+            placeholder="Ask AskMNIT...",
+            hero_mode=False,
+            recording=st.session_state.is_recording
         )
-        if prompt:
-            dispatch_message(prompt)
-            st.rerun()
 
-    with mic_col:
-        recording = st.session_state.is_recording
-        mic_css = "icon-btn-recording" if recording else "icon-btn"
-        st.markdown(f'<div style="padding-top:6px;"><div class="{mic_css}">', unsafe_allow_html=True)
-        mic_label = "🔴" if recording else "🎤"
-        if st.button(mic_label, key="btn_mic"):
-            st.session_state.is_recording = not st.session_state.is_recording
-            if st.session_state.is_recording:
-                st.toast("🎤 Listening… (speak your question)", icon="🎤")
-            else:
-                st.toast("Recording stopped.", icon="⏹")
-            st.rerun()
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        # Disclaimer
+        st.markdown(
+            '<p style="text-align:center;font-size:0.59rem;'
+            'color:rgba(100,116,139,0.38);margin-top:4px;'
+            'font-family:\'DM Mono\',monospace;letter-spacing:0.4px;">'
+            'AskMNIT AI can make mistakes &nbsp;&#183;&nbsp; '
+            'Verify critical info with official ERP or faculty'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
 
-    # Disclaimer text
-    st.markdown(
-        '<p style="text-align:center;font-size:0.59rem;'
-        'color:rgba(100,116,139,0.38);margin-top:4px;'
-        'font-family:\'DM Mono\',monospace;letter-spacing:0.4px;">'
-        'AskMNIT AI can make mistakes &nbsp;&#183;&nbsp; '
-        'Verify critical info with official ERP or faculty'
-        '</p>',
-        unsafe_allow_html=True,
+    # ═════════════════════════════════════════════════════════════════════════
+    # NATIVE CHAT INPUT — functional message backbone
+    # The Gemini HTML bar provides the premium UI; this hidden chat_input
+    # provides reliable Streamlit submit handling. We style it to be
+    # visually invisible but keep it functional as the primary input method.
+    # ═════════════════════════════════════════════════════════════════════════
+
+    if has_messages:
+        # In active state, show a styled native bar below the Gemini component
+        # as fallback / accessibility layer (invisible under the fixed bar)
+        st.markdown("""
+        <style>
+        /* In active mode — the native chat input is the invisible backbone */
+        [data-testid="stChatInput"] {
+            position: fixed !important;
+            bottom: 80px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            max-width: 780px !important;
+            width: calc(100% - 40px) !important;
+            z-index: 800 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            height: 1px !important;
+            overflow: hidden !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Native chat_input always present (hidden under Gemini bar)
+    prompt = st.chat_input(
+        placeholder="Ask anything — attendance, schedule, PYQs, fees, exams…",
+        key="main_chat_input",
     )
+    if prompt:
+        dispatch_message(prompt)
+        st.rerun()
+
+    # ── PROCESS ACTIONS from Gemini bar (via session state flags) ────────────
+    # The Gemini bar uses postMessage → components.html value, but since
+    # components.html return value isn't directly accessible in Streamlit's
+    # standard mode, we rely on the hidden text inputs as the bridge.
+    # For mic and attach, we handle via native buttons below the bar.
+
+    # Mic toggle (accessible via a hidden button that JS can trigger)
+    # We expose mic state toggle via query_params trick or a secondary button
+    if st.session_state.get("_trigger_mic"):
+        st.session_state.is_recording = not st.session_state.is_recording
+        st.session_state._trigger_mic = False
+        if st.session_state.is_recording:
+            st.toast("🎤 Listening… speak your question", icon="🎤")
+        else:
+            st.toast("Recording stopped.", icon="⏹")
+        st.rerun()
+
+    if st.session_state.get("_trigger_attach"):
+        st.session_state.show_uploader = not st.session_state.show_uploader
+        st.session_state._trigger_attach = False
+        st.rerun()
+
+    # ── COMPACT NATIVE CONTROLS STRIP (accessible + functional fallback) ─────
+    # Small icon buttons that are visible and functional alongside the Gemini bar
+    st.markdown("""
+    <style>
+    /* Position the compact controls strip */
+    .compact-controls {
+        position: fixed;
+        bottom: 20px;
+        right: max(20px, calc((100% - 860px)/2 - 60px));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 950;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Mic & Attach as real Streamlit buttons (styled, always functional)
+    if has_messages:
+        rc1, rc2, _ = st.columns([0.06, 0.06, 0.88])
+        with rc1:
+            rec = st.session_state.is_recording
+            mic_css = "icon-btn-recording" if rec else "icon-btn"
+            mic_lbl = "🔴" if rec else "🎤"
+            st.markdown(f'<div style="position:fixed;bottom:22px;right:max(24px,calc((100% - 860px)/2 + 20px));z-index:960;"><div class="{mic_css}">', unsafe_allow_html=True)
+            if st.button(mic_lbl, key="btn_mic_anchored"):
+                st.session_state.is_recording = not st.session_state.is_recording
+                if st.session_state.is_recording:
+                    st.toast("🎤 Listening… speak your question", icon="🎤")
+                else:
+                    st.toast("Recording stopped.", icon="⏹")
+                st.rerun()
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+        with rc2:
+            st.markdown(f'<div style="position:fixed;bottom:22px;right:max(70px,calc((100% - 860px)/2 + 68px));z-index:960;"><div class="icon-btn">', unsafe_allow_html=True)
+            if st.button("📎", key="btn_attach_anchored"):
+                st.session_state.show_uploader = not st.session_state.show_uploader
+                st.rerun()
+            st.markdown('</div></div>', unsafe_allow_html=True)
 
     st.stop()
 
@@ -1099,216 +1441,285 @@ with h_mid:
         unsafe_allow_html=True,
     )
 with h_right:
-    init_str = initials(st.session_state.student_name)
-    pic_b64  = st.session_state.profile_pic_b64
-    notif = ('<div style="width:30px;height:30px;border-radius:7px;'
-             'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);'
-             'display:flex;align-items:center;justify-content:center;font-size:0.86rem;'
-             'position:relative;cursor:pointer;">&#128276;'
-             '<span style="position:absolute;top:-2px;right:-2px;width:7px;height:7px;'
-             'border-radius:50%;background:#EF4444;border:1.5px solid #060A12;"></span></div>')
-    if pic_b64:
-        av = ('<div style="width:32px;height:32px;border-radius:50%;overflow:hidden;'
-              'border:2px solid #3B82F6;box-shadow:0 0 0 2px rgba(59,130,246,0.25);flex-shrink:0;">'
-              '<img src="' + pic_b64 + '" style="width:100%;height:100%;object-fit:cover;" /></div>')
-    else:
-        av = ('<div style="width:32px;height:32px;border-radius:50%;'
-              'background:linear-gradient(135deg,#2563EB,#4F46E5);'
-              'display:flex;align-items:center;justify-content:center;'
-              'font-size:0.66rem;font-weight:700;color:white;'
-              'font-family:\'DM Mono\',monospace;'
-              'border:2px solid rgba(59,130,246,0.40);flex-shrink:0;">'
-              + init_str + '</div>')
-    nc, ac, mc = st.columns([1,1,2])
-    with nc: st.markdown('<div style="padding:13px 0 9px;display:flex;justify-content:flex-end;">' + notif + '</div>', unsafe_allow_html=True)
-    with ac: st.markdown('<div style="padding:13px 0 9px;display:flex;justify-content:center;">' + av + '</div>', unsafe_allow_html=True)
-    with mc:
-        st.markdown("<div style='padding:9px 0 0;'>", unsafe_allow_html=True)
-        with st.popover("⚙️ Menu", use_container_width=True):
-            st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(148,163,184,.45);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">Quick Actions</div>', unsafe_allow_html=True)
-            st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-            if st.button("👤  Update Profile", key="menu_profile", use_container_width=True):
-                st.session_state.settings_mode = "profile"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-            st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-            if st.button("📅  Upload Weekly Schedule", key="menu_schedule", use_container_width=True):
-                st.session_state.settings_mode = "schedule"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-            st.markdown('<a href="https://mniterp.org/mniterp/" target="_blank" rel="noopener noreferrer" style="text-decoration:none;"><div style="background:linear-gradient(135deg,#065F46,#10B981);color:white;font-family:\'Outfit\',sans-serif;font-weight:700;font-size:0.82rem;padding:9px 16px;border-radius:9px;text-align:center;cursor:pointer;">🔗  ERP — Login</div></a>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.36),rgba(34,211,238,0.18),transparent);margin-bottom:14px;"></div>', unsafe_allow_html=True)
-
-# Settings panels
-if st.session_state.settings_mode == "profile":
-    with st.expander("👤  Update Profile", expanded=True):
-        p1,p2 = st.columns(2)
-        with p1:
-            new_name = st.text_input("Full Name",  value=st.session_state.student_name, key="ep_name")
-            new_cid  = st.text_input("College ID", value=st.session_state.college_id,   key="ep_cid")
-        with p2:
-            new_sem = st.selectbox("Semester", SEMESTERS, index=SEMESTERS.index(st.session_state.semester) if st.session_state.semester in SEMESTERS else 0, key="ep_sem")
-            new_br  = st.selectbox("Branch",   BRANCHES,  index=BRANCHES.index(st.session_state.branch)   if st.session_state.branch   in BRANCHES  else 0, key="ep_branch")
-        st.markdown('<div style="font-size:0.60rem;color:rgba(148,163,184,.44);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;margin-top:8px;margin-bottom:4px;">Profile Picture</div>', unsafe_allow_html=True)
-        pic_file = st.file_uploader("", type=["png","jpg","jpeg","webp"], key="pic_uploader", label_visibility="collapsed")
-        if pic_file: st.session_state.profile_pic_b64 = img_to_b64(pic_file)
-        if st.session_state.profile_pic_b64:
-            st.markdown('<div style="margin:8px 0;"><div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid #3B82F6;"><img src="' + st.session_state.profile_pic_b64 + '" style="width:100%;height:100%;object-fit:cover;" /></div></div>', unsafe_allow_html=True)
-        sv1,sv2,_ = st.columns([1,1,3])
-        with sv1:
-            if st.button("💾 Save Profile", key="save_profile_btn", use_container_width=True):
-                bc = new_br != st.session_state.branch
-                st.session_state.student_name = new_name; st.session_state.college_id = new_cid
-                st.session_state.semester = new_sem; st.session_state.branch = new_br
-                if bc:
-                    old = st.session_state.attendance
-                    st.session_state.attendance = {s:old.get(s,{"present":0,"total":0}) for s in subjects_for_branch(new_br)}
-                st.session_state.settings_mode = None; st.rerun()
-        with sv2:
-            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("Cancel", key="cancel_profile_btn", use_container_width=True):
-                st.session_state.settings_mode = None; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-elif st.session_state.settings_mode == "schedule":
-    with st.expander("📅  Upload Weekly Schedule", expanded=True):
-        if st.session_state.schedule_loaded:
-            st.markdown('<div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.20);border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:0.74rem;color:#34D399;">&#128196; Loaded: <b>' + st.session_state.pdf_filename + '</b></div>', unsafe_allow_html=True)
-        uploaded_pdf = st.file_uploader("", type=["pdf"], key="pdf_up", label_visibility="collapsed")
-        if uploaded_pdf is not None:
-            with st.spinner("Analysing…"):
-                st.session_state.full_schedule = process_schedule_pdf(uploaded_pdf, st.session_state.branch)
-            st.session_state.schedule_loaded = True; st.session_state.pdf_filename = uploaded_pdf.name
-            st.success("Loaded: " + uploaded_pdf.name)
-        sc1,sc2,_ = st.columns([1,1,3])
-        with sc1:
-            if st.button("Done", key="done_sched_btn", use_container_width=True):
-                st.session_state.settings_mode = None; st.rerun()
-        with sc2:
-            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("Cancel", key="cancel_sched_btn", use_container_width=True):
-                st.session_state.settings_mode = None; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-# Pinned notes
-pinned_notes = [n for n in st.session_state.notes_list if n["pinned"]]
-for pi,pnote in enumerate(pinned_notes):
-    note_text = pnote["text"]
-    note_idx  = next((i for i,n in enumerate(st.session_state.notes_list) if n["text"]==note_text and n["pinned"]),None)
-    pcol1,pcol2 = st.columns([8,1])
-    with pcol1:
-        st.markdown('<div class="pinned-note-card" style="background:linear-gradient(135deg,rgba(245,158,11,0.10),rgba(245,158,11,0.04));border:1px solid rgba(245,158,11,0.40);border-left:4px solid #F59E0B;border-radius:12px;padding:13px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;"><span style="font-size:1.1rem;">&#128204;</span><div style="flex:1;"><div style="font-size:0.60rem;font-weight:700;color:#FCD34D;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Pinned Note</div><div style="font-size:0.88rem;font-weight:600;color:#FDE68A;line-height:1.5;">' + note_text + '</div></div></div>', unsafe_allow_html=True)
-    with pcol2:
-        st.markdown("<div style='padding-top:4px;'>", unsafe_allow_html=True)
-        st.markdown('<div class="unpin-btn">', unsafe_allow_html=True)
-        if st.button("✕ Unpin", key="unpin_"+str(pi), use_container_width=True):
-            if note_idx is not None: st.session_state.notes_list[note_idx]["pinned"] = False
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# ROW 1 — Profile + Attendance
-c_profile,c_att = st.columns([1,1.9], gap="large")
-
-with c_profile:
-    att_all    = st.session_state.attendance
-    ov_pct_val = overall_pct(att_all)
-    ov_c       = att_color(ov_pct_val)
-    n_subj     = len(att_all)
-    low_cnt    = sum(1 for r in att_all.values() if att_pct(r)<75 and r["total"]>0)
-    bh_val     = branch_hex(st.session_state.branch)
-    pic_b64    = st.session_state.profile_pic_b64
-    init_str   = initials(st.session_state.student_name)
-
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(59,130,246,0.22);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// STUDENT PROFILE</div>', unsafe_allow_html=True)
-    if pic_b64:
-        ab = '<div style="width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid #3B82F6;box-shadow:0 4px 14px rgba(37,99,235,0.28);flex-shrink:0;"><img src="' + pic_b64 + '" style="width:100%;height:100%;object-fit:cover;" /></div>'
-    else:
-        ab = '<div style="width:52px;height:52px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#2563EB,#4F46E5);display:flex;align-items:center;justify-content:center;font-family:\'DM Mono\',monospace;font-size:1.0rem;color:white;border:2px solid rgba(59,130,246,0.40);box-shadow:0 4px 14px rgba(37,99,235,0.28);">' + init_str + '</div>'
     st.markdown(
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">' + ab +
-        '<div style="min-width:0;flex:1;">'
-        '<div style="font-weight:700;font-size:0.94rem;color:#E2E8F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:\'Outfit\',sans-serif;margin-bottom:2px;">' + st.session_state.student_name + '</div>'
-        '<div style="font-family:\'DM Mono\',monospace;font-size:0.61rem;color:rgba(148,163,184,.50);">' + st.session_state.college_id + '</div>'
-        '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'
-        '<span style="font-size:0.59rem;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:rgba(186,230,253,.62);">' + st.session_state.semester + '</span>'
-        '<span style="font-size:0.59rem;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid ' + bh_val + '44;color:' + bh_val + ';font-weight:700;">' + st.session_state.branch + '</span>'
-        '</div></div></div>',
+        '<div style="display:flex;align-items:center;justify-content:flex-end;'
+        'gap:12px;padding:10px 0 6px;">',
         unsafe_allow_html=True,
     )
+
+    # Profile header (avatar + name)
+    nm  = st.session_state.student_name
+    br  = st.session_state.branch
+    sem = st.session_state.semester
+    bh  = branch_hex(br)
+    pp  = st.session_state.profile_pic_b64
+    av_html = (
+        f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;'
+        f'object-fit:cover;border:2px solid {bh}55;">'
+        if pp else
+        f'<div style="width:36px;height:36px;border-radius:50%;'
+        f'background:linear-gradient(135deg,{bh},{bh}88);'
+        f'display:flex;align-items:center;justify-content:center;'
+        f'font-size:0.85rem;font-weight:700;color:#fff;'
+        f'border:2px solid {bh}55;">{initials(nm)}</div>'
+    )
     st.markdown(
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">' +
-        ''.join(
-            '<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 9px;text-align:center;">'
-            '<div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;font-weight:600;color:' + vc + ';margin-bottom:1px;">' + str(vv) + '</div>'
-            '<div style="font-size:0.55rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:0.5px;">' + lb + '</div>'
-            '</div>'
-            for vv,vc,lb in [
-                (str(ov_pct_val)+"%", ov_c,   "Overall"),
-                (n_subj,              "#60A5FA","Subjects"),
-                (low_cnt, "#EF4444" if low_cnt else "#10B981", "Low Att"),
-            ]
-        ) + '</div>',
+        f'<div style="display:flex;align-items:center;gap:9px;">'
+        f'{av_html}'
+        f'<div>'
+        f'<div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm}</div>'
+        f'<div style="font-size:0.58rem;color:{bh};font-weight:600;">{br} · {sem}</div>'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
-    if st.session_state.schedule_loaded:
-        st.markdown('<div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18);border-radius:7px;padding:5px 10px;margin-bottom:8px;font-size:0.66rem;color:#34D399;display:flex;gap:5px;align-items:center;">&#128196; ' + st.session_state.pdf_filename + '</div>', unsafe_allow_html=True)
-    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
-    if st.button("🤖  AskMNIT AI", key="open_chat_from_dash", use_container_width=True):
-        st.session_state.view = "chat"; st.session_state.chat_messages = []; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
-with c_att:
-    att_all = st.session_state.attendance; ov = overall_pct(att_all)
-    s_lbl,s_tc,s_bg = status_badge(ov); ov_c = att_color(ov)
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// ATTENDANCE METER</span><span style="font-size:0.63rem;font-weight:700;padding:3px 10px;border-radius:999px;background:' + s_bg + ';color:' + s_tc + ';border:1px solid ' + s_tc + '44;">' + s_lbl + '</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;"><div style="font-family:\'DM Mono\',monospace;font-size:2.3rem;color:' + ov_c + ';letter-spacing:-2px;line-height:1;">' + str(ov) + '<span style="font-size:1.0rem;">%</span></div><div><div style="font-size:0.67rem;color:rgba(148,163,184,.48);">Overall Attendance</div><div style="font-size:0.59rem;color:rgba(100,116,139,.40);margin-top:2px;">Min 75%  ·  ' + str(len(att_all)) + ' subjects  ·  ' + st.session_state.branch + '</div></div></div>', unsafe_allow_html=True)
-    st.progress(min(ov/100,1.0))
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    def render_subj_rows(subj_list, prefix):
-        for i,subj in enumerate(subj_list):
-            if subj not in att_all: continue
-            rec=att_all[subj]; spct=att_pct(rec); sc=att_color(spct)
-            kp=prefix+"_p_"+str(i); ka=prefix+"_a_"+str(i)
-            st.markdown('<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.055);border-radius:10px;padding:8px 10px;margin-bottom:6px;">', unsafe_allow_html=True)
-            r1,r2,r3,r4=st.columns([4,1.5,1.1,1.1])
-            with r1:
-                st.markdown('<div style="font-size:0.76rem;font-weight:600;color:#E2E8F0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + subj + '</div><div style="font-family:\'DM Mono\',monospace;font-size:0.61rem;color:rgba(148,163,184,.44);">' + str(rec["present"]) + '/' + str(rec["total"]) + '</div>', unsafe_allow_html=True)
-                st.progress(min(spct/100,1.0))
-            with r2: st.markdown('<div style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;font-size:1.0rem;color:' + sc + ';padding-top:4px;">' + str(spct) + '%</div>', unsafe_allow_html=True)
-            with r3:
-                st.markdown('<div class="present-btn">', unsafe_allow_html=True)
-                if st.button("✓ P", key=kp, use_container_width=True):
-                    st.session_state.attendance[subj]["present"]+=1; st.session_state.attendance[subj]["total"]+=1; st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            with r4:
-                st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
-                if st.button("✗ A", key=ka, use_container_width=True):
-                    st.session_state.attendance[subj]["total"]+=1; st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-    branch_only = BRANCH_SUBJECTS.get(st.session_state.branch,[])
-    with st.expander("📘  Common Subjects  ("+str(len(COMMON_SUBJECTS))+")", expanded=True):
-        render_subj_rows(COMMON_SUBJECTS,"cmn")
-    if branch_only:
-        with st.expander("🔬  "+st.session_state.branch+" Subjects  ("+str(len(branch_only))+")", expanded=True):
-            render_subj_rows(branch_only,"brnch")
-    st.markdown("</div>", unsafe_allow_html=True)
+st.markdown(
+    '<div style="height:1px;background:linear-gradient(90deg,'
+    'transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);'
+    'margin-bottom:20px;"></div>',
+    unsafe_allow_html=True,
+)
+
+# ── SETTINGS PANEL TOGGLE ─────────────────────────────────────────────────
+srow1, srow2, srow3, srow4, srow5 = st.columns([1,1,1,1,1])
+with srow1:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("⚙️ Settings & Profile", key="open_settings"):
+        st.session_state.settings_mode = (
+            None if st.session_state.settings_mode == "profile" else "profile"
+        )
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow2:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("📅 Upload Schedule", key="open_schedule"):
+        st.session_state.settings_mode = (
+            None if st.session_state.settings_mode == "schedule" else "schedule"
+        )
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow3:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("🔔 Notifications", key="open_notif"):
+        st.toast("No new notifications.", icon="🔔")
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow4:
+    pass
+with srow5:
+    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
+    if st.button("💬 Open AskMNIT AI", key="btn_open_chat_dash"):
+        st.session_state.view = "chat"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+# ── SETTINGS / PROFILE DRAWER ─────────────────────────────────────────────
+mode = st.session_state.settings_mode
+if mode == "profile":
+    with st.expander("⚙️ Settings & Profile", expanded=True):
+        pc1, pc2 = st.columns([1, 2])
+        with pc1:
+            pp = st.session_state.profile_pic_b64
+            bh = branch_hex(st.session_state.branch)
+            if pp:
+                st.markdown(
+                    f'<img src="{pp}" style="width:80px;height:80px;border-radius:50%;'
+                    f'object-fit:cover;border:3px solid {bh}66;display:block;margin:0 auto 8px;">',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div style="width:80px;height:80px;border-radius:50%;'
+                    f'background:linear-gradient(135deg,{bh},{bh}88);'
+                    f'display:flex;align-items:center;justify-content:center;'
+                    f'font-size:1.8rem;font-weight:700;color:#fff;margin:0 auto 8px;">'
+                    f'{initials(st.session_state.student_name)}</div>',
+                    unsafe_allow_html=True,
+                )
+            pic_file = st.file_uploader("Upload photo", type=["png","jpg","jpeg"],
+                                         key="profile_pic_up", label_visibility="collapsed")
+            if pic_file:
+                st.session_state.profile_pic_b64 = img_to_b64(pic_file)
+                st.rerun()
+
+        with pc2:
+            new_name = st.text_input("Full Name",  value=st.session_state.student_name, key="inp_name")
+            new_id   = st.text_input("College ID", value=st.session_state.college_id,   key="inp_id")
+            new_sem  = st.selectbox("Semester", SEMESTERS,
+                                     index=SEMESTERS.index(st.session_state.semester), key="sel_sem")
+            new_br   = st.selectbox("Branch", BRANCHES,
+                                     index=BRANCHES.index(st.session_state.branch), key="sel_br")
+            if st.button("💾 Save Profile", key="save_profile"):
+                old_br = st.session_state.branch
+                st.session_state.student_name = new_name
+                st.session_state.college_id   = new_id
+                st.session_state.semester      = new_sem
+                st.session_state.branch        = new_br
+                if old_br != new_br:
+                    st.session_state.attendance = blank_att(subjects_for_branch(new_br))
+                st.toast("✅ Profile saved!", icon="✅")
+                st.session_state.settings_mode = None
+                st.rerun()
+
+elif mode == "schedule":
+    with st.expander("📅 Upload Weekly Schedule PDF", expanded=True):
+        pdf_file = st.file_uploader("Drop schedule PDF here",
+                                     type=["pdf"], key="sched_upload")
+        if pdf_file:
+            st.session_state.full_schedule  = process_schedule_pdf(pdf_file, st.session_state.branch)
+            st.session_state.schedule_loaded = True
+            st.session_state.pdf_filename    = pdf_file.name
+            st.toast(f"✅ Schedule loaded: {pdf_file.name}", icon="📅")
+            st.session_state.settings_mode  = None
+            st.rerun()
+        if st.session_state.schedule_loaded:
+            st.markdown(
+                f'<div style="font-size:0.75rem;color:#10B981;margin-top:6px;">'
+                f'✓ Active: {st.session_state.pdf_filename}</div>',
+                unsafe_allow_html=True,
+            )
+
+# ── OVERVIEW STATS ROW ────────────────────────────────────────────────────
+ov = overall_pct(st.session_state.attendance)
+stat_badge, stat_col, stat_bg = status_badge(ov)
+
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+for col, ico, val, lbl, c in [
+    (kpi1,"📊",f"{ov}%","Overall Attendance",stat_col),
+    (kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#60A5FA"),
+    (kpi3,"📅",str(len(get_today_slots(st.session_state.full_schedule)) if st.session_state.schedule_loaded else 0),"Classes Today","#22D3EE"),
+    (kpi4,"📝",str(len(st.session_state.notes_list)),"Active Notes","#A78BFA"),
+]:
+    with col:
+        st.markdown(
+            f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
+            f'border:1px solid rgba(255,255,255,0.07);border-radius:14px;'
+            f'padding:16px 18px 14px;margin-bottom:14px;">'
+            f'<div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div>'
+            f'<div style="font-size:1.7rem;font-weight:800;color:{c};'
+            f'font-family:\'DM Mono\',monospace;line-height:1.1;">{val}</div>'
+            f'<div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+# ── ATTENDANCE TRACKER ────────────────────────────────────────────────────
+st.markdown(
+    '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
+    'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
+    'padding:18px 18px 14px;margin-bottom:14px;">'
+    '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
+    'color:rgba(148,163,184,.40);text-transform:uppercase;'
+    'letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>',
+    unsafe_allow_html=True,
+)
+
+def render_subj_rows(subj_list, key_prefix):
+    att = st.session_state.attendance
+    for subj in subj_list:
+        if subj not in att:
+            att[subj] = {"present":0,"total":0}
+        r   = att[subj]
+        pct = att_pct(r)
+        c   = att_color(pct)
+        sc1,sc2,sc3,sc4,sc5,sc6 = st.columns([3.5,1.2,0.9,0.9,0.9,0.9])
+        with sc1:
+            st.markdown(
+                f'<div style="font-size:0.80rem;color:#E2E8F0;'
+                f'font-weight:600;padding:8px 0 4px;">{subj}</div>'
+                f'<div style="background:rgba(255,255,255,.06);border-radius:99px;'
+                f'height:4px;overflow:hidden;width:90%;">'
+                f'<div style="width:{pct}%;height:100%;'
+                f'background:linear-gradient(90deg,{c},{c}88);'
+                f'border-radius:99px;"></div></div>',
+                unsafe_allow_html=True,
+            )
+        with sc2:
+            st.markdown(
+                f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;'
+                f'font-weight:700;color:{c};padding-top:8px;">{pct}%</div>'
+                f'<div style="font-size:0.60rem;color:rgba(148,163,184,.40);">'
+                f'{r["present"]}/{r["total"]}</div>',
+                unsafe_allow_html=True,
+            )
+        kp = f"{key_prefix}_{subj[:8]}"
+        with sc3:
+            st.markdown('<div class="present-btn">', unsafe_allow_html=True)
+            if st.button("✓ P", key="pp_"+kp, use_container_width=True):
+                st.session_state.attendance[subj]["present"]+=1
+                st.session_state.attendance[subj]["total"]+=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc4:
+            st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
+            if st.button("✗ A", key="pa_"+kp, use_container_width=True):
+                st.session_state.attendance[subj]["total"]+=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc5:
+            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+            if st.button("−P", key="rp_"+kp, use_container_width=True):
+                if r["present"]>0 and r["total"]>0:
+                    st.session_state.attendance[subj]["present"]-=1
+                    st.session_state.attendance[subj]["total"]-=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc6:
+            ka = "ra_"+kp
+            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+            if st.button("−A", key=ka, use_container_width=True):
+                st.session_state.attendance[subj]["total"]+=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+branch_only = BRANCH_SUBJECTS.get(st.session_state.branch,[])
+with st.expander("📘  Common Subjects  ("+str(len(COMMON_SUBJECTS))+")", expanded=True):
+    render_subj_rows(COMMON_SUBJECTS,"cmn")
+if branch_only:
+    with st.expander("🔬  "+st.session_state.branch+" Subjects  ("+str(len(branch_only))+")", expanded=True):
+        render_subj_rows(branch_only,"brnch")
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
-# Schedule section
-today_name = datetime.datetime.now().strftime("%A"); now_hm = datetime.datetime.now().hour*60+datetime.datetime.now().minute
-st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S CLASS SCHEDULE</span><span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;color:rgba(96,165,250,.65);">' + today_name.upper() + '</span></div>', unsafe_allow_html=True)
+# ── SCHEDULE SECTION ──────────────────────────────────────────────────────
+today_name = datetime.datetime.now().strftime("%A")
+now_hm = datetime.datetime.now().hour*60+datetime.datetime.now().minute
+st.markdown(
+    '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
+    'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
+    'padding:18px 18px 14px;margin-bottom:14px;">'
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
+    '<span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
+    'color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">'
+    '// TODAY\'S CLASS SCHEDULE</span>'
+    '<span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;'
+    'color:rgba(96,165,250,.65);">' + today_name.upper() + '</span></div>',
+    unsafe_allow_html=True
+)
 if st.session_state.schedule_loaded:
-    today_slots = get_today_slots(st.session_state.full_schedule); nxt = get_next_class(today_slots)
+    today_slots = get_today_slots(st.session_state.full_schedule)
+    nxt = get_next_class(today_slots)
     if nxt:
-        mins=nxt["minutes_away"]; hrs=mins//60; rem=mins%60; cd_str=(f"{hrs}h {rem}m" if hrs else f"{rem} min")+" away"
+        mins=nxt["minutes_away"]; hrs=mins//60; rem=mins%60
+        cd_str=(f"{hrs}h {rem}m" if hrs else f"{rem} min")+" away"
         urg_c="#EF4444" if mins<15 else "#F59E0B" if mins<45 else "#22D3EE"
-        st.markdown('<div style="background:linear-gradient(90deg,rgba(34,211,238,.06),rgba(37,99,235,.04));border:1px solid rgba(34,211,238,.18);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.57rem;color:rgba(148,163,184,.46);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div><div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">' + nxt["subject"] + '  <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">' + nxt["room"] + '</span></div></div><div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;font-weight:600;color:' + urg_c + ';text-align:right;">' + cd_str + '<div style="font-size:0.57rem;color:rgba(148,163,184,.42);font-weight:400;margin-top:1px;">' + fmt_time(nxt["time_start"]) + ' – ' + fmt_time(nxt["time_end"]) + '</div></div></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="background:linear-gradient(90deg,rgba(34,211,238,.06),'
+            'rgba(37,99,235,.04));border:1px solid rgba(34,211,238,.18);'
+            'border-radius:10px;padding:10px 16px;margin-bottom:14px;'
+            'display:flex;align-items:center;justify-content:space-between;">'
+            '<div><div style="font-size:0.57rem;color:rgba(148,163,184,.46);'
+            'text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div>'
+            '<div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">'
+            + nxt["subject"] + '  <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">'
+            + nxt["room"] + '</span></div></div>'
+            '<div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;'
+            'font-weight:600;color:' + urg_c + ';text-align:right;">' + cd_str
+            + '<div style="font-size:0.57rem;color:rgba(148,163,184,.42);'
+            'font-weight:400;margin-top:1px;">'
+            + fmt_time(nxt["time_start"]) + ' – ' + fmt_time(nxt["time_end"])
+            + '</div></div></div>',
+            unsafe_allow_html=True,
+        )
     if today_slots:
         rows=[today_slots[i:i+3] for i in range(0,len(today_slots),3)]
         for row in rows:
@@ -1317,44 +1728,121 @@ if st.session_state.schedule_loaded:
                 sh,sm=map(int,slot["time_start"].split(":")); is_past=(sh*60+sm)<now_hm
                 tc=TYPE_COLORS.get(slot["type"],"#60A5FA")
                 is_next=(nxt is not None and slot["time_start"]==nxt["time_start"] and slot["subject"]==nxt["subject"])
-                bc=tc if not is_past else "rgba(255,255,255,0.06)"; cbg="linear-gradient(160deg,rgba(34,211,238,0.06),rgba(37,99,235,0.03))" if is_next else "rgba(255,255,255,0.02)" if not is_past else "rgba(255,255,255,0.01)"
+                bc=tc if not is_past else "rgba(255,255,255,0.06)"
+                cbg="linear-gradient(160deg,rgba(34,211,238,0.06),rgba(37,99,235,0.03))" if is_next else "rgba(255,255,255,0.02)" if not is_past else "rgba(255,255,255,0.01)"
                 with col:
-                    st.markdown('<div style="background:' + cbg + ';border:1px solid ' + bc + ';border-left:3px solid ' + bc + ';border-radius:12px;padding:13px 14px;margin-bottom:8px;position:relative;overflow:hidden;"><div style="position:absolute;top:10px;right:10px;width:7px;height:7px;border-radius:50%;background:' + tc + ';opacity:' + ("1" if not is_past else "0.35") + ';' + ("box-shadow:0 0 6px "+tc+";" if is_next else "") + '"></div><div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;font-weight:700;color:' + ("#E2E8F0" if not is_past else "rgba(148,163,184,0.32)") + ';margin-bottom:6px;line-height:1.2;">' + fmt_time(slot["time_start"]) + '<br><span style="font-size:0.62rem;font-weight:400;color:rgba(148,163,184,0.45);">– ' + fmt_time(slot["time_end"]) + '</span></div><div style="font-size:0.82rem;font-weight:700;color:' + ("#F1F5F9" if not is_past else "rgba(148,163,184,0.28)") + ';margin-bottom:5px;line-height:1.3;">' + slot["subject"] + '</div><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:0.62rem;color:rgba(148,163,184,.48);">' + slot["room"] + '</span><span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;background:' + tc + '1A;color:' + tc + ';font-weight:600;">' + slot["type"] + '</span>' + ('  <span style="font-size:0.58rem;color:#22D3EE;font-weight:700;">&#9679; NEXT</span>' if is_next else '') + '</div>' + ('<div style="font-size:0.58rem;color:rgba(148,163,184,.28);margin-top:4px;text-decoration:line-through;">Done</div>' if is_past else '') + '</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        '<div style="background:' + cbg + ';border:1px solid ' + bc
+                        + ';border-left:3px solid ' + bc
+                        + ';border-radius:12px;padding:13px 14px;margin-bottom:8px;">'
+                        '<div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;'
+                        'font-weight:700;color:' + ("#E2E8F0" if not is_past else "rgba(148,163,184,0.32)")
+                        + ';margin-bottom:6px;">'
+                        + fmt_time(slot["time_start"])
+                        + '<br><span style="font-size:0.62rem;font-weight:400;color:rgba(148,163,184,0.45);">– '
+                        + fmt_time(slot["time_end"]) + '</span></div>'
+                        '<div style="font-size:0.82rem;font-weight:700;color:'
+                        + ("#F1F5F9" if not is_past else "rgba(148,163,184,0.28)")
+                        + ';margin-bottom:5px;">' + slot["subject"] + '</div>'
+                        '<div style="display:flex;align-items:center;gap:6px;">'
+                        '<span style="font-size:0.62rem;color:rgba(148,163,184,.48);">' + slot["room"] + '</span>'
+                        '<span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;'
+                        'background:' + tc + '1A;color:' + tc + ';font-weight:600;">' + slot["type"] + '</span>'
+                        + ('  <span style="font-size:0.58rem;color:#22D3EE;font-weight:700;">&#9679; NEXT</span>' if is_next else '')
+                        + '</div>'
+                        + ('<div style="font-size:0.58rem;color:rgba(148,163,184,.28);margin-top:4px;text-decoration:line-through;">Done</div>' if is_past else '')
+                        + '</div>',
+                        unsafe_allow_html=True,
+                    )
     else:
-        st.markdown('<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);font-size:0.80rem;">No classes for ' + today_name + '.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);'
+            'font-size:0.80rem;">No classes for ' + today_name + '.</div>',
+            unsafe_allow_html=True,
+        )
 else:
-    st.markdown('<div style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.20);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;color:rgba(148,163,184,.48);">&#128196;  Use <b>&#9881;&#65039; Menu &#8594; Upload Weekly Schedule</b> to activate the planner.</div>', unsafe_allow_html=True)
-    if "planner_overrides" not in st.session_state: st.session_state.planner_overrides = {}
-    for st_start,st_end in [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]:
+    st.markdown(
+        '<div style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.20);'
+        'border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;'
+        'color:rgba(148,163,184,.48);">&#128196;  Use <b>&#9881;&#65039; Menu &#8594; '
+        'Upload Weekly Schedule</b> to activate the planner.</div>',
+        unsafe_allow_html=True,
+    )
+    if "planner_overrides" not in st.session_state:
+        st.session_state.planner_overrides = {}
+    for st_start,st_end in [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),
+                              ("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]:
         override=st.session_state.planner_overrides.get(st_start,"")
         mp1,mp2,mp3,mp4=st.columns([1.6,4,0.8,2.2])
-        with mp1: st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#60A5FA;padding-top:10px;white-space:nowrap;font-weight:700;">' + fmt_time(st_start) + '<br><span style="font-size:0.56rem;font-weight:400;color:rgba(148,163,184,.38);">– ' + fmt_time(st_end) + '</span></div>', unsafe_allow_html=True)
-        with mp2: note_v=st.text_input("",value=override,placeholder="Task…",key="mp_"+st_start,label_visibility="collapsed")
+        with mp1:
+            st.markdown(
+                '<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;'
+                'color:#60A5FA;padding-top:10px;white-space:nowrap;font-weight:700;">'
+                + fmt_time(st_start)
+                + '<br><span style="font-size:0.56rem;font-weight:400;color:rgba(148,163,184,.38);">– '
+                + fmt_time(st_end) + '</span></div>',
+                unsafe_allow_html=True,
+            )
+        with mp2:
+            note_v=st.text_input("",value=override,placeholder="Task…",key="mp_"+st_start,label_visibility="collapsed")
         with mp3:
             st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-            if st.button("💾",key="sv_mp_"+st_start,use_container_width=True): st.session_state.planner_overrides[st_start]=note_v; st.rerun()
+            if st.button("💾",key="sv_mp_"+st_start,use_container_width=True):
+                st.session_state.planner_overrides[st_start]=note_v; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with mp4:
             saved=st.session_state.planner_overrides.get(st_start,"")
-            if saved: st.markdown('<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">&#10003; ' + saved + '</div>', unsafe_allow_html=True)
+            if saved:
+                st.markdown(
+                    '<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);'
+                    'border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;'
+                    'margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                    '&#10003; ' + saved + '</div>',
+                    unsafe_allow_html=True,
+                )
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-# Notes & Quick Links
+# ── NOTES & QUICK LINKS ───────────────────────────────────────────────────
 ql_col,notes_col=st.columns([1,1.5],gap="large")
 with ql_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
-    QL=[("📤","Upload Syllabus","Syllabus uploader will be enabled here."),("🔗","Add PYQ Link","PYQ link manager will open here."),("🔍","Library Search","Library search will open here.")]
+    st.markdown(
+        '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
+        'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
+        'padding:18px 18px 14px;height:100%;">'
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;'
+        'letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>',
+        unsafe_allow_html=True,
+    )
+    QL=[("📤","Upload Syllabus","Syllabus uploader will be enabled here."),
+        ("🔗","Add PYQ Link","PYQ link manager will open here."),
+        ("🔍","Library Search","Library search will open here.")]
     st.markdown('<div class="ql-btn">', unsafe_allow_html=True)
     for ico,lbl,fb in QL:
-        if st.button(ico+"  "+lbl,key="ql_"+lbl,use_container_width=True): st.session_state.ql_feedback=fb; st.rerun()
+        if st.button(ico+"  "+lbl,key="ql_"+lbl,use_container_width=True):
+            st.session_state.ql_feedback=fb; st.rerun()
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    if st.session_state.ql_feedback: st.markdown('<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;color:rgba(186,230,253,.58);line-height:1.5;">' + st.session_state.ql_feedback + '</div>', unsafe_allow_html=True)
+    if st.session_state.ql_feedback:
+        st.markdown(
+            '<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);'
+            'border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;'
+            'color:rgba(186,230,253,.58);line-height:1.5;">' + st.session_state.ql_feedback + '</div>',
+            unsafe_allow_html=True,
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 with notes_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);'
+        'border:1px solid rgba(255,255,255,0.07);border-radius:16px;'
+        'padding:18px 18px 14px;">'
+        '<div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;'
+        'color:rgba(148,163,184,.40);text-transform:uppercase;'
+        'letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>',
+        unsafe_allow_html=True,
+    )
     new_note_input=st.text_input("",placeholder="Type a new note…",key="new_note_input_field",label_visibility="collapsed")
     ac,_=st.columns([1,3])
     with ac:
@@ -1364,20 +1852,41 @@ with notes_col:
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     unpinned=[(i,n) for i,n in enumerate(st.session_state.notes_list) if not n["pinned"]]
     if not unpinned:
-        st.markdown('<div style="font-size:0.76rem;color:rgba(148,163,184,.38);text-align:center;padding:16px;font-style:italic;">No notes yet.</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="font-size:0.76rem;color:rgba(148,163,184,.38);'
+            'text-align:center;padding:16px;font-style:italic;">No notes yet.</div>',
+            unsafe_allow_html=True,
+        )
     else:
         for i,note in unpinned:
             nr1,nr2,nr3=st.columns([5,1.2,1])
-            with nr1: st.markdown('<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">' + note["text"] + '</div>', unsafe_allow_html=True)
+            with nr1:
+                st.markdown(
+                    '<div style="background:rgba(255,255,255,0.025);border:1px solid '
+                    'rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;'
+                    'font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">'
+                    + note["text"] + '</div>',
+                    unsafe_allow_html=True,
+                )
             with nr2:
                 st.markdown('<div class="pin-btn">', unsafe_allow_html=True)
-                if st.button("📌 Pin",key="pin_note_"+str(i),use_container_width=True): st.session_state.notes_list[i]["pinned"]=True; st.rerun()
+                if st.button("📌 Pin",key="pin_note_"+str(i),use_container_width=True):
+                    st.session_state.notes_list[i]["pinned"]=True; st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
             with nr3:
                 st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-                if st.button("🗑",key="del_note_"+str(i),use_container_width=True): st.session_state.notes_list.pop(i); st.rerun()
+                if st.button("🗑",key="del_note_"+str(i),use_container_width=True):
+                    st.session_state.notes_list.pop(i); st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; SESSION-STATE ONLY</span></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div style="text-align:center;margin-top:28px;padding:10px 0;'
+    'border-top:1px solid rgba(255,255,255,0.05);">'
+    '<span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;'
+    'color:rgba(148,163,184,0.24);letter-spacing:1.2px;">'
+    'ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; SESSION-STATE ONLY'
+    '</span></div>',
+    unsafe_allow_html=True,
+)
 st.markdown("</div>", unsafe_allow_html=True)

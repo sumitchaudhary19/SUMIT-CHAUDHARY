@@ -11,8 +11,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import streamlit as st
-import anthropic
 import datetime
+
+try:
+    import anthropic
+    _ANTHROPIC_AVAILABLE = True
+except ImportError:
+    _ANTHROPIC_AVAILABLE = False
+    anthropic = None
 
 # ── Page config — MUST be first Streamlit call ───────────────────────────────
 st.set_page_config(
@@ -105,6 +111,8 @@ for k, v in _DEFAULTS.items():
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource
 def get_client():
+    if not _ANTHROPIC_AVAILABLE:
+        return None
     try:
         return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
     except Exception:

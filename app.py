@@ -1,1219 +1,1750 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AskMNIT — World-Class AI Chatbot for MNIT Jaipur                           ║
-# ║  v6.0 — Powered by Claude claude-sonnet-4-20250514 · Premium UI             ║
+# ║  AskMNIT — Premium AI Chatbot + Student Dashboard                           ║
+# ║  v4.0 — Sidebar, Native File Picker, Voice Auto-Reply                       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-#
-#  SETUP:
-#  1. pip install streamlit anthropic
-#  2. Create .streamlit/secrets.toml → ANTHROPIC_API_KEY = "sk-ant-..."
-#  3. streamlit run app.py
-#
-# ─────────────────────────────────────────────────────────────────────────────
 
 import streamlit as st
+import streamlit.components.v1 as components
 import datetime
+import random
+import base64
 
-try:
-    import anthropic
-    _ANTHROPIC_AVAILABLE = True
-except ImportError:
-    _ANTHROPIC_AVAILABLE = False
-    anthropic = None
-
-# ── Page config — MUST be first Streamlit call ───────────────────────────────
 st.set_page_config(
-    page_title="AskMNIT AI",
+    page_title="AskMNIT",
     page_icon="🎓",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTS & DATA
+# SUBJECT DATABASE
 # ─────────────────────────────────────────────────────────────────────────────
-MNIT_SYSTEM_PROMPT = """You are AskMNIT, the official AI assistant for MNIT Jaipur (Malaviya National Institute of Technology Jaipur) — one of India's top NITs, ranked ~#11 in NIRF.
+COMMON_SUBJECTS = [
+    "Mathematics I/II", "Physics", "Chemistry", "Computer Programming",
+    "Basic Electrical", "Basic Electronics", "Basic Mechanical",
+    "Engineering Drawing", "Environmental Science",
+    "Technical Communication", "Basic Economics",
+]
+BRANCH_SUBJECTS: dict[str, list[str]] = {
+    "CSE":        ["Discrete Mathematics", "Problem Solving using C"],
+    "AI & ML":    ["Mathematics for AI", "Data Structures and Algorithms"],
+    "ECE":        ["Signals and Systems", "Electronic Devices and Circuits"],
+    "Civil":      ["Mechanics of Solid", "Engineering Geology"],
+    "Metallurgy": ["Engineering Materials", "Mineral Processing"],
+}
+BRANCHES  = ["CSE", "AI & ML", "ECE", "Civil", "Metallurgy"]
+SEMESTERS = [f"Semester {i}" for i in range(1, 9)]
+DAYS      = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+TYPE_COLORS = {"Lecture": "#22D3EE", "Lab": "#F59E0B", "Tutorial": "#A78BFA"}
 
-YOUR PERSONALITY:
-- Brilliant senior-student meets knowledgeable mentor energy
-- Warm, sharp, witty. Never robotic or corporate.
-- Occasionally use natural Hindi: "bilkul", "haan bhai", "sahi baat hai", "koi tension nahi"
-- Genuinely proud of MNIT Jaipur and its legacy
-
-YOUR EXPERTISE:
-1. ACADEMICS: B.Tech (CSE, ECE, ME, CE, EE, Chemical, Metallurgy, Architecture), M.Tech, PhD, MBA. Credit system (CGPA), semester structure, syllabus, exam patterns, internal marks.
-
-2. ADMISSIONS: JEE Advanced cutoffs (CSE opening ~2000-3000 rank, closing ~4000-5000 General), GATE cutoffs for M.Tech, MBA via CAT/MAT. Counselling (JoSAA), seat matrix (~900 B.Tech seats), fee ~₹1.5L/year for B.Tech.
-
-3. CAMPUS LIFE: 10 hostels (8 boys: Aravali, Vindhyachal, Himgiri, Shivalik, Nilgiri, Satpura, Udaygiri, Sahyadri; 2 girls: Janaki, Mahi), mess timings (7:30-9:30, 12:30-2:30, 7:30-9:30), sports facilities (swimming pool, cricket ground, basketball courts), Central Library (1L+ books, 24hr access during exams).
-
-4. CLUBS & EVENTS: Blitzschlag (annual techfest, March), Madhuram (cultural fest, Feb), E-Cell MNIT, Optix (photography), Robotics Club, MNIT Racing (Formula Student), NSS, NCC, Literary Club, Music Club.
-
-5. PLACEMENTS: Average package ~12-14 LPA, highest ~1 Cr+, top recruiters: Google, Microsoft, Amazon, Goldman Sachs, DE Shaw, Schlumberger, Infosys, TCS, Wipro, Samsung, Texas Instruments. ~95% placement rate for CSE. Placement season: Nov-Mar.
-
-6. RESEARCH: Funded projects from DST, DRDO, ISRO. Labs: VLSI Lab, AI/ML Lab, Robotics Lab, Material Science Lab, EV Research Center.
-
-7. FACILITIES: Medical center (24hr), SBI Bank + ATM, post office, shopping complex, sports complex, WiFi campus (NKN), gym, yoga center.
-
-8. ERP SYSTEM: mnit.ac.in/erp — attendance (75% mandatory), fee payment, grade cards, course registration, timetable.
-
-9. IMPORTANT INFO: Founded 1963, Jaipur Rajasthan. Director: Prof. N.P. Padhy. About 6000+ students, 300+ faculty.
-
-FORMATTING RULES:
-- Use markdown beautifully: **bold**, *italic*, ## headers, bullet lists, tables, code blocks
-- For complex questions, structure your answer with clear sections
-- Keep responses helpful but not bloated — quality over quantity
-- End with a relevant follow-up suggestion or offer to explain more
-- If you don't know specific real-time data (exact current cutoffs, etc.), give honest approximate ranges based on historical data"""
-
-MOCK_HISTORY = [
-    ("Today",      "📊 GATE 2025 cutoffs for CSE"),
-    ("Today",      "🏠 Hostel allotment process"),
-    ("Yesterday",  "📚 B.Tech syllabus Sem 5"),
-    ("Yesterday",  "💰 Fee structure 2024-25"),
-    ("2 days ago", "🎯 Placement stats 2024"),
-    ("2 days ago", "🔬 Research labs in ECE"),
-    ("Last week",  "📅 Blitzschlag 2025 dates"),
-    ("Last week",  "🍽️ Mess menu & timings"),
+# Sidebar chat history items
+SIDEBAR_HISTORY = [
+    ("Today",       "Attendance analysis request"),
+    ("Today",       "Mineral Processing PYQs"),
+    ("Yesterday",   "Welding Lab dates"),
+    ("Yesterday",   "Exam prep strategy"),
+    ("2 days ago",  "Fee payment receipt"),
+    ("2 days ago",  "Subject list Sem 6"),
+    ("Last week",   "Schedule for Monday"),
+    ("Last week",   "CSE branch subjects"),
 ]
 
-SUGGESTION_PILLS = [
-    "What are MNIT Jaipur JEE cutoffs?",
-    "Tell me about hostel facilities",
-    "How are placements at MNIT?",
-    "What clubs & fests happen here?",
-    "Explain the ERP attendance system",
-    "GATE cutoffs for M.Tech admission",
-]
+# ─────────────────────────────────────────────────────────────────────────────
+# SCHEDULE / GENERAL HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+def process_schedule_pdf(file, branch: str) -> dict:
+    pool = COMMON_SUBJECTS[:4] + BRANCH_SUBJECTS.get(branch, [])
+    random.seed(42)
+    TIME_PAIRS = [
+        ("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),
+        ("12:00","13:00"),("14:00","15:00"),("15:30","16:30"),
+    ]
+    sched: dict[str, list[dict]] = {}
+    for day in DAYS[:6]:
+        chosen = sorted(random.sample(range(len(TIME_PAIRS)), k=random.randint(2,4)))
+        sched[day] = [
+            {"time_start":TIME_PAIRS[ci][0],"time_end":TIME_PAIRS[ci][1],
+             "subject":random.choice(pool),
+             "room":random.choice(["LT-1","LT-2","Lab-A","Lab-B","CR-3","CR-5"]),
+             "type":random.choice(["Lecture","Lecture","Lab","Tutorial"])}
+            for ci in chosen
+        ]
+    return sched
 
-QUICK_CHIPS = [
-    "JEE cutoffs?", "Hostel info", "Placements?",
-    "Campus life", "Fee structure", "Research labs",
-]
+def get_today_slots(fs: dict) -> list[dict]:
+    return fs.get(datetime.datetime.now().strftime("%A"), [])
+
+def get_next_class(slots: list[dict]) -> dict | None:
+    now = datetime.datetime.now()
+    for slot in slots:
+        h, m = map(int, slot["time_start"].split(":"))
+        dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
+        if dt > now:
+            return {**slot, "minutes_away": int((dt - now).total_seconds() // 60)}
+    return None
+
+def subjects_for_branch(b):   return COMMON_SUBJECTS + BRANCH_SUBJECTS.get(b, [])
+def blank_att(s):             return {x: {"present":0,"total":0} for x in s}
+def att_pct(r):               return round(r["present"]/r["total"]*100,1) if r["total"] else 0.0
+def overall_pct(a):
+    tp = sum(r["present"] for r in a.values())
+    tt = sum(r["total"] for r in a.values())
+    return round(tp/tt*100,1) if tt else 0.0
+def status_badge(p):
+    if p>=75: return "Safe","#10B981","rgba(16,185,129,0.12)"
+    if p>=65: return "Low","#F59E0B","rgba(245,158,11,0.12)"
+    return "Critical","#EF4444","rgba(239,68,68,0.12)"
+def att_color(p):    return "#10B981" if p>=75 else "#F59E0B" if p>=65 else "#EF4444"
+def initials(n):     return "".join(w[0].upper() for w in n.split()[:2]) if n else "??"
+def branch_hex(b):   return {"CSE":"#3B82F6","AI & ML":"#8B5CF6","ECE":"#06B6D4","Civil":"#F59E0B","Metallurgy":"#10B981"}.get(b,"#6366F1")
+def img_to_b64(f):
+    d=f.read(); m=f.type or "image/png"
+    return f"data:{m};base64,{base64.b64encode(d).decode()}"
+def fmt_time(t: str) -> str:
+    try:
+        h,m=map(int,t.split(":"))
+        return f"{h%12 or 12:02d}:{m:02d} {'AM' if h<12 else 'PM'}"
+    except: return t
+def _safe_key(s: str) -> str:
+    return "".join(c if c.isalnum() else "_" for c in s)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SESSION STATE
 # ─────────────────────────────────────────────────────────────────────────────
-_DEFAULTS = {
-    "messages":       [],
-    "saved_sessions": [],
-    "response_style": "Balanced",
-    "chat_theme":     "dark",
-    "user_name":      "Student",
-    "total_tokens":   0,
-    "show_welcome":   True,
+_def_branch = "CSE"
+_DEFAULTS: dict = {
+    "view":              "dashboard",
+    "nav_page":          "My Dashboard",
+    "student_name":      "Sumit Chaudhary",
+    "college_id":        "2022UMT1234",
+    "semester":          "Semester 6",
+    "branch":            _def_branch,
+    "profile_pic_b64":   "",
+    "settings_mode":     None,
+    "attendance":        blank_att(subjects_for_branch(_def_branch)),
+    "schedule_loaded":   False,
+    "full_schedule":     {},
+    "pdf_filename":      "",
+    "notes_list": [
+        {"text":"Mid-sem revision starts Monday","pinned":False},
+        {"text":"Submit fee by 17 Mar","pinned":False},
+        {"text":"Collect hall ticket from ERP","pinned":False},
+    ],
+    "ql_feedback":       "",
+    "chat_messages":     [],
+    "chat_sessions":     [],
+    "voice_output":      False,
+    "strict_mode":       False,
+    "is_recording":      False,
+    "planner_overrides": {},
+    "show_uploader":     False,
+    # NEW v4
+    "chat_theme":        "dark",          # "dark" | "light"
+    "response_style":    "Concise",       # "Concise" | "Detailed" | "Bullet Points"
+    "attached_file_name":"",              # filename chip shown inside bar
+    "voice_transcript":  "",              # transcript from voice recording
+    "_voice_submit":     False,           # flag to auto-submit after voice
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANTHROPIC CLIENT
+# AI RESPONSE GENERATOR
 # ─────────────────────────────────────────────────────────────────────────────
-@st.cache_resource
-def get_client():
-    if not _ANTHROPIC_AVAILABLE:
-        return None
-    try:
-        return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    except Exception:
-        return None
+def generate_ai_response(last: str) -> str:
+    lower = last.lower()
+    att   = st.session_state.attendance
+    br    = st.session_state.branch
+    style = st.session_state.response_style
 
-# ─────────────────────────────────────────────────────────────────────────────
-# THEME SETUP
-# ─────────────────────────────────────────────────────────────────────────────
-IS_LIGHT = st.session_state.chat_theme == "light"
+    def fmt(resp):
+        if style == "Bullet Points":
+            lines = resp.split("\n")
+            return "\n".join(f"• {l}" if l.strip() and not l.startswith(("•","#","*","-","1","2","3","4","5")) else l for l in lines)
+        if style == "Detailed":
+            return resp + "\n\n---\n*Need more detail? Just ask a follow-up!*"
+        return resp
 
-if IS_LIGHT:
-    C = {
-        "bg":        "#F2F5FF",
-        "surf":      "#FFFFFF",
-        "surf2":     "#EEF2FF",
-        "bar":       "rgba(255,255,255,0.92)",
-        "border":    "rgba(37,99,235,0.15)",
-        "text":      "#0F172A",
-        "muted":     "rgba(30,58,138,0.50)",
-        "accent":    "#1D4ED8",
-        "sidebar":   "#F0F4FF",
-        "grid":      "rgba(37,99,235,0.04)",
-        "radial":    "rgba(37,99,235,0.08)",
-        "msg_user":  "rgba(29,78,216,0.06)",
-        "msg_ai":    "rgba(255,255,255,0.78)",
-        "code_bg":   "rgba(37,99,235,0.06)",
-        "code_c":    "#1D4ED8",
-        "ts_c":      "rgba(29,78,216,0.32)",
-        "disc_c":    "rgba(29,78,216,0.32)",
-        "tag_bg":    "rgba(37,99,235,0.07)",
-        "tag_c":     "rgba(29,78,216,0.75)",
-        "inp_bg":    "rgba(255,255,255,0.90)",
-        "inp_sh":    "0 8px 32px rgba(37,99,235,0.10)",
-        "sb_bg":     "#F0F4FF",
-        "tok_c":     "rgba(29,78,216,0.40)",
-        "chip_bg":   "rgba(37,99,235,0.06)",
-        "chip_c":    "rgba(29,78,216,0.75)",
-        "sug_bg":    "rgba(255,255,255,0.70)",
-        "sug_c":     "rgba(15,23,42,0.70)",
-    }
-else:
-    C = {
-        "bg":        "#050810",
-        "surf":      "#0A0F1E",
-        "surf2":     "#0D1426",
-        "bar":       "rgba(5,8,16,0.94)",
-        "border":    "rgba(59,130,246,0.12)",
-        "text":      "#E8F0FE",
-        "muted":     "rgba(148,163,184,0.55)",
-        "accent":    "#3B82F6",
-        "sidebar":   "#070918",
-        "grid":      "rgba(59,130,246,0.035)",
-        "radial":    "rgba(29,78,216,0.12)",
-        "msg_user":  "rgba(29,78,216,0.09)",
-        "msg_ai":    "rgba(10,15,30,0.75)",
-        "code_bg":   "rgba(59,130,246,0.10)",
-        "code_c":    "#93C5FD",
-        "ts_c":      "rgba(59,130,246,0.28)",
-        "disc_c":    "rgba(59,130,246,0.28)",
-        "tag_bg":    "rgba(59,130,246,0.07)",
-        "tag_c":     "rgba(147,197,253,0.65)",
-        "inp_bg":    "rgba(10,15,30,0.94)",
-        "inp_sh":    "0 8px 40px rgba(0,0,0,0.65)",
-        "sb_bg":     "#070918",
-        "tok_c":     "rgba(59,130,246,0.38)",
-        "chip_bg":   "rgba(59,130,246,0.07)",
-        "chip_c":    "rgba(147,197,253,0.65)",
-        "sug_bg":    "rgba(255,255,255,0.028)",
-        "sug_c":     "rgba(186,230,253,0.70)",
-    }
+    if any(w in lower for w in ["attendance","present","absent","%"]):
+        ov  = overall_pct(att)
+        low = [(s,att_pct(r)) for s,r in att.items() if att_pct(r)<75 and r["total"]>0]
+        resp = f"**Attendance — {st.session_state.student_name}**\n\nOverall: **{ov}%**\n\n"
+        if low:
+            resp += "**Below 75%:**\n"
+            for s,p in low:
+                need = max(0,int((0.75*att[s]["total"]-att[s]["present"])/0.25)+1)
+                resp += f"- **{s}**: {p}% — need **{need}** more\n"
+        else:
+            resp += "All subjects above 75%. Stay consistent!"
+        return fmt(resp)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GLOBAL CSS
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Nunito:wght@300;400;500;600;700;800&display=swap');
+    if any(w in lower for w in ["schedule","class","next","today","timetable"]):
+        if st.session_state.schedule_loaded:
+            slots = get_today_slots(st.session_state.full_schedule)
+            nxt   = get_next_class(slots)
+            dn    = datetime.datetime.now().strftime("%A")
+            resp  = f"**Today's Classes ({dn})**\n\n"
+            for s in slots:
+                resp += f"- **{fmt_time(s['time_start'])}–{fmt_time(s['time_end'])}** — {s['subject']} in {s['room']} _({s['type']})_\n"
+            if nxt:
+                resp += f"\nNext: {nxt['subject']} in **{nxt['minutes_away']} min**"
+            else:
+                resp += "\nNo more classes today."
+            return fmt(resp)
+        return "No schedule loaded. Go to **Upload Schedule** on the dashboard."
 
-*, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    if any(w in lower for w in ["pyq","previous year","question paper","past paper"]):
+        return fmt(f"**PYQ Resources for {br}**\n\nAccess via PYQs in the dashboard.\n\nBranch subjects: {', '.join(BRANCH_SUBJECTS.get(br,[]))}")
 
+    if any(w in lower for w in ["fee","pay","due","payment"]):
+        return fmt("Fee details are in the **Fee Portal** section on the dashboard.")
+
+    if any(w in lower for w in ["subject","syllabus","branch","course"]):
+        common   = "\n".join(f"- {s}" for s in COMMON_SUBJECTS)
+        branch_s = "\n".join(f"- {s}" for s in BRANCH_SUBJECTS.get(br,[]))
+        return fmt(f"**Subjects — {br} · {st.session_state.semester}**\n\n**Common:**\n{common}\n\n**{br} specific:**\n{branch_s}")
+
+    if any(w in lower for w in ["exam","tip","strategy","prepare","study"]):
+        first_bs = BRANCH_SUBJECTS.get(br,["your core subject"])[0]
+        return fmt(f"**Exam Prep — {br}**\n\n1. **Triage by attendance** — below-75% subjects first.\n2. **PYQ pattern** — last 5 years covers ~70%.\n3. **Block schedule** — 2-hour deep-work slots.\n4. **Group study** — 3-person group for {first_bs}.\n5. **ERP deadlines** — check submissions weekly.")
+
+    if any(w in lower for w in ["hi","hello","hey","hii"]):
+        fn = st.session_state.student_name.split()[0]
+        return fmt(f"Hey {fn}! 👋 I'm AskMNIT. I can help with:\n\n- Attendance analysis\n- Today's schedule\n- Previous year papers\n- Fee status\n- Exam strategy\n\nYou're on **{br} · {st.session_state.semester}**. What can I help with?")
+
+    if "voice" in lower or "recorded" in lower or "[voice" in lower:
+        fn = st.session_state.student_name.split()[0]
+        return fmt(f"🎤 Voice message received, {fn}! I heard your question. For best results, try asking about attendance, schedule, PYQs, fees, or exam strategy.")
+
+    if "attached" in lower or "file" in lower:
+        return fmt("File received! Tell me what you'd like to do with this file.")
+
+    fn = st.session_state.student_name.split()[0]
+    return fmt(f"I'm AskMNIT — built for **{fn}** · **{br}**.\n\n| Topic | Try asking... |\n|---|---|\n| Attendance | _Analyse my attendance_ |\n| Schedule | _What's next today?_ |\n| PYQs | _Find PYQs for my branch_ |\n| Fees | _Check fee due date_ |\n| Exams | _Give me an exam strategy_ |")
+
+def dispatch_message(text: str):
+    text = text.strip()
+    if not text: return
+    st.session_state.chat_messages.append({"role":"user","content":text})
+    st.session_state.chat_messages.append({"role":"assistant","content":generate_ai_response(text)})
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# THEME-AWARE CSS VARIABLES
+# ═════════════════════════════════════════════════════════════════════════════
+def get_theme_css() -> str:
+    is_light = st.session_state.chat_theme == "light"
+    if is_light:
+        return """
+:root {
+  --bg:      #F0F4FF;
+  --surf:    #FFFFFF;
+  --surf2:   #E8EEFF;
+  --bar-bg:  #FFFFFF;
+  --border:  rgba(0,0,0,0.10);
+  --border2: rgba(0,0,0,0.18);
+  --text:    #1E2A3A;
+  --muted:   rgba(60,80,110,0.60);
+  --accent:  #2563EB;
+}
 html, body,
 [data-testid="stApp"],
-[data-testid="stAppViewContainer"] {{
-  background: {C["bg"]} !important;
-  color: {C["text"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-}}
+[data-testid="stAppViewContainer"] {
+  background: #F0F4FF !important;
+  color: #1E2A3A !important;
+}
+.gemini-bar [data-testid="stForm"] {
+  background: #FFFFFF !important;
+  border-color: rgba(37,99,235,0.22) !important;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.10) !important;
+}
+.gemini-bar [data-testid="stTextInput"] input {
+  color: #1E2A3A !important;
+  caret-color: #2563EB !important;
+}
+.gemini-bar [data-testid="stTextInput"] input::placeholder {
+  color: rgba(60,80,110,0.45) !important;
+}
+.gemini-bar-anchored {
+  background: rgba(240,244,255,0.97) !important;
+  border-top-color: rgba(37,99,235,0.15) !important;
+}
+[data-testid="stChatMessage"] {
+  background: rgba(255,255,255,0.85) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+  background: rgba(37,99,235,0.07) !important;
+  border-color: rgba(37,99,235,0.15) !important;
+}
+[data-testid="stSidebar"] {
+  background: #FFFFFF !important;
+  border-right: 1px solid rgba(37,99,235,0.14) !important;
+}
+"""
+    else:
+        return """
+:root {
+  --bg:      #070B14;
+  --surf:    #0B1120;
+  --surf2:   #0E1726;
+  --bar-bg:  #1A1E2E;
+  --border:  rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text:    #E2E8F0;
+  --muted:   rgba(148,163,184,0.55);
+  --accent:  #3B82F6;
+}
+html, body,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"] {
+  background: #070B14 !important;
+  color: #E2E8F0 !important;
+}
+"""
 
-/* Hide Streamlit chrome */
+# ═════════════════════════════════════════════════════════════════════════════
+# GLOBAL CSS (static, theme-independent parts)
+# ═════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700;9..144,900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+*, html, body { box-sizing: border-box; margin: 0; padding: 0; }
+html, body,
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"] {
+  font-family: 'Outfit', sans-serif !important;
+}
 header[data-testid="stHeader"], footer, #MainMenu,
-[data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
+[data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
+[data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
 
-[data-testid="stMainBlockContainer"] {{ padding: 0 !important; max-width: 100% !important; }}
+/* ── Sidebar (both views) ── */
+[data-testid="stSidebar"] {
+  background: #0B1120 !important;
+  border-right: 1px solid rgba(59,130,246,0.16) !important;
+  min-width: 260px !important; max-width: 260px !important;
+}
+[data-testid="stSidebar"] > div { padding: 0 !important; }
 
-/* ═══════════════════════════════════════════
-   SIDEBAR — ALWAYS VISIBLE
-   ═══════════════════════════════════════════ */
-[data-testid="stSidebar"] {{
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  background: {C["sb_bg"]} !important;
-  border-right: 1px solid {C["border"]} !important;
-  min-width: 268px !important;
-  max-width: 268px !important;
-  box-shadow: {"2px 0 24px rgba(37,99,235,0.07)" if IS_LIGHT else "4px 0 40px rgba(0,0,0,0.65)"} !important;
-}}
-[data-testid="stSidebar"] > div {{
-  padding: 0 !important;
-  height: 100vh !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(59,130,246,0.22) transparent;
-}}
-[data-testid="stSidebarCollapseButton"],
-[data-testid="collapsedControl"] {{
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}}
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{ gap: 0 !important; }}
-
-/* Sidebar section header */
-.sb-hdr {{
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.57rem; font-weight: 600;
-  color: {C["accent"]}; opacity: 0.65;
-  text-transform: uppercase; letter-spacing: 2px;
-  padding: 15px 18px 6px;
-  border-top: 1px solid {C["border"]};
-  margin-top: 4px;
-  display: flex; align-items: center; gap: 7px;
-}}
-.sb-hdr::before {{
-  content: '';
-  width: 12px; height: 1px;
-  background: {C["accent"]}; opacity: 0.45;
-}}
-
-/* Sidebar history */
-.sb-hist {{
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 18px; cursor: pointer;
-  font-size: 0.79rem; font-weight: 500;
-  color: {C["muted"]};
-  border-bottom: 1px solid {C["border"]};
-  transition: background 0.15s, color 0.15s, padding 0.15s;
-  font-family: 'Nunito', sans-serif;
-}}
-.sb-hist:hover {{
-  background: {"rgba(37,99,235,0.06)" if IS_LIGHT else "rgba(59,130,246,0.06)"};
-  color: {"#1D4ED8" if IS_LIGHT else "#93C5FD"};
-  padding-left: 22px;
-}}
-.sb-dot    {{ width:5px; height:5px; border-radius:50%; background:#3B82F6; flex-shrink:0; opacity:0.7; }}
-.sb-dot-d  {{ width:5px; height:5px; border-radius:50%; background:rgba(148,163,184,0.35); flex-shrink:0; }}
-
-/* Sidebar controls */
-[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {{
-  background: {"rgba(37,99,235,0.05)" if IS_LIGHT else "rgba(255,255,255,0.04)"} !important;
-  border: 1px solid {C["border"]} !important;
-  border-radius: 10px !important;
-  color: {C["text"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-  font-size: 0.82rem !important;
-}}
-[data-testid="stSidebar"] [data-testid="stSelectbox"] label {{
-  color: {C["accent"]} !important; opacity: 0.65;
-  font-size: 0.65rem !important; font-weight: 700 !important;
-  text-transform: uppercase !important; letter-spacing: 0.8px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-}}
-[data-testid="stSidebar"] [data-testid="stTextInput"] input {{
-  background: {"rgba(37,99,235,0.04)" if IS_LIGHT else "rgba(255,255,255,0.04)"} !important;
-  border: 1px solid {C["border"]} !important;
-  border-radius: 10px !important;
-  color: {C["text"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-  font-size: 0.83rem !important;
-}}
-[data-testid="stSidebar"] [data-testid="stTextInput"] label {{
-  color: {C["accent"]} !important; opacity: 0.65;
-  font-size: 0.65rem !important; font-weight: 700 !important;
-  text-transform: uppercase !important; letter-spacing: 0.8px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-}}
-[data-testid="stSidebar"] [data-testid="stToggle"] label {{
-  color: {C["text"]} !important;
-  font-size: 0.82rem !important;
-}}
-
-/* Sidebar all buttons default (red-tinted — for dangerous actions) */
-[data-testid="stSidebar"] .stButton > button {{
-  background: rgba(239,68,68,0.07) !important;
-  border: 1px solid rgba(239,68,68,0.20) !important;
-  color: #F87171 !important;
-  border-radius: 10px !important;
-  font-size: 0.79rem !important; font-weight: 600 !important;
-  padding: 7px 14px !important; box-shadow: none !important;
-  font-family: 'Nunito', sans-serif !important;
-  width: 100% !important;
-}}
-[data-testid="stSidebar"] .stButton > button:hover {{
-  background: rgba(239,68,68,0.14) !important; transform: none !important;
-}}
-
-/* New chat button override */
-[data-testid="stSidebar"] .sb-new .stButton > button {{
-  background: linear-gradient(135deg,rgba(29,78,216,0.16),rgba(14,165,233,0.10)) !important;
-  border: 1px solid {"rgba(37,99,235,0.30)" if IS_LIGHT else "rgba(59,130,246,0.28)"} !important;
-  color: {"#1D4ED8" if IS_LIGHT else "#60A5FA"} !important;
-  font-size: 0.84rem !important; font-weight: 700 !important;
-  padding: 9px 14px !important; border-radius: 12px !important;
-}}
-[data-testid="stSidebar"] .sb-new .stButton > button:hover {{
-  background: rgba(59,130,246,0.18) !important;
-  border-color: rgba(59,130,246,0.50) !important;
-}}
-
-/* Theme buttons */
-[data-testid="stSidebar"] .sb-th .stButton > button {{
-  background: {"rgba(37,99,235,0.06)" if IS_LIGHT else "rgba(255,255,255,0.04)"} !important;
-  border: 1px solid {C["border"]} !important;
-  color: {C["text"]} !important;
-  font-size: 0.79rem !important; font-weight: 600 !important;
-  padding: 7px 12px !important; border-radius: 9px !important;
-  box-shadow: none !important;
-}}
-[data-testid="stSidebar"] .sb-th .stButton > button:hover {{
-  background: {"rgba(37,99,235,0.12)" if IS_LIGHT else "rgba(59,130,246,0.10)"} !important;
-  border-color: {"rgba(37,99,235,0.35)" if IS_LIGHT else "rgba(59,130,246,0.35)"} !important;
-  transform: none !important;
-}}
-[data-testid="stSidebar"] .sb-th-a .stButton > button {{
-  background: {"rgba(37,99,235,0.16)" if IS_LIGHT else "rgba(59,130,246,0.16)"} !important;
-  border-color: {"rgba(37,99,235,0.45)" if IS_LIGHT else "rgba(59,130,246,0.50)"} !important;
-  color: {"#1D4ED8" if IS_LIGHT else "#93C5FD"} !important;
-  font-weight: 800 !important;
-}}
-
-/* Ghost / load session button */
-[data-testid="stSidebar"] .sb-ghost .stButton > button {{
-  background: transparent !important;
-  border: 1px solid {C["border"]} !important;
-  color: {C["muted"]} !important;
-  font-size: 0.75rem !important;
-  padding: 4px 10px !important; border-radius: 7px !important;
-  box-shadow: none !important;
-}}
-[data-testid="stSidebar"] .sb-ghost .stButton > button:hover {{
-  background: {"rgba(37,99,235,0.08)" if IS_LIGHT else "rgba(59,130,246,0.10)"} !important;
-  color: {C["accent"]} !important;
-}}
-
-/* ═══════════════════════════════════════════
-   ANIMATED BACKGROUND
-   ═══════════════════════════════════════════ */
-.chat-bg {{
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: {C["bg"]};
-}}
-.chat-bg::before {{
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient({C["grid"]} 1px, transparent 1px),
-    linear-gradient(90deg, {C["grid"]} 1px, transparent 1px);
-  background-size: 52px 52px;
-  animation: gridMove 28s linear infinite;
-}}
-@keyframes gridMove {{
-  from {{ background-position: 0 0; }}
-  to   {{ background-position: 52px 52px; }}
-}}
-.chat-bg::after {{
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(
-    ellipse 75% 55% at 50% -5%,
-    {C["radial"]}, transparent 68%
-  );
-}}
-
-/* ═══════════════════════════════════════════
-   NAVBAR
-   ═══════════════════════════════════════════ */
-.navbar {{
-  position: relative; z-index: 100;
-  background: {C["bar"]};
-  backdrop-filter: blur(26px) saturate(180%);
-  border-bottom: 1px solid {C["border"]};
-  box-shadow: {"0 1px 14px rgba(37,99,235,0.07)" if IS_LIGHT else "0 2px 24px rgba(0,0,0,0.65)"};
-  padding: 11px 26px;
-  display: flex; align-items: center; justify-content: space-between;
-}}
-.nav-brand {{ display: flex; align-items: center; gap: 12px; }}
-.nav-logo {{
-  width: 38px; height: 38px; border-radius: 11px;
-  background: linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 100%);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800; color: white;
-  box-shadow: 0 4px 18px rgba(29,78,216,0.40); letter-spacing: -1px; flex-shrink: 0;
-}}
-.nav-title {{
-  font-family: 'Syne', sans-serif;
-  font-size: 1.05rem; font-weight: 800;
-  color: {C["text"]}; letter-spacing: -0.4px;
-}}
-.nav-sub {{
-  font-size: 0.54rem; letter-spacing: 0.8px;
-  color: {C["muted"]};
-  font-family: 'JetBrains Mono', monospace;
+/* Sidebar section headers */
+.sb-section-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: rgba(148,163,184,0.50);
   text-transform: uppercase;
-}}
-.nav-live {{
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(5,150,105,0.10);
-  border: 1px solid rgba(5,150,105,0.25);
-  border-radius: 20px; padding: 4px 12px;
-  font-size: 0.60rem; color: #34D399;
-  font-family: 'JetBrains Mono', monospace; font-weight: 600;
-  letter-spacing: 0.5px;
-}}
-.live-dot {{
-  width: 6px; height: 6px; border-radius: 50%; background: #10B981;
-  animation: liveB 2s ease infinite;
-}}
-@keyframes liveB {{
-  0%,100% {{ opacity:1; transform:scale(1); }}
-  50%      {{ opacity:0.45; transform:scale(0.80); }}
-}}
-.tok-badge {{
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.58rem; color: {C["tok_c"]};
-  padding: 3px 8px;
-  background: {"rgba(37,99,235,0.06)" if IS_LIGHT else "rgba(59,130,246,0.06)"};
-  border: 1px solid {C["border"]}; border-radius: 8px;
-}}
+  letter-spacing: 1.4px;
+  padding: 14px 16px 6px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 4px;
+}
+.sb-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.14s;
+  font-size: 0.80rem;
+  color: rgba(148,163,184,0.70);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.sb-history-item:hover { background: rgba(59,130,246,0.09); color: #BAE6FD; }
+.sb-history-dot { width:5px; height:5px; border-radius:50%; background:#3B82F6; flex-shrink:0; }
 
-/* ═══════════════════════════════════════════
-   HERO
-   ═══════════════════════════════════════════ */
-.hero-wrap {{
-  position: relative; z-index: 10;
-  padding: 5vh 0 2vh;
-  display: flex; flex-direction: column; align-items: center;
-}}
-.hero-orb {{
-  width: 104px; height: 104px; border-radius: 28px;
-  background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 35%, #0EA5E9 68%, #059669 100%);
-  display: flex; align-items: center; justify-content: center; font-size: 3rem;
-  box-shadow:
-    0 0 0 1px rgba(59,130,246,0.18),
-    0 0 60px rgba(29,78,216,0.40),
-    0 24px 60px rgba(0,0,0,0.22);
-  animation: floatOrb 4.5s ease-in-out infinite;
-  margin-bottom: 28px;
-}}
-@keyframes floatOrb {{
-  0%,100% {{ transform: translateY(0px) rotate(0deg); box-shadow: 0 0 0 1px rgba(59,130,246,0.18),0 0 60px rgba(29,78,216,0.40),0 24px 60px rgba(0,0,0,0.22); }}
-  50%      {{ transform: translateY(-10px) rotate(1.5deg); box-shadow: 0 0 0 1px rgba(59,130,246,0.22),0 0 80px rgba(29,78,216,0.50),0 34px 70px rgba(0,0,0,0.18); }}
-}}
-.hero-h1 {{
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(2.0rem, 3.8vw, 3.0rem);
-  font-weight: 800; color: {C["text"]};
-  text-align: center; letter-spacing: -1.5px; line-height: 1.08;
-  margin-bottom: 14px; animation: fadeUp 0.5s ease both;
-}}
-.hero-h1 .grad {{
-  background: linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 50%, #059669 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}}
-.hero-sub {{
-  font-size: 0.87rem; color: {C["muted"]};
-  text-align: center; line-height: 1.75; max-width: 500px;
-  margin-bottom: 28px; font-weight: 500;
-  animation: fadeUp 0.55s 0.08s ease both;
-}}
-.hero-tags {{
-  display: flex; flex-wrap: wrap; gap: 8px;
-  justify-content: center; margin-bottom: 32px;
-  animation: fadeUp 0.55s 0.14s ease both;
-}}
-.hero-tag {{
-  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
-  padding: 4px 13px; border-radius: 20px;
-  background: {C["tag_bg"]}; border: 1px solid {C["border"]};
-  color: {C["tag_c"]}; letter-spacing: 0.4px;
-}}
+/* Sidebar selectbox + toggle override */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 8px !important;
+  color: #E2E8F0 !important;
+  font-size: 0.83rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label {
+  color: rgba(148,163,184,0.65) !important;
+  font-size: 0.70rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+  background: rgba(239,68,68,0.10) !important;
+  border: 1px solid rgba(239,68,68,0.28) !important;
+  color: #FCA5A5 !important;
+  border-radius: 8px !important;
+  font-size: 0.80rem !important;
+  font-weight: 600 !important;
+  padding: 7px 14px !important;
+  box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+  background: rgba(239,68,68,0.20) !important; transform: none !important;
+}
+/* Theme toggle buttons in sidebar */
+.sb-theme-dark-btn .stButton > button {
+  background: rgba(15,23,42,0.80) !important;
+  border: 1.5px solid rgba(59,130,246,0.35) !important;
+  color: #60A5FA !important;
+  border-radius: 8px !important;
+  font-size: 0.80rem !important;
+  padding: 7px 12px !important;
+  box-shadow: none !important;
+}
+.sb-theme-dark-btn .stButton > button:hover {
+  border-color: rgba(59,130,246,0.65) !important; transform: none !important;
+}
+.sb-theme-light-btn .stButton > button {
+  background: rgba(240,244,255,0.15) !important;
+  border: 1.5px solid rgba(148,163,184,0.25) !important;
+  color: rgba(226,232,240,0.75) !important;
+  border-radius: 8px !important;
+  font-size: 0.80rem !important;
+  padding: 7px 12px !important;
+  box-shadow: none !important;
+}
+.sb-theme-light-btn .stButton > button:hover {
+  background: rgba(240,244,255,0.25) !important; transform: none !important;
+}
 
-/* Stat chips */
-.stat-row {{
-  display: flex; flex-wrap: wrap; gap: 10px;
-  justify-content: center; margin-bottom: 28px;
-  animation: fadeUp 0.55s 0.20s ease both;
-}}
-.stat-chip {{
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 10px;
-  background: {"rgba(255,255,255,0.55)" if IS_LIGHT else "rgba(255,255,255,0.025)"};
-  border: 1px solid {C["border"]};
-  font-size: 0.73rem; color: {C["muted"]};
-  font-family: 'JetBrains Mono', monospace;
-  backdrop-filter: blur(8px);
-}}
-.stat-v {{ font-weight: 700; color: {C["accent"]}; }}
+/* ── Chat messages ── */
+[data-testid="stChatMessage"] {
+  background: rgba(255,255,255,0.025) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 14px !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+  background: rgba(37,99,235,0.08) !important;
+  border-color: rgba(59,130,246,0.16) !important;
+}
 
-/* Suggestion pills */
-.sug-pill .stButton > button {{
-  background: {C["sug_bg"]} !important;
-  border: 1px solid {C["border"]} !important;
-  border-radius: 999px !important;
-  color: {C["sug_c"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-  font-size: 0.80rem !important; font-weight: 600 !important;
-  padding: 9px 18px !important;
-  box-shadow: {"0 2px 8px rgba(37,99,235,0.07)" if IS_LIGHT else "none"} !important;
-  backdrop-filter: blur(8px) !important;
-  transition: all 0.18s !important;
-}}
-.sug-pill .stButton > button:hover {{
-  background: {"rgba(37,99,235,0.12)" if IS_LIGHT else "rgba(29,78,216,0.12)"} !important;
-  border-color: {"rgba(37,99,235,0.35)" if IS_LIGHT else "rgba(59,130,246,0.38)"} !important;
-  color: {"#1D4ED8" if IS_LIGHT else "#BAE6FD"} !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(29,78,216,0.14) !important;
-}}
-
-/* ═══════════════════════════════════════════
-   INPUT BAR
-   ═══════════════════════════════════════════ */
-.inp-wrap {{
-  position: relative; z-index: 50;
-  max-width: 820px; margin: 0 auto;
-}}
-.inp-wrap [data-testid="stForm"] {{
-  background: {C["inp_bg"]} !important;
-  border: 1.5px solid {C["border"]} !important;
-  border-radius: 22px !important;
-  padding: 7px 10px 7px 4px !important;
-  backdrop-filter: blur(30px) saturate(160%) !important;
-  box-shadow: {C["inp_sh"]} !important;
+/* ═══════════════════════════════════════════════════════════════════════
+   GEMINI BAR — native st.form styled as Gemini pill
+   ═══════════════════════════════════════════════════════════════════════ */
+.gemini-bar [data-testid="stForm"] {
+  background: #1A1E2E !important;
+  border: 1.5px solid rgba(255,255,255,0.10) !important;
+  border-radius: 28px !important;
+  padding: 6px 8px 6px 2px !important;
+  min-height: 60px !important;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset !important;
   transition: border-color 0.22s, box-shadow 0.22s !important;
-}}
-.inp-wrap [data-testid="stForm"]:focus-within {{
-  border-color: {"rgba(37,99,235,0.50)" if IS_LIGHT else "rgba(59,130,246,0.48)"} !important;
-  box-shadow: {"0 0 0 3px rgba(37,99,235,0.09),0 8px 32px rgba(37,99,235,0.14)" if IS_LIGHT else "0 0 0 3px rgba(59,130,246,0.10),0 8px 40px rgba(0,0,0,0.65)"} !important;
-}}
-.inp-wrap [data-testid="stHorizontalBlock"] {{ align-items: center !important; gap: 2px !important; }}
-.inp-wrap [data-testid="stTextInput"] label {{ display: none !important; }}
-.inp-wrap [data-testid="stTextInput"] > div {{
+}
+.gemini-bar [data-testid="stForm"]:focus-within {
+  border-color: rgba(59,130,246,0.55) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 6px 40px rgba(37,99,235,0.18) !important;
+}
+.gemini-bar [data-testid="stForm"] > div:first-child { padding: 0 !important; }
+.gemini-bar [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 2px !important; }
+
+/* Text input — transparent */
+.gemini-bar [data-testid="stTextInput"] label { display: none !important; }
+.gemini-bar [data-testid="stTextInput"] > div {
   background: transparent !important; border: none !important;
   box-shadow: none !important; padding: 0 !important;
-}}
-.inp-wrap [data-testid="stTextInput"] input {{
+}
+.gemini-bar [data-testid="stTextInput"] input {
   background: transparent !important; border: none !important;
   outline: none !important; box-shadow: none !important;
-  color: {C["text"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-  font-size: 0.97rem !important; font-weight: 500 !important;
-  caret-color: {C["accent"]} !important;
-  padding: 12px 10px !important; height: 46px !important;
-}}
-.inp-wrap [data-testid="stTextInput"] input::placeholder {{
-  color: {"rgba(30,58,138,0.30)" if IS_LIGHT else "rgba(148,163,184,0.32)"} !important;
-}}
-.inp-wrap [data-testid="stTextInput"] input:focus {{
-  border: none !important; box-shadow: none !important; outline: none !important;
-}}
-.send-btn [data-testid="stFormSubmitButton"] > button {{
-  background: linear-gradient(135deg, #1D4ED8 0%, #0EA5E9 100%) !important;
-  border: none !important; border-radius: 14px !important;
-  color: #fff !important; font-size: 1.15rem !important; font-weight: 700 !important;
-  width: 44px !important; height: 44px !important; min-width: 44px !important;
-  padding: 0 !important;
-  box-shadow: 0 4px 18px rgba(29,78,216,0.45) !important;
-  transition: all 0.16s !important;
-}}
-.send-btn [data-testid="stFormSubmitButton"] > button:hover {{
-  transform: scale(1.09) !important;
-  box-shadow: 0 6px 26px rgba(29,78,216,0.60) !important;
-  opacity: 1 !important;
-}}
-.send-btn [data-testid="stFormSubmitButton"] > button:active {{
-  transform: scale(0.94) !important;
-}}
+  color: #E2E8F0 !important; font-family: 'Outfit', sans-serif !important;
+  font-size: 0.97rem !important; caret-color: #60A5FA !important;
+  padding: 11px 8px !important; height: 44px !important;
+  border-radius: 0 !important; width: 100% !important;
+}
+.gemini-bar [data-testid="stTextInput"] input::placeholder { color: rgba(148,163,184,0.38) !important; }
+.gemini-bar [data-testid="stTextInput"] input:focus { border: none !important; box-shadow: none !important; outline: none !important; }
 
-/* ═══════════════════════════════════════════
-   CHAT MESSAGES
-   ═══════════════════════════════════════════ */
-.msg-area {{ padding-bottom: 155px; }}
+/* Attach button */
+.gemini-attach .stButton > button {
+  background: transparent !important; border: none !important;
+  border-radius: 50% !important; color: rgba(148,163,184,0.55) !important;
+  font-size: 1.2rem !important; width: 42px !important; height: 42px !important;
+  min-width: 42px !important; padding: 0 !important; box-shadow: none !important;
+  transition: background 0.16s, color 0.16s !important;
+}
+.gemini-attach .stButton > button:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(186,230,253,0.80) !important; transform: none !important; opacity: 1 !important;
+}
 
-[data-testid="stChatMessage"] {{
-  background: {C["msg_ai"]} !important;
-  border: 1px solid {C["border"]} !important;
-  border-radius: 18px !important;
-  font-family: 'Nunito', sans-serif !important;
-  backdrop-filter: blur(14px) !important;
-  box-shadow: {"0 2px 12px rgba(37,99,235,0.05)" if IS_LIGHT else "none"} !important;
-  animation: msgIn 0.28s cubic-bezier(0.34,1.56,0.64,1) both !important;
-}}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
-  background: {C["msg_user"]} !important;
-  border-color: {"rgba(29,78,216,0.16)" if IS_LIGHT else "rgba(59,130,246,0.18)"} !important;
-}}
-@keyframes msgIn {{
-  from {{ opacity:0; transform:translateY(10px) scale(0.97); }}
-  to   {{ opacity:1; transform:translateY(0) scale(1); }}
-}}
-[data-testid="stChatMessage"] p,
-[data-testid="stChatMessage"] li {{
-  color: {C["text"]} !important;
-  font-family: 'Nunito', sans-serif !important;
-  font-size: 0.90rem !important; line-height: 1.72 !important;
-}}
-[data-testid="stChatMessage"] strong {{ color: {C["text"]} !important; font-weight: 700 !important; }}
-[data-testid="stChatMessage"] h1,
-[data-testid="stChatMessage"] h2,
-[data-testid="stChatMessage"] h3 {{
-  font-family: 'Syne', sans-serif !important;
-  color: {C["text"]} !important; font-weight: 700 !important;
-  margin: 8px 0 4px !important;
-}}
-[data-testid="stChatMessage"] code {{
-  font-family: 'JetBrains Mono', monospace !important;
-  background: {C["code_bg"]} !important;
-  border: 1px solid {C["border"]} !important;
-  border-radius: 6px !important; padding: 1px 6px !important;
-  font-size: 0.82rem !important; color: {C["code_c"]} !important;
-}}
-[data-testid="stChatMessage"] table {{
-  font-size: 0.83rem !important; font-family: 'Nunito', sans-serif !important;
-  border-collapse: collapse !important; width: 100% !important;
-}}
-[data-testid="stChatMessage"] th {{
-  background: {"rgba(37,99,235,0.08)" if IS_LIGHT else "rgba(59,130,246,0.10)"} !important;
-  color: {C["text"]} !important; font-weight: 700 !important;
-  padding: 6px 12px !important;
-  border: 1px solid {C["border"]} !important;
-}}
-[data-testid="stChatMessage"] td {{
-  color: {C["text"]} !important; padding: 5px 12px !important;
-  border: 1px solid {C["border"]} !important;
-  background: {"rgba(255,255,255,0.30)" if IS_LIGHT else "rgba(255,255,255,0.02)"} !important;
-}}
+/* Mic idle */
+.gemini-mic .stButton > button {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 50% !important; color: rgba(148,163,184,0.60) !important;
+  font-size: 1.05rem !important; width: 38px !important; height: 38px !important;
+  min-width: 38px !important; padding: 0 !important; box-shadow: none !important;
+}
+.gemini-mic .stButton > button:hover {
+  background: rgba(255,255,255,0.09) !important;
+  color: rgba(186,230,253,0.80) !important; transform: none !important; opacity: 1 !important;
+}
 
-/* Streaming dots */
-.thinking {{
-  display: inline-flex; align-items: center; gap: 9px;
-  padding: 8px 16px;
-  background: {"rgba(37,99,235,0.07)" if IS_LIGHT else "rgba(29,78,216,0.09)"};
-  border: 1px solid {C["border"]};
-  border-radius: 20px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem; color: {C["accent"]};
-  animation: fadeInUp 0.22s ease both;
-}}
-.t-dot {{
-  display: inline-block; width: 5px; height: 5px;
-  background: {C["accent"]}; border-radius: 50%;
-  animation: tdBounce 1.1s ease infinite;
-}}
-.t-dot:nth-child(2) {{ animation-delay: 0.15s; }}
-.t-dot:nth-child(3) {{ animation-delay: 0.30s; }}
-@keyframes tdBounce {{
-  0%,60%,100% {{ transform:translateY(0); }}
-  30%          {{ transform:translateY(-5px); }}
-}}
+/* Mic recording */
+.gemini-mic-active .stButton > button {
+  background: rgba(239,68,68,0.18) !important;
+  border: 1px solid rgba(239,68,68,0.45) !important;
+  border-radius: 50% !important; color: #FCA5A5 !important;
+  font-size: 1.05rem !important; width: 38px !important; height: 38px !important;
+  min-width: 38px !important; padding: 0 !important;
+  animation: micPulse 1.1s ease-in-out infinite !important;
+}
+@keyframes micPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.40); }
+  50%      { box-shadow: 0 0 0 7px rgba(239,68,68,0.00); }
+}
 
-/* Timestamp */
-.msg-ts {{
-  font-size: 0.57rem; color: {C["ts_c"]};
-  font-family: 'JetBrains Mono', monospace;
-  margin-top: 6px; text-align: right;
-}}
+/* Send button */
+.gemini-send [data-testid="stFormSubmitButton"] > button {
+  background: linear-gradient(135deg, #2563EB, #4F46E5) !important;
+  border: none !important; border-radius: 50% !important;
+  color: #fff !important; font-size: 1.25rem !important; font-weight: 700 !important;
+  width: 38px !important; height: 38px !important; min-width: 38px !important;
+  padding: 0 !important; line-height: 1 !important;
+  box-shadow: 0 3px 14px rgba(37,99,235,0.38) !important;
+  transition: opacity 0.16s, transform 0.14s !important;
+}
+.gemini-send [data-testid="stFormSubmitButton"] > button:hover { opacity: 0.88 !important; transform: scale(1.07) !important; }
+.gemini-send [data-testid="stFormSubmitButton"] > button:active { transform: scale(0.95) !important; }
 
-/* ═══════════════════════════════════════════
-   ANCHORED BOTTOM BAR
-   ═══════════════════════════════════════════ */
-.bar-anch {{
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 800;
-  background: {"rgba(242,245,255,0.97)" if IS_LIGHT else "rgba(5,8,16,0.97)"};
-  backdrop-filter: blur(28px) saturate(180%);
-  border-top: 1px solid {C["border"]};
-  box-shadow: {"0 -4px 20px rgba(37,99,235,0.07)" if IS_LIGHT else "0 -4px 30px rgba(0,0,0,0.75)"};
-  padding: 10px max(22px, calc((100% - 870px) / 2)) 14px;
-}}
-.quick-chips {{
-  display: flex; flex-wrap: wrap; gap: 5px;
-  max-width: 820px; margin: 0 auto 9px;
-}}
-.q-chip {{
-  display: inline-block; padding: 4px 12px;
-  background: {C["chip_bg"]};
-  border: 1px solid {C["border"]}; border-radius: 20px;
-  font-size: 0.70rem; color: {C["chip_c"]};
-  cursor: pointer; font-family: 'JetBrains Mono', monospace;
-  transition: all 0.16s; white-space: nowrap;
-}}
-.q-chip:hover {{
-  background: {"rgba(37,99,235,0.14)" if IS_LIGHT else "rgba(59,130,246,0.14)"};
-  border-color: {"rgba(37,99,235,0.35)" if IS_LIGHT else "rgba(59,130,246,0.35)"};
-  color: {C["accent"]};
-}}
+/* File chip inside bar */
+.file-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 20px; padding: 3px 10px 3px 8px;
+  font-size: 0.72rem; color: #BAE6FD; font-weight: 600;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  animation: chipIn 0.2s ease both;
+  margin-left: 4px; flex-shrink: 0;
+}
+.file-chip-icon { font-size: 0.85rem; flex-shrink: 0; }
+@keyframes chipIn {
+  from { opacity:0; transform:scale(0.85); }
+  to   { opacity:1; transform:scale(1); }
+}
 
-/* ═══════════════════════════════════════════
-   GLOBAL BUTTONS (outside sidebar)
-   ═══════════════════════════════════════════ */
-.stButton > button {{
-  background: linear-gradient(135deg,#1D4ED8,#0EA5E9) !important;
-  color: #fff !important; border: none !important; border-radius: 10px !important;
-  font-family: 'Nunito', sans-serif !important; font-weight: 700 !important;
-  font-size: 0.83rem !important; padding: 9px 18px !important;
-  box-shadow: 0 3px 14px rgba(29,78,216,0.25) !important;
-  transition: all 0.16s !important;
-}}
-.stButton > button:hover {{
-  opacity: 0.87 !important; transform: translateY(-1px) !important;
-}}
+/* Voice banner */
+.listening-banner {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px auto 0; padding: 8px 18px;
+  background: rgba(239,68,68,0.09); border: 1px solid rgba(239,68,68,0.22);
+  border-radius: 10px; font-size: 0.80rem; color: #FCA5A5;
+  max-width: 800px; animation: fadeInUp 0.25s ease both;
+}
+.listening-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #EF4444;
+  animation: blinkDot 1.1s ease infinite; flex-shrink: 0;
+}
+@keyframes blinkDot { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
 
-/* Misc */
-[data-testid="column"] {{ padding: 0 4px !important; }}
-::-webkit-scrollbar {{ width: 4px; height: 4px; }}
-::-webkit-scrollbar-track {{ background: transparent; }}
-::-webkit-scrollbar-thumb {{ background: rgba(59,130,246,0.22); border-radius: 4px; }}
+/* Voice processing banner */
+.processing-banner {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px auto 0; padding: 8px 18px;
+  background: rgba(59,130,246,0.09); border: 1px solid rgba(59,130,246,0.22);
+  border-radius: 10px; font-size: 0.80rem; color: #BAE6FD;
+  max-width: 800px; animation: fadeInUp 0.25s ease both;
+}
+.processing-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #3B82F6;
+  animation: blinkDot 0.7s ease infinite; flex-shrink: 0;
+}
 
-@keyframes fadeUp {{
-  from {{ opacity:0; transform:translateY(18px); }}
-  to   {{ opacity:1; transform:translateY(0); }}
-}}
-@keyframes fadeInUp {{
-  from {{ opacity:0; transform:translateY(-5px); }}
-  to   {{ opacity:1; transform:translateY(0); }}
-}}
+/* Attach file panel */
+.attach-panel {
+  max-width: 800px; margin: 10px auto 4px; padding: 14px 16px;
+  background: rgba(59,130,246,0.05); border: 1px dashed rgba(59,130,246,0.28);
+  border-radius: 14px; animation: fadeInUp 0.2s ease both;
+}
+
+/* Fixed bottom bar */
+.gemini-bar-anchored {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: rgba(7,11,20,0.97);
+  backdrop-filter: blur(24px) saturate(160%);
+  border-top: 1px solid rgba(59,130,246,0.12);
+  padding: 10px max(16px, calc((100% - 860px) / 2)) 12px;
+}
+
+/* ── Global buttons ── */
+.stButton > button {
+  background: linear-gradient(135deg,#2563EB,#4F46E5) !important;
+  color: #fff !important; border: none !important; border-radius: 9px !important;
+  font-family: 'Outfit', sans-serif !important; font-weight: 600 !important;
+  font-size: 0.82rem !important; padding: 9px 16px !important;
+  box-shadow: 0 3px 14px rgba(37,99,235,0.20) !important;
+  transition: all 0.16s ease !important;
+}
+.stButton > button:hover { opacity: .88 !important; transform: translateY(-1px) !important; }
+.stButton > button:active { transform: scale(0.97) !important; }
+.nav-pill .stButton > button {
+  background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 999px !important; color: rgba(226,232,240,0.72) !important;
+  font-size: 0.78rem !important; font-weight: 500 !important;
+  padding: 6px 15px !important; box-shadow: none !important;
+}
+.nav-pill .stButton > button:hover {
+  background: rgba(59,130,246,0.16) !important; border-color: rgba(59,130,246,0.38) !important;
+  color: #BAE6FD !important; transform: none !important;
+}
+.nav-back .stButton > button {
+  background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 10px !important; color: rgba(226,232,240,0.65) !important;
+  font-size: 0.78rem !important; font-weight: 600 !important;
+  padding: 6px 14px !important; box-shadow: none !important;
+}
+.nav-back .stButton > button:hover {
+  background: rgba(59,130,246,0.14) !important; color: #BAE6FD !important;
+  border-color: rgba(59,130,246,0.30) !important;
+}
+.sug-pill .stButton > button {
+  background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 999px !important; color: rgba(186,230,253,0.74) !important;
+  font-size: 0.79rem !important; font-weight: 500 !important;
+  padding: 9px 18px !important; box-shadow: none !important;
+}
+.sug-pill .stButton > button:hover {
+  background: rgba(59,130,246,0.14) !important; border-color: rgba(59,130,246,0.34) !important;
+  color: #BAE6FD !important; transform: translateY(-2px) !important;
+}
+.ghost-btn .stButton > button {
+  background: rgba(255,255,255,.05) !important; border: 1px solid rgba(255,255,255,0.14) !important;
+  color: rgba(226,232,240,.55) !important; box-shadow: none !important;
+}
+.ghost-btn .stButton > button:hover { background: rgba(59,130,246,.10) !important; color: #E2E8F0 !important; }
+.present-btn .stButton > button {
+  background: linear-gradient(135deg,#065F46,#10B981) !important;
+  box-shadow: 0 2px 10px rgba(16,185,129,.18) !important;
+  padding: 6px 11px !important; font-size: 0.75rem !important; border-radius: 7px !important;
+}
+.absent-btn .stButton > button {
+  background: linear-gradient(135deg,#7F1D1D,#EF4444) !important;
+  box-shadow: 0 2px 10px rgba(239,68,68,.16) !important;
+  padding: 6px 11px !important; font-size: 0.75rem !important; border-radius: 7px !important;
+}
+.save-btn .stButton > button {
+  background: linear-gradient(135deg,#92400E,#F59E0B) !important;
+  box-shadow: 0 2px 10px rgba(245,158,11,.18) !important;
+  padding: 7px 13px !important; font-size: 0.77rem !important;
+}
+.pin-btn .stButton > button {
+  background: rgba(245,158,11,0.10) !important; border: 1px solid rgba(245,158,11,0.28) !important;
+  color: #FCD34D !important; box-shadow: none !important;
+  font-size: 0.70rem !important; padding: 4px 10px !important; border-radius: 7px !important;
+}
+.pin-btn .stButton > button:hover { background: rgba(245,158,11,0.20) !important; transform: none !important; }
+.del-btn .stButton > button {
+  background: rgba(239,68,68,0.07) !important; border: 1px solid rgba(239,68,68,0.18) !important;
+  color: rgba(252,165,165,0.70) !important; box-shadow: none !important;
+  font-size: 0.68rem !important; padding: 3px 8px !important; border-radius: 6px !important;
+}
+.del-btn .stButton > button:hover { background: rgba(239,68,68,0.16) !important; transform: none !important; }
+.ql-btn .stButton > button {
+  background: rgba(255,255,255,.03) !important; border: 1px solid rgba(255,255,255,0.14) !important;
+  color: rgba(186,230,253,.65) !important; box-shadow: none !important;
+  text-align: left !important; justify-content: flex-start !important;
+  font-size: 0.80rem !important; padding: 9px 14px !important; border-radius: 9px !important;
+}
+.ql-btn .stButton > button:hover {
+  background: rgba(59,130,246,.10) !important; border-color: rgba(59,130,246,.28) !important;
+  color: #BAE6FD !important; transform: none !important;
+}
+.logout-btn .stButton > button {
+  background: rgba(239,68,68,.09) !important; border: 1px solid rgba(239,68,68,.20) !important;
+  color: #FCA5A5 !important; box-shadow: none !important; font-size: 0.80rem !important;
+}
+.logout-btn .stButton > button:hover { background: rgba(239,68,68,.18) !important; }
+.open-chat-btn .stButton > button {
+  background: linear-gradient(135deg,#059669,#10B981) !important;
+  border-radius: 12px !important; font-weight: 700 !important;
+  font-size: 0.88rem !important; padding: 11px 22px !important;
+  box-shadow: 0 5px 24px rgba(16,185,129,.36) !important; font-family: 'DM Mono',monospace !important;
+}
+.open-chat-btn .stButton > button:hover {
+  box-shadow: 0 7px 32px rgba(16,185,129,.50) !important; transform: translateY(-2px) !important;
+}
+.settings-menu-btn .stButton > button {
+  background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.12) !important;
+  color: rgba(226,232,240,0.75) !important; box-shadow: none !important;
+  font-size: 0.82rem !important; font-weight: 600 !important;
+  padding: 8px 16px !important; border-radius: 10px !important;
+}
+.settings-menu-btn .stButton > button:hover {
+  background: rgba(59,130,246,0.13) !important; color: #BAE6FD !important;
+  border-color: rgba(59,130,246,0.30) !important;
+}
+.nav-btn .stButton > button {
+  background: transparent !important; color: rgba(148,163,184,.65) !important;
+  border: none !important; box-shadow: none !important;
+  text-align: left !important; justify-content: flex-start !important;
+  padding: 10px 14px !important; font-size: 0.83rem !important;
+  font-weight: 500 !important; border-radius: 8px !important;
+}
+.nav-btn .stButton > button:hover { background: rgba(59,130,246,.10) !important; color: #BAE6FD !important; transform: none !important; }
+.nav-btn-active .stButton > button {
+  background: rgba(59,130,246,.14) !important; color: #60A5FA !important;
+  border-left: 2px solid #3B82F6 !important; font-weight: 700 !important; box-shadow: none !important;
+}
+
+/* ── Text inputs ── */
+[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea {
+  background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: 10px !important; color: #E2E8F0 !important;
+  font-family: 'Outfit', sans-serif !important; font-size: 0.87rem !important;
+}
+[data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus {
+  border-color: rgba(59,130,246,0.55) !important;
+  box-shadow: 0 0 0 2.5px rgba(59,130,246,0.13) !important;
+}
+[data-testid="stTextInput"] label, [data-testid="stTextArea"] label {
+  color: rgba(148,163,184,0.55) !important; font-size: 0.70rem !important;
+  font-weight: 600 !important; text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+}
+[data-testid="stSelectbox"] > div > div {
+  background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.14) !important;
+  border-radius: 10px !important; color: #E2E8F0 !important;
+}
+[data-testid="stSelectbox"] label {
+  color: rgba(148,163,184,0.55) !important; font-size: 0.70rem !important;
+  font-weight: 600 !important; text-transform: uppercase !important;
+}
+[data-testid="stFileUploader"] {
+  background: rgba(59,130,246,0.04) !important;
+  border: 1px dashed rgba(59,130,246,0.26) !important; border-radius: 12px !important;
+}
+[data-testid="stToggle"] label { color: #E2E8F0 !important; font-size: 0.86rem !important; }
+
+/* ── Popovers ── */
+[data-testid="stPopover"] > div {
+  background: #0D1828 !important; border: 1px solid rgba(59,130,246,0.30) !important;
+  border-radius: 16px !important; box-shadow: 0 16px 56px rgba(0,0,0,0.65) !important;
+}
+button[data-testid="stPopoverButton"] {
+  background: rgba(255,255,255,0.06) !important; border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 999px !important; color: rgba(226,232,240,0.72) !important;
+  font-size: 0.78rem !important; font-weight: 500 !important;
+  padding: 6px 15px !important; box-shadow: none !important;
+}
+button[data-testid="stPopoverButton"]:hover {
+  background: rgba(59,130,246,0.16) !important;
+  border-color: rgba(59,130,246,0.38) !important; color: #BAE6FD !important;
+}
+
+/* ── Progress / Expanders / Misc ── */
+[data-testid="stProgress"] > div > div { border-radius: 99px !important; background: linear-gradient(90deg,#2563EB,#22D3EE) !important; }
+[data-testid="stProgress"] > div { background: rgba(255,255,255,.07) !important; border-radius: 99px !important; height: 5px !important; }
+[data-testid="stExpander"] { background: rgba(255,255,255,.018) !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 12px !important; }
+summary { font-family: 'Outfit',sans-serif !important; font-weight: 600 !important; }
+h1,h2,h3,h4 { font-family: 'DM Mono', monospace !important; font-weight: 500 !important; }
+[data-testid="stMarkdown"] p, [data-testid="stMarkdown"] li { color: rgba(226,232,240,.72) !important; font-family: 'Outfit',sans-serif !important; }
+hr { border-color: rgba(255,255,255,0.08) !important; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,.22); border-radius: 4px; }
+[data-testid="column"] { padding: 0 4px !important; }
+
+/* ── Animations ── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+@keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pinPulse { 0%,100% { box-shadow:0 0 0 0 rgba(245,158,11,.30); } 50% { box-shadow:0 0 0 6px rgba(245,158,11,.00); } }
+.pinned-note-card { animation: pinPulse 2.5s ease infinite; }
+.chat-scroll-area { padding-bottom: 140px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────────────────────────────────────────
-def render_sidebar():
+# Inject theme CSS dynamically
+st.markdown(f"<style>{get_theme_css()}</style>", unsafe_allow_html=True)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FEATURE 2: NATIVE FILE PICKER COMPONENT
+# Uses a hidden HTML <input type="file"> linked to the 📎 button via JS.
+# When user picks a file, JS sends its name back via a hidden Streamlit
+# query-param update trick — we read it via st.query_params.
+# Architecture: components.html renders the picker; filename flows back
+# through URL query params which Streamlit reads on next rerun.
+# ═════════════════════════════════════════════════════════════════════════════
+def render_native_file_picker(picker_id: str):
+    """
+    Renders an invisible HTML file picker. When a file is selected,
+    it dispatches a CustomEvent 'fileSelected' with the filename,
+    AND calls window.parent.postMessage to set a Streamlit query param.
+    Returns the selected filename or empty string.
+    """
+    # Check if a filename was posted back via query params
+    qp = st.query_params
+    fname = qp.get(f"fp_{picker_id}", "")
+
+    picker_html = f"""
+<div id="picker-{picker_id}" style="display:none;">
+  <input type="file" id="fileinput-{picker_id}"
+    accept=".pdf,.txt,.png,.jpg,.jpeg,.docx,.csv,.mp4,.zip"
+    style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+    onchange="handleFileChange_{picker_id}(this)">
+</div>
+<script>
+// Expose trigger function to parent
+window.triggerFilePicker_{picker_id} = function() {{
+  document.getElementById('fileinput-{picker_id}').click();
+}};
+
+function handleFileChange_{picker_id}(input) {{
+  if (!input.files || !input.files[0]) return;
+  var fname = input.files[0].name;
+  // Send filename to Streamlit via URL query param update
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('fp_{picker_id}', fname);
+  window.parent.history.replaceState(null, '', url.toString());
+  // Also trigger a Streamlit rerun via hidden input focus trick
+  window.parent.postMessage({{type:'streamlit:forceRerun', filename: fname}}, '*');
+  // Fallback: use a short timeout to reload
+  setTimeout(function() {{
+    window.parent.location.href = url.toString();
+  }}, 100);
+}}
+// Listen for trigger from parent
+window.addEventListener('message', function(e) {{
+  if (e.data && e.data.type === 'triggerPicker_{picker_id}') {{
+    document.getElementById('fileinput-{picker_id}').click();
+  }}
+}});
+</script>
+"""
+    components.html(picker_html, height=0, scrolling=False)
+    return fname
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FEATURE 3: VOICE RECORDER COMPONENT
+# Uses Web Audio API (MediaRecorder) inside components.html.
+# On stop: encodes audio to base64, posts back via URL param.
+# Python side: detects the audio param → dispatches a voice reply immediately.
+# ═════════════════════════════════════════════════════════════════════════════
+def render_voice_recorder(recorder_id: str) -> str | None:
+    """
+    Renders an invisible voice recorder.
+    Returns "DONE" when recording is complete and audio is ready,
+    or None otherwise.
+    Actual start/stop is triggered by JS messages from the bar buttons.
+    """
+    qp = st.query_params
+    voice_done = qp.get(f"vr_{recorder_id}", "")
+
+    recorder_html = f"""
+<div id="recorder-{recorder_id}" style="display:none;"></div>
+<script>
+(function() {{
+  var mediaRecorder = null;
+  var audioChunks = [];
+  var isRecording = false;
+
+  // Listen for start/stop commands from parent
+  window.addEventListener('message', function(evt) {{
+    var d = evt.data;
+    if (!d || !d.type) return;
+
+    if (d.type === 'startRecording_{recorder_id}') {{
+      startRec();
+    }} else if (d.type === 'stopRecording_{recorder_id}') {{
+      stopRec();
+    }}
+  }});
+
+  function startRec() {{
+    if (isRecording) return;
+    navigator.mediaDevices.getUserMedia({{ audio: true }}).then(function(stream) {{
+      audioChunks = [];
+      var options = {{ mimeType: 'audio/webm' }};
+      try {{ mediaRecorder = new MediaRecorder(stream, options); }}
+      catch(e) {{ mediaRecorder = new MediaRecorder(stream); }}
+
+      mediaRecorder.ondataavailable = function(e) {{
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+      }};
+      mediaRecorder.onstop = function() {{
+        var blob = new Blob(audioChunks, {{ type: 'audio/webm' }});
+        var reader = new FileReader();
+        reader.onloadend = function() {{
+          var base64 = reader.result.split(',')[1];
+          // Send done signal back via URL param
+          var url = new URL(window.parent.location.href);
+          url.searchParams.set('vr_{recorder_id}', 'DONE');
+          url.searchParams.set('vr_{recorder_id}_ts', Date.now().toString());
+          window.parent.history.replaceState(null, '', url.toString());
+          setTimeout(function() {{
+            window.parent.location.href = url.toString();
+          }}, 80);
+        }};
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(function(t) {{ t.stop(); }});
+        isRecording = false;
+      }};
+
+      mediaRecorder.start(200);
+      isRecording = true;
+      // Notify parent that recording started
+      window.parent.postMessage({{ type: 'recordingStarted_{recorder_id}' }}, '*');
+    }}).catch(function(err) {{
+      window.parent.postMessage({{ type: 'micError_{recorder_id}', error: err.message }}, '*');
+    }});
+  }}
+
+  function stopRec() {{
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {{
+      mediaRecorder.stop();
+    }}
+    isRecording = false;
+  }}
+
+  // Expose for direct call
+  window.startRecording_{recorder_id} = startRec;
+  window.stopRecording_{recorder_id}  = stopRec;
+}})();
+</script>
+"""
+    components.html(recorder_html, height=0, scrolling=False)
+    return voice_done if voice_done == "DONE" else None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# GEMINI INPUT BAR — render_gemini_bar()
+# Updated: 📎 triggers native file picker, 🎤 triggers Web Audio recorder
+# ═════════════════════════════════════════════════════════════════════════════
+def render_gemini_bar(bar_key: str, hero_mode: bool = True):
+    """
+    Renders the Gemini-style input bar.
+    📎 → opens native file picker (via JS message to hidden component)
+    🎤 → starts/stops voice recording (via JS message to hidden component)
+    ↑  → sends text message
+    Returns ("send", text) | ("mic", "start"|"stop") | ("attach",) | None
+    """
+    recording  = st.session_state.is_recording
+    mic_class  = "gemini-mic-active" if recording else "gemini-mic"
+    mic_icon   = "⏹" if recording else "🎤"
+    anim_style = "animation:slideUp 0.35s cubic-bezier(0.22,0.61,0.36,1) both;" if hero_mode else ""
+
+    # Show attached file chip if one is selected
+    chip_html = ""
+    if st.session_state.attached_file_name:
+        fname = st.session_state.attached_file_name
+        short = fname if len(fname) <= 18 else fname[:15] + "..."
+        chip_html = (
+            f'<div class="file-chip" title="{fname}">'
+            f'<span class="file-chip-icon">📎</span>{short}'
+            f'</div>'
+        )
+
+    # Bar wrapper
+    st.markdown(
+        f'<div class="gemini-bar" style="max-width:800px;margin:0 auto;{anim_style}">',
+        unsafe_allow_html=True,
+    )
+
+    # If file chip exists, render it above the bar (inside the wrapper, outside form)
+    if chip_html:
+        st.markdown(
+            f'<div style="display:flex;align-items:center;padding:0 16px 6px;">'
+            f'{chip_html}'
+            f'<button onclick="clearChip_{bar_key}()" style="background:none;border:none;color:rgba(148,163,184,0.5);cursor:pointer;font-size:0.75rem;margin-left:4px;padding:0 4px;" title="Remove file">✕</button>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    with st.form(key=f"gemini_form_{bar_key}", clear_on_submit=True):
+        c_attach, c_input, c_mic, c_send = st.columns([0.55, 10, 0.65, 0.65])
+
+        with c_attach:
+            st.markdown('<div class="gemini-attach">', unsafe_allow_html=True)
+            attach_clicked = st.form_submit_button("📎", help="Attach file")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with c_input:
+            placeholder = "Ask AskMNIT..." if not st.session_state.attached_file_name else "Add a message about the file..."
+            user_text = st.text_input(
+                label="__gi__",
+                placeholder=placeholder,
+                key=f"gi_text_{bar_key}",
+                label_visibility="collapsed",
+            )
+
+        with c_mic:
+            st.markdown(f'<div class="{mic_class}">', unsafe_allow_html=True)
+            mic_clicked = st.form_submit_button(mic_icon, help="Voice input")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with c_send:
+            st.markdown('<div class="gemini-send">', unsafe_allow_html=True)
+            send_clicked = st.form_submit_button("↑", help="Send")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # JS: wire mic/attach clicks to their respective hidden components
+    st.markdown(f"""
+    <script>
+    // When 🎤 form button fires, tell the recorder component
+    // We detect the Streamlit rerun that follows mic_clicked=True server-side.
+    // For direct JS-triggered start/stop:
+    function clearChip_{bar_key}() {{
+      var url = new URL(window.location.href);
+      url.searchParams.delete('fp_{bar_key}');
+      window.location.href = url.toString();
+    }}
+    </script>
+    """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close .gemini-bar
+
+    # Decode actions
+    if mic_clicked:
+        return ("mic", "stop" if recording else "start")
+    if attach_clicked:
+        return ("attach",)
+    if send_clicked:
+        txt = (user_text or "").strip()
+        if txt or st.session_state.attached_file_name:
+            full = txt
+            if st.session_state.attached_file_name and not txt:
+                full = f"[File attached: {st.session_state.attached_file_name}]"
+            elif st.session_state.attached_file_name:
+                full = f"{txt} [File: {st.session_state.attached_file_name}]"
+            return ("send", full)
+    return None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SHARED SIDEBAR (used in chat view only — defined as a reusable function)
+# ═════════════════════════════════════════════════════════════════════════════
+def render_chat_sidebar():
+    """
+    Renders the chat-view sidebar with:
+      1. ⏱ Chat History
+      2. ⚙ Chatbot Settings
+      3. 🌗 Theme Change
+    """
     with st.sidebar:
-        # Logo header
-        st.markdown(f"""
-        <div style="padding:20px 18px 16px;border-bottom:1px solid {C['border']};">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:40px;height:40px;border-radius:12px;
-              background:linear-gradient(135deg,#1D4ED8,#0EA5E9);
-              display:flex;align-items:center;justify-content:center;
-              font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:white;
-              box-shadow:0 4px 18px rgba(29,78,216,0.42);">A</div>
-            <div>
-              <div style="font-family:'Syne',sans-serif;font-size:0.97rem;
-                font-weight:800;color:{C['text']};letter-spacing:-0.4px;">AskMNIT</div>
-              <div style="font-size:0.56rem;color:{C['accent']};opacity:0.60;
-                font-family:'JetBrains Mono',monospace;letter-spacing:0.6px;
-                text-transform:uppercase;">MNIT Jaipur · AI Assistant</div>
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # ── LOGO ──
+        st.markdown(
+            '<div style="padding:18px 16px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">'
+            '<div style="display:flex;align-items:center;gap:9px;">'
+            '<div style="width:32px;height:32px;border-radius:9px;'
+            'background:linear-gradient(135deg,#2563EB,#4F46E5);'
+            'display:flex;align-items:center;justify-content:center;'
+            'font-size:0.95rem;font-weight:700;color:white;'
+            'box-shadow:0 3px 12px rgba(37,99,235,0.30);">A</div>'
+            '<div>'
+            '<div style="font-family:\'DM Mono\',monospace;font-size:0.87rem;color:#E2E8F0;font-weight:500;">AskMNIT AI</div>'
+            '<div style="font-size:0.57rem;color:rgba(148,163,184,.40);margin-top:1px;">Smart Campus Assistant</div>'
+            '</div></div></div>',
+            unsafe_allow_html=True,
+        )
 
-        # New chat
-        st.markdown("<div style='padding:12px 16px 0;'>", unsafe_allow_html=True)
-        st.markdown('<div class="sb-new">', unsafe_allow_html=True)
-        if st.button("＋  New Conversation", key="sb_new", use_container_width=True):
-            if st.session_state.messages:
-                label = next(
-                    (m["content"][:42] for m in st.session_state.messages if m["role"]=="user"),
-                    "Conversation"
-                )
-                st.session_state.saved_sessions.append({
-                    "label":    label + "…",
-                    "messages": list(st.session_state.messages),
-                })
-            st.session_state.messages   = []
-            st.session_state.show_welcome = True
-            st.rerun()
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        # ── ⏱ CHAT HISTORY ──────────────────────────────────────────────────
+        st.markdown('<div class="sb-section-header">⏱️ Chat History</div>', unsafe_allow_html=True)
 
-        # ── ⏱ CHAT HISTORY ──
-        st.markdown('<div class="sb-hdr">⏱ Chat History</div>', unsafe_allow_html=True)
-
-        if st.session_state.saved_sessions:
+        # Live sessions first
+        if st.session_state.chat_sessions:
             st.markdown(
-                f'<div style="font-size:0.58rem;'
-                f'color:{C["accent"]};opacity:0.55;'
-                f'padding:4px 18px 2px;font-family:\'JetBrains Mono\',monospace;'
-                f'text-transform:uppercase;letter-spacing:0.5px;">This Session</div>',
+                '<div style="font-size:0.60rem;color:rgba(59,130,246,0.60);'
+                'padding:4px 16px 2px;text-transform:uppercase;letter-spacing:0.6px;">This session</div>',
                 unsafe_allow_html=True,
             )
-            for i, sess in enumerate(reversed(st.session_state.saved_sessions[-3:])):
-                lbl = sess["label"][:30] + ("…" if len(sess["label"]) > 30 else "")
-                col_a, col_b = st.columns([5, 1])
-                with col_a:
+            for i, sess in enumerate(reversed(st.session_state.chat_sessions[-3:])):
+                label = sess["label"][:28] + ("..." if len(sess["label"]) > 28 else "")
+                col_h, col_b = st.columns([5, 1])
+                with col_h:
                     st.markdown(
-                        f'<div class="sb-hist"><div class="sb-dot"></div>{lbl}</div>',
+                        f'<div class="sb-history-item"><div class="sb-history-dot"></div>{label}</div>',
                         unsafe_allow_html=True,
                     )
                 with col_b:
-                    st.markdown('<div class="sb-ghost">', unsafe_allow_html=True)
-                    if st.button("↩", key=f"ls_{i}"):
-                        st.session_state.messages     = list(sess["messages"])
-                        st.session_state.show_welcome = False
-                        st.rerun()
+                    st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+                    if st.button("↩", key=f"sb_load_{i}"):
+                        st.session_state.chat_messages = list(sess["messages"]); st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
 
-        cur_day = ""
-        for day_lbl, title in MOCK_HISTORY:
-            if day_lbl != cur_day:
-                cur_day = day_lbl
+        # Mock history grouped by day
+        current_day = ""
+        for day_lbl, title in SIDEBAR_HISTORY:
+            if day_lbl != current_day:
+                current_day = day_lbl
                 st.markdown(
-                    f'<div style="font-size:0.56rem;color:{C["muted"]};opacity:0.70;'
-                    f'padding:6px 18px 2px;font-family:\'JetBrains Mono\',monospace;'
-                    f'text-transform:uppercase;letter-spacing:0.5px;">{day_lbl}</div>',
+                    f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.38);'
+                    f'padding:6px 16px 2px;text-transform:uppercase;letter-spacing:0.6px;">{day_lbl}</div>',
                     unsafe_allow_html=True,
                 )
             st.markdown(
-                f'<div class="sb-hist"><div class="sb-dot-d"></div>{title}</div>',
+                f'<div class="sb-history-item"><div class="sb-history-dot" style="background:rgba(148,163,184,0.30);"></div>{title}</div>',
                 unsafe_allow_html=True,
             )
 
-        # ── ⚙ SETTINGS ──
-        st.markdown('<div class="sb-hdr">⚙ Settings</div>', unsafe_allow_html=True)
-        st.markdown('<div style="padding:10px 18px 4px;">', unsafe_allow_html=True)
+        # ── ⚙ CHATBOT SETTINGS ──────────────────────────────────────────────
+        st.markdown('<div class="sb-section-header">⚙️ Chatbot Settings</div>', unsafe_allow_html=True)
+        st.markdown('<div style="padding:8px 16px 4px;">', unsafe_allow_html=True)
 
-        options = ["Balanced", "Concise", "Detailed", "Bullet Points"]
         new_style = st.selectbox(
             "Response Style",
-            options,
-            index=options.index(st.session_state.response_style),
-            key="sb_style",
+            ["Concise", "Detailed", "Bullet Points"],
+            index=["Concise","Detailed","Bullet Points"].index(st.session_state.response_style),
+            key="sb_response_style",
         )
         if new_style != st.session_state.response_style:
             st.session_state.response_style = new_style
             st.rerun()
 
-        new_name = st.text_input(
-            "Your Name",
-            value=st.session_state.user_name,
-            key="sb_uname",
+        st.session_state.strict_mode = st.toggle(
+            "Strict Academic Mode", value=st.session_state.strict_mode, key="sb_strict",
         )
-        if new_name != st.session_state.user_name:
-            st.session_state.user_name = new_name
+        st.session_state.voice_output = st.toggle(
+            "Voice Output", value=st.session_state.voice_output, key="sb_voice_out",
+        )
 
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-        if st.button("🗑  Clear Chat History", key="sb_clear", use_container_width=True):
-            st.session_state.messages     = []
-            st.session_state.show_welcome = True
-            st.session_state.total_tokens = 0
-            st.toast("Chat cleared!", icon="🗑")
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        if st.button("🗑 Clear All Chats", key="sb_clear_chats"):
+            st.session_state.chat_messages  = []
+            st.session_state.chat_sessions  = []
+            st.session_state.show_uploader  = False
+            st.session_state.attached_file_name = ""
+            st.toast("All chats cleared.", icon="🗑")
             st.rerun()
+
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── 🌗 THEME ──
-        st.markdown('<div class="sb-hdr">🌗 Theme</div>', unsafe_allow_html=True)
-        st.markdown('<div style="padding:10px 18px 18px;">', unsafe_allow_html=True)
+        # ── 🌗 THEME CHANGE ─────────────────────────────────────────────────
+        st.markdown('<div class="sb-section-header">🌗 Theme</div>', unsafe_allow_html=True)
+        st.markdown('<div style="padding:8px 16px 14px;display:flex;gap:8px;">', unsafe_allow_html=True)
+
         t1, t2 = st.columns(2)
         with t1:
-            cls = "sb-th-a sb-th" if not IS_LIGHT else "sb-th"
-            st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-            if st.button("🌑  Dark", key="th_d", use_container_width=True):
+            active_dark = st.session_state.chat_theme == "dark"
+            btn_label_d = "🟢 Dark" if active_dark else "Dark"
+            css_d = "sb-theme-dark-btn"
+            st.markdown(f'<div class="{css_d}">', unsafe_allow_html=True)
+            if st.button(btn_label_d, key="sb_theme_dark", use_container_width=True):
                 st.session_state.chat_theme = "dark"; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with t2:
-            cls = "sb-th-a sb-th" if IS_LIGHT else "sb-th"
-            st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-            if st.button("☀️  Light", key="th_l", use_container_width=True):
+            active_light = st.session_state.chat_theme == "light"
+            btn_label_l = "⚪ Light" if not active_light else "🟡 Light"
+            css_l = "sb-theme-light-btn"
+            st.markdown(f'<div class="{css_l}">', unsafe_allow_html=True)
+            if st.button(btn_label_l, key="sb_theme_light", use_container_width=True):
                 st.session_state.chat_theme = "light"; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Footer
+        # ── Footer ──
         st.markdown(
-            f'<div style="padding:12px 18px;border-top:1px solid {C["border"]};margin-top:4px;">'
-            f'<div style="font-size:0.57rem;color:{C["muted"]};opacity:0.60;'
-            f'font-family:\'JetBrains Mono\',monospace;">'
-            f'AskMNIT v6.0 · MNIT Jaipur<br>'
-            f'<span style="opacity:0.65;">Powered by Claude claude-sonnet-4-20250514</span>'
-            f'</div></div>',
+            '<div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.05);margin-top:auto;">'
+            f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.30);font-family:\'DM Mono\',monospace;">'
+            f'{st.session_state.student_name} · {st.session_state.branch}'
+            '</div></div>',
             unsafe_allow_html=True,
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STREAMING AI CALL
-# ─────────────────────────────────────────────────────────────────────────────
-def build_system() -> str:
-    style = st.session_state.response_style
-    instr = ""
-    if style == "Concise":
-        instr = "\n\n[STYLE: Be concise. Max 3-4 sentences or short bullet points. Skip preamble.]"
-    elif style == "Detailed":
-        instr = "\n\n[STYLE: Be comprehensive. Include examples, sub-sections, and deep context.]"
-    elif style == "Bullet Points":
-        instr = "\n\n[STYLE: Respond primarily in bullet points / numbered lists. Minimal prose.]"
-    name = st.session_state.user_name
-    if name and name != "Student":
-        instr += f"\n\n[User's name is {name}. Address them naturally by name occasionally.]"
-    return MNIT_SYSTEM_PROMPT + instr
+# ═════════════════════════════════════════════════════════════════════════════
+# VIEW ROUTER
+# ═════════════════════════════════════════════════════════════════════════════
+view = st.session_state.view
 
+###############################################################################
+# ████████████████████████  CHAT VIEW  ████████████████████████████████████████
+###############################################################################
+if view == "chat":
 
-def stream_ai(api_msgs: list):
-    """Generator that streams text tokens from Claude."""
-    client = get_client()
-    if client is None:
-        placeholder = (
-            "⚠️ **API Key Not Configured**\n\n"
-            "To unlock real AI responses, add your Anthropic API key:\n\n"
-            "```\n# .streamlit/secrets.toml\nANTHROPIC_API_KEY = \"sk-ant-...\"\n```\n\n"
-            "Restart the app and I'll be fully powered up! Meanwhile, I'm AskMNIT — "
-            "your AI guide for everything about **MNIT Jaipur**. "
-            f"You asked: *{api_msgs[-1]['content'][:100]}*\n\n"
-            "Ask me about admissions, placements, hostels, academics, or campus life!"
-        )
-        for char in placeholder:
-            yield char
-        return
-
-    with client.messages.stream(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1600,
-        system=build_system(),
-        messages=api_msgs,
-    ) as stream:
-        for text in stream.text_stream:
-            yield text
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# INPUT BAR (reusable component)
-# ─────────────────────────────────────────────────────────────────────────────
-def render_input_bar(form_key: str, placeholder: str = "Ask anything about MNIT Jaipur…"):
-    """Renders the input bar. Returns (submitted: bool, text: str)."""
-    st.markdown('<div class="inp-wrap">', unsafe_allow_html=True)
-    with st.form(key=form_key, clear_on_submit=True):
-        col_inp, col_send = st.columns([11, 1])
-        with col_inp:
-            user_input = st.text_input(
-                label="__q__",
-                placeholder=placeholder,
-                key=f"inp_{form_key}",
-                label_visibility="collapsed",
-            )
-        with col_send:
-            st.markdown('<div class="send-btn">', unsafe_allow_html=True)
-            submitted = st.form_submit_button("↑")
-            st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    return submitted, (user_input or "").strip()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PROCESS & STREAM MESSAGE
-# ─────────────────────────────────────────────────────────────────────────────
-def process_message(user_text: str):
-    if not user_text.strip():
-        return
-
-    ts_now = datetime.datetime.now().strftime("%H:%M")
-    st.session_state.messages.append({
-        "role":    "user",
-        "content": user_text.strip(),
-        "ts":      ts_now,
-    })
-    st.session_state.show_welcome = False
-
-    # Build API payload
-    api_msgs = [
-        {"role": m["role"], "content": m["content"]}
-        for m in st.session_state.messages
-        if m["role"] in ("user", "assistant")
-    ]
-
-    # Stream into chat
-    with st.chat_message("assistant"):
-        st.markdown(
-            '<div class="thinking">'
-            '<span class="t-dot"></span>'
-            '<span class="t-dot"></span>'
-            '<span class="t-dot"></span>'
-            '&nbsp; AskMNIT is thinking…'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-        response_text = st.write_stream(stream_ai(api_msgs))
-        st.markdown(
-            f'<div class="msg-ts">{datetime.datetime.now().strftime("%H:%M")}</div>',
-            unsafe_allow_html=True,
-        )
-
-    # Approximate token count
-    st.session_state.total_tokens += int(len(response_text.split()) * 1.35)
-
-    st.session_state.messages.append({
-        "role":    "assistant",
-        "content": response_text,
-        "ts":      datetime.datetime.now().strftime("%H:%M"),
-    })
-    st.rerun()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# RENDER — FORCE SIDEBAR VISIBLE
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-[data-testid="stSidebar"]              { display: flex !important; }
-[data-testid="stSidebarCollapseButton"]{ display: flex !important; }
-[data-testid="collapsedControl"]       { display: flex !important; }
-</style>
-""", unsafe_allow_html=True)
-
-render_sidebar()
-
-has_messages = bool(st.session_state.messages)
-
-# Animated background
-st.markdown('<div class="chat-bg"></div>', unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# HERO / WELCOME STATE
-# ══════════════════════════════════════════════════════════════════════════════
-if not has_messages:
-
-    # Navbar
-    st.markdown(f"""
-    <div class="navbar">
-      <div class="nav-brand">
-        <div class="nav-logo">AM</div>
-        <div>
-          <div class="nav-title">AskMNIT</div>
-          <div class="nav-sub">Malaviya National Institute of Technology Jaipur</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div class="nav-live">
-          <div class="live-dot"></div>
-          CLAUDE claude-sonnet-4-20250514 · LIVE
-        </div>
-      </div>
-    </div>
+    # ── Sidebar always visible in chat view ───────────────────────────────────
+    # Re-enable sidebar (it's hidden in global CSS reset, re-show it here)
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { display: flex !important; }
+    [data-testid="stSidebarCollapseButton"] { display: flex !important; }
+    [data-testid="collapsedControl"] { display: flex !important; }
+    [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
+    </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
+    render_chat_sidebar()
 
-    # Hero content
-    _, hero_col, _ = st.columns([1, 3.2, 1])
-    with hero_col:
-        st.markdown(f"""
-        <div class="hero-wrap">
-          <div class="hero-orb">🎓</div>
-          <div class="hero-h1">
-            Your Campus AI<br>
-            <span class="grad">Knows Everything</span>
-          </div>
-          <div class="hero-sub">
-            Powered by Claude claude-sonnet-4-20250514 · Built exclusively for MNIT Jaipur.
-            Ask anything — admissions, placements, hostels, research, clubs, ERP, fees.
-          </div>
-          <div class="hero-tags">
-            <span class="hero-tag">⚡ Streaming AI</span>
-            <span class="hero-tag">🎓 MNIT Jaipur</span>
-            <span class="hero-tag">📊 Placements</span>
-            <span class="hero-tag">🏠 Hostels</span>
-            <span class="hero-tag">📚 Academics</span>
-            <span class="hero-tag">🔬 Research</span>
-            <span class="hero-tag">🎉 Events</span>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+    has_messages = len(st.session_state.chat_messages) > 0
 
-        # Stats row
-        st.markdown(f"""
-        <div class="stat-row">
-          <div class="stat-chip">Founded <span class="stat-v">1963</span></div>
-          <div class="stat-chip">NIRF Rank <span class="stat-v">#11</span></div>
-          <div class="stat-chip">Students <span class="stat-v">6,000+</span></div>
-          <div class="stat-chip">Avg CTC <span class="stat-v">~12 LPA</span></div>
-          <div class="stat-chip">Campus <span class="stat-v">325 acres</span></div>
-          <div class="stat-chip">Faculty <span class="stat-v">300+</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+    # ── Process voice-done signal from recorder ───────────────────────────────
+    # Check both hero and anchored recorder params
+    for rkey in ["hero", "anchored"]:
+        qp = st.query_params
+        vdone = qp.get(f"vr_{rkey}", "")
+        if vdone == "DONE" and not st.session_state.get("_voice_submit"):
+            st.session_state._voice_submit    = True
+            st.session_state.is_recording     = False
+            st.session_state.voice_transcript = "[Voice message recorded]"
+            # Clear the query param
+            try:
+                del st.query_params[f"vr_{rkey}"]
+                st.query_params.pop(f"vr_{rkey}_ts", None)
+            except Exception:
+                pass
 
-    # Suggestion pills
-    _, pills_col, _ = st.columns([0.5, 5.5, 0.5])
-    with pills_col:
-        r1 = st.columns(3)
-        for i, pill in enumerate(SUGGESTION_PILLS[:3]):
-            with r1[i]:
-                st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
-                if st.button(pill, key=f"p1_{i}", use_container_width=True):
-                    process_message(pill)
-                st.markdown('</div>', unsafe_allow_html=True)
+    # Auto-submit voice message
+    if st.session_state._voice_submit:
+        st.session_state._voice_submit = False
+        msg = st.session_state.voice_transcript or "[Voice message]"
+        st.session_state.voice_transcript = ""
+        dispatch_message(f"🎤 {msg}")
+        st.toast("Voice message sent!", icon="🎤")
+        st.rerun()
 
-        st.markdown("<div style='height:7px'></div>", unsafe_allow_html=True)
+    # ── Detect native file picker result ─────────────────────────────────────
+    for rkey in ["hero", "anchored"]:
+        qp = st.query_params
+        fpname = qp.get(f"fp_{rkey}", "")
+        if fpname and fpname != st.session_state.attached_file_name:
+            st.session_state.attached_file_name = fpname
+            st.toast(f"📎 {fpname} selected!", icon="✅")
+            try: del st.query_params[f"fp_{rkey}"]
+            except Exception: pass
+            st.rerun()
 
-        r2 = st.columns(3)
-        for i, pill in enumerate(SUGGESTION_PILLS[3:]):
-            with r2[i]:
-                st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
-                if st.button(pill, key=f"p2_{i}", use_container_width=True):
-                    process_message(pill)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<div style='height:2.5vh'></div>", unsafe_allow_html=True)
-
-    # Hero input bar
-    _, bar_col, _ = st.columns([0.5, 5, 0.5])
-    with bar_col:
-        sub, txt = render_input_bar("hero_form")
-        if sub and txt:
-            process_message(txt)
-
-    # Disclaimer
+    # ── NAVBAR ────────────────────────────────────────────────────────────────
     st.markdown(
-        f'<p style="text-align:center;font-size:0.57rem;color:{C["disc_c"]};'
-        f'margin-top:14px;font-family:\'JetBrains Mono\',monospace;">'
-        f'AskMNIT may occasionally be inaccurate · Always verify critical info with official MNIT Jaipur portals</p>',
+        '<div style="background:rgba(7,11,20,0.96);'
+        'backdrop-filter:blur(20px) saturate(180%);'
+        'border-bottom:1px solid rgba(59,130,246,0.16);'
+        'box-shadow:0 2px 24px rgba(0,0,0,0.50);'
+        'padding:10px 22px;display:flex;align-items:center;">'
+        '<div style="display:flex;align-items:center;gap:9px;">'
+        '<div style="width:28px;height:28px;border-radius:8px;'
+        'background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;'
+        'font-size:0.82rem;font-weight:700;color:white;">A</div>'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;">AskMNIT</span>'
+        '<span style="font-size:0.56rem;color:#10B981;font-weight:700;margin-left:2px;">&#9679; AI</span>'
+        '</div></div>',
         unsafe_allow_html=True,
     )
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ACTIVE CHAT STATE
-# ══════════════════════════════════════════════════════════════════════════════
+    _, nc1, nc2, nc3 = st.columns([4.5, 1.3, 1.3, 1.4])
+
+    with nc1:
+        st.markdown('<div class="nav-pill">', unsafe_allow_html=True)
+        if st.button("+ New Chat", key="btn_new_chat"):
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with nc2:
+        with st.popover("Settings", use_container_width=True):
+            st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(148,163,184,0.45);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px;">Bot Settings</div>', unsafe_allow_html=True)
+            st.session_state.voice_output = st.toggle("Voice Output", value=st.session_state.voice_output, key="toggle_voice")
+            st.session_state.strict_mode  = st.toggle("Strict Mode",  value=st.session_state.strict_mode,  key="toggle_strict")
+
+    with nc3:
+        st.markdown('<div class="nav-back">', unsafe_allow_html=True)
+        if st.button("Dashboard", key="btn_dashboard"):
+            st.session_state.view = "dashboard"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.30),rgba(34,211,238,0.14),transparent);"></div>', unsafe_allow_html=True)
+
+    # ── FILE UPLOADER PANEL (Streamlit native fallback, shown when attach toggled) ──
+    if st.session_state.show_uploader:
+        st.markdown('<div class="attach-panel">', unsafe_allow_html=True)
+        up_c1, up_c2 = st.columns([6, 1])
+        with up_c1:
+            attached_file = st.file_uploader(
+                "Attach a file",
+                type=["pdf","txt","png","jpg","jpeg","docx","csv"],
+                key="file_uploader_chat",
+            )
+        with up_c2:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+            if st.button("Close", key="close_uploader"):
+                st.session_state.show_uploader = False; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        if attached_file is not None:
+            st.session_state.attached_file_name = attached_file.name
+            st.session_state.show_uploader = False
+            st.toast(f"📎 {attached_file.name} selected!", icon="✅")
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── HERO STATE ────────────────────────────────────────────────────────────
+    if not has_messages:
+        st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
+
+        _, hero_col, _ = st.columns([1, 3, 1])
+        with hero_col:
+            st.markdown(
+                '<div style="text-align:center;animation:fadeUp 0.45s ease both;">'
+                '<div style="width:80px;height:80px;margin:0 auto 22px;border-radius:22px;'
+                'background:linear-gradient(135deg,#1E3A8A,#4338CA 50%,#059669);'
+                'display:flex;align-items:center;justify-content:center;font-size:2.3rem;'
+                'box-shadow:0 0 0 1px rgba(59,130,246,0.22),0 16px 52px rgba(37,99,235,0.30);">&#129302;</div>'
+                '<div style="font-family:\'Fraunces\',serif;font-size:3rem;font-weight:900;'
+                'color:#E2E8F0;letter-spacing:-2px;line-height:1.05;margin-bottom:10px;">'
+                'AskMNIT <span style="font-weight:300;color:#60A5FA;">AI</span></div>'
+                '<div style="font-size:0.86rem;color:rgba(148,163,184,0.50);line-height:1.70;margin-bottom:32px;">'
+                'Attendance analysis &nbsp;&#183;&nbsp; PYQ search &nbsp;&#183;&nbsp; Schedule queries &nbsp;&#183;&nbsp; Exam prep'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        br = st.session_state.branch
+        PILLS_ROW1 = ["Analyse my attendance", "What's next on my schedule?", f"PYQs for {br}", "Check my fee status"]
+        PILLS_ROW2 = [f"Subjects for {br}", "Exam schedule tips"]
+
+        _, pills_col, _ = st.columns([0.5, 5, 0.5])
+        with pills_col:
+            r1_cols = st.columns(len(PILLS_ROW1))
+            for i, pill in enumerate(PILLS_ROW1):
+                with r1_cols[i]:
+                    st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
+                    if st.button(pill, key=f"pill_r1_{i}", use_container_width=True):
+                        dispatch_message(pill); st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            _, r2_c1, r2_c2, _ = st.columns([1, 1.5, 1.5, 1])
+            for i, (pill, col) in enumerate(zip(PILLS_ROW2, [r2_c1, r2_c2])):
+                with col:
+                    st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
+                    if st.button(pill, key=f"pill_r2_{i}", use_container_width=True):
+                        dispatch_message(pill); st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
+
+        # Hero bar + voice recorder
+        _, bar_col, _ = st.columns([0.5, 5, 0.5])
+        with bar_col:
+            hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
+
+        # Render hidden voice recorder for hero
+        render_voice_recorder("hero")
+        render_native_file_picker("hero")
+
+        if st.session_state.is_recording:
+            st.markdown('<div class="listening-banner"><div class="listening-dot"></div><span>Listening... speak now, then press ⏹ to stop</span></div>', unsafe_allow_html=True)
+
+        st.markdown('<p style="text-align:center;font-size:0.59rem;color:rgba(100,116,139,0.38);margin-top:10px;font-family:\'DM Mono\',monospace;">AskMNIT AI can make mistakes &nbsp;·&nbsp; Verify with official ERP or faculty</p>', unsafe_allow_html=True)
+
+        # Handle hero actions
+        if hero_action is not None:
+            act = hero_action[0]
+            if act == "send":
+                dispatch_message(hero_action[1])
+                st.session_state.attached_file_name = ""
+                st.rerun()
+            elif act == "mic":
+                direction = hero_action[1]
+                if direction == "start":
+                    st.session_state.is_recording = True
+                    # Tell recorder component to start
+                    st.markdown("""<script>
+                    (function poll(){ var f = document.querySelector('iframe');
+                    if(f && f.contentWindow){ f.contentWindow.postMessage({type:'startRecording_hero'},'*'); }
+                    else { setTimeout(poll,200); }
+                    })(); </script>""", unsafe_allow_html=True)
+                    st.toast("🎤 Recording started — speak now!", icon="🎤")
+                else:
+                    st.session_state.is_recording = False
+                    st.markdown("""<script>
+                    (function poll(){ var frames = document.querySelectorAll('iframe');
+                    frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'stopRecording_hero'},'*'); });
+                    })(); </script>""", unsafe_allow_html=True)
+                    st.toast("⏹ Processing voice...", icon="⏳")
+                st.rerun()
+            elif act == "attach":
+                # Open native file picker
+                st.markdown("""<script>
+                setTimeout(function(){
+                  var frames = document.querySelectorAll('iframe');
+                  frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'triggerPicker_hero'},'*'); });
+                }, 100);
+                </script>""", unsafe_allow_html=True)
+                # Fallback: show Streamlit uploader
+                st.session_state.show_uploader = True
+                st.rerun()
+
+    # ── ACTIVE STATE ──────────────────────────────────────────────────────────
+    else:
+        st.markdown("<div class='chat-scroll-area'>", unsafe_allow_html=True)
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        _, msg_col, _ = st.columns([0.5, 5, 0.5])
+        with msg_col:
+            for msg in st.session_state.chat_messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Anchored bottom bar
+        st.markdown('<div class="gemini-bar-anchored">', unsafe_allow_html=True)
+        anchored_action = render_gemini_bar(bar_key="anchored", hero_mode=False)
+
+        # Hidden voice/file components inside anchored bar
+        render_voice_recorder("anchored")
+        render_native_file_picker("anchored")
+
+        if st.session_state.is_recording:
+            st.markdown('<div class="listening-banner" style="margin-top:8px;"><div class="listening-dot"></div><span>Listening... press ⏹ to stop and send</span></div>', unsafe_allow_html=True)
+
+        st.markdown('<p style="text-align:center;font-size:0.59rem;color:rgba(100,116,139,0.38);margin-top:4px;font-family:\'DM Mono\',monospace;">AskMNIT AI can make mistakes &nbsp;·&nbsp; Verify with official ERP or faculty</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Handle anchored actions
+        if anchored_action is not None:
+            act = anchored_action[0]
+            if act == "send":
+                dispatch_message(anchored_action[1])
+                st.session_state.attached_file_name = ""
+                st.rerun()
+            elif act == "mic":
+                direction = anchored_action[1]
+                if direction == "start":
+                    st.session_state.is_recording = True
+                    st.markdown("""<script>
+                    setTimeout(function(){
+                      var frames = document.querySelectorAll('iframe');
+                      frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'startRecording_anchored'},'*'); });
+                    }, 150);
+                    </script>""", unsafe_allow_html=True)
+                    st.toast("🎤 Recording started — speak now!", icon="🎤")
+                else:
+                    st.session_state.is_recording = False
+                    st.markdown("""<script>
+                    setTimeout(function(){
+                      var frames = document.querySelectorAll('iframe');
+                      frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'stopRecording_anchored'},'*'); });
+                    }, 50);
+                    </script>""", unsafe_allow_html=True)
+                    st.toast("⏹ Processing voice...", icon="⏳")
+                st.rerun()
+            elif act == "attach":
+                st.markdown("""<script>
+                setTimeout(function(){
+                  var frames = document.querySelectorAll('iframe');
+                  frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'triggerPicker_anchored'},'*'); });
+                }, 100);
+                </script>""", unsafe_allow_html=True)
+                st.session_state.show_uploader = True
+                st.rerun()
+
+    st.stop()
+
+
+###############################################################################
+# ████████████████████  DASHBOARD VIEW  ██████████████████████████████████████
+###############################################################################
+
+# Dashboard sidebar
+NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]
+with st.sidebar:
+    st.markdown(
+        '<div style="padding:18px 14px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">'
+        '<div style="display:flex;align-items:center;gap:9px;">'
+        '<div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;color:white;'
+        'box-shadow:0 3px 12px rgba(37,99,235,0.28);">A</div>'
+        '<div><div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;color:#E2E8F0;">AskMNIT</div>'
+        '<div style="font-size:0.56rem;color:rgba(148,163,184,.40);margin-top:1px;">Student Portal</div>'
+        '</div></div></div>',
+        unsafe_allow_html=True,
+    )
+    bh = branch_hex(st.session_state.branch)
+    st.markdown(
+        f'<div style="padding:8px 12px 4px;">'
+        f'<span style="font-size:0.60rem;font-weight:700;padding:2px 9px;background:rgba(255,255,255,0.05);'
+        f'border:1px solid {bh}44;border-radius:5px;color:{bh};letter-spacing:0.4px;">'
+        f'{st.session_state.branch}</span></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    for label in NAV_LABELS:
+        is_active = st.session_state.nav_page == label
+        css = "nav-btn-active" if is_active else "nav-btn"
+        st.markdown(f'<div class="{css}">', unsafe_allow_html=True)
+        if st.button(label, key="nav_"+label, use_container_width=True):
+            st.session_state.nav_page = label; st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('<div style="position:fixed;bottom:18px;width:182px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">', unsafe_allow_html=True)
+    st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+    if st.button("Logout", key="sidebar_logout", use_container_width=True):
+        for k in list(st.session_state.keys()): del st.session_state[k]
+        st.rerun()
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+# Placeholder pages
+dash_page = st.session_state.nav_page
+if dash_page != "My Dashboard":
+    PMETA = {
+        "My Schedule":    ("My Schedule",   "Weekly timetable renders here."),
+        "Academics":      ("Academics",      "Grades and CGPA records render here."),
+        "Study Material": ("Study Material", "Uploaded notes render here."),
+        "PYQs":           ("PYQs",           "Previous year papers render here."),
+        "Fee Portal":     ("Fee Portal",     "Fee dues and receipts render here."),
+        "Mess Menu":      ("Mess Menu",      "Weekly hostel menu renders here."),
+    }
+    title, desc = PMETA.get(dash_page, (dash_page, "Coming soon."))
+    st.markdown(
+        f'<div style="padding:24px;">'
+        f'<div style="font-family:\'DM Mono\',monospace;font-size:0.95rem;color:#E2E8F0;'
+        f'border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;margin-bottom:24px;">{title.upper()}</div>'
+        f'<div style="background:linear-gradient(160deg,#0B1120,#060A12);border:1px dashed rgba(59,130,246,0.18);'
+        f'border-radius:16px;padding:60px 40px;text-align:center;">'
+        f'<div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;margin-bottom:8px;">{title.upper()}</div>'
+        f'<div style="font-size:0.76rem;color:rgba(148,163,184,.44);max-width:280px;margin:0 auto;line-height:1.65;">{desc}</div>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.stop()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MY DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+st.markdown("<div style='padding:0 22px 80px;'>", unsafe_allow_html=True)
+
+h_logo, h_mid, h_right = st.columns([2,4,3])
+with h_logo:
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;">'
+        '<div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:white;">M</div>'
+        '<div><div style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div>'
+        '<div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div></div></div>',
+        unsafe_allow_html=True,
+    )
+with h_mid:
+    now_str = datetime.datetime.now().strftime("%a, %d %b %Y  ·  %H:%M")
+    st.markdown(
+        '<div style="padding:13px 0 9px;text-align:center;">'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#60A5FA;letter-spacing:0.8px;">MY DASHBOARD</span>'
+        f'<br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">{now_str}</span></div>',
+        unsafe_allow_html=True,
+    )
+with h_right:
+    nm, br, sem = st.session_state.student_name, st.session_state.branch, st.session_state.semester
+    bh = branch_hex(br); pp = st.session_state.profile_pic_b64
+    av_html = (f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh}55;">' if pp
+               else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh}55;">{initials(nm)}</div>')
+    st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm}</div><div style="font-size:0.58rem;color:{bh};font-weight:600;">{br} · {sem}</div></div></div>', unsafe_allow_html=True)
+
+st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
+
+# Settings toggle row
+srow1,srow2,srow3,_,srow5 = st.columns([1,1,1,1,1])
+with srow1:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("Settings & Profile", key="open_settings"):
+        st.session_state.settings_mode = None if st.session_state.settings_mode=="profile" else "profile"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow2:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("Upload Schedule", key="open_schedule"):
+        st.session_state.settings_mode = None if st.session_state.settings_mode=="schedule" else "schedule"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow3:
+    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
+    if st.button("Notifications", key="open_notif"):
+        st.toast("No new notifications.", icon="🔔")
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow5:
+    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
+    if st.button("Open AskMNIT AI", key="btn_open_chat_dash"):
+        st.session_state.view = "chat"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+mode = st.session_state.settings_mode
+if mode == "profile":
+    with st.expander("Settings & Profile", expanded=True):
+        pc1,pc2 = st.columns([1,2])
+        with pc1:
+            pp = st.session_state.profile_pic_b64; bh = branch_hex(st.session_state.branch)
+            if pp:
+                st.markdown(f'<img src="{pp}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid {bh}66;display:block;margin:0 auto 8px;">', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;margin:0 auto 8px;">{initials(st.session_state.student_name)}</div>', unsafe_allow_html=True)
+            pic_file = st.file_uploader("Upload photo", type=["png","jpg","jpeg"], key="profile_pic_up", label_visibility="collapsed")
+            if pic_file: st.session_state.profile_pic_b64 = img_to_b64(pic_file); st.rerun()
+        with pc2:
+            new_name = st.text_input("Full Name",  value=st.session_state.student_name, key="inp_name")
+            new_id   = st.text_input("College ID", value=st.session_state.college_id,   key="inp_id")
+            new_sem  = st.selectbox("Semester", SEMESTERS, index=SEMESTERS.index(st.session_state.semester), key="sel_sem")
+            new_br   = st.selectbox("Branch",   BRANCHES,  index=BRANCHES.index(st.session_state.branch),   key="sel_br")
+            if st.button("Save Profile", key="save_profile"):
+                old_br = st.session_state.branch
+                st.session_state.student_name=new_name; st.session_state.college_id=new_id
+                st.session_state.semester=new_sem; st.session_state.branch=new_br
+                if old_br!=new_br: st.session_state.attendance=blank_att(subjects_for_branch(new_br))
+                st.toast("Profile saved!", icon="✅"); st.session_state.settings_mode=None; st.rerun()
+
+elif mode == "schedule":
+    with st.expander("Upload Weekly Schedule PDF", expanded=True):
+        pdf_file = st.file_uploader("Drop schedule PDF here", type=["pdf"], key="sched_upload")
+        if pdf_file:
+            st.session_state.full_schedule=process_schedule_pdf(pdf_file,st.session_state.branch)
+            st.session_state.schedule_loaded=True; st.session_state.pdf_filename=pdf_file.name
+            st.toast(f"Schedule loaded: {pdf_file.name}", icon="✅"); st.session_state.settings_mode=None; st.rerun()
+        if st.session_state.schedule_loaded:
+            st.markdown(f'<div style="font-size:0.75rem;color:#10B981;margin-top:6px;">Active: {st.session_state.pdf_filename}</div>', unsafe_allow_html=True)
+
+# KPI Row
+ov = overall_pct(st.session_state.attendance)
+stat_badge_txt,stat_col,_ = status_badge(ov)
+kpi1,kpi2,kpi3,kpi4 = st.columns(4)
+for col,ico,val,lbl,c in [
+    (kpi1,"📊",f"{ov}%","Overall Attendance",stat_col),
+    (kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#60A5FA"),
+    (kpi3,"📅",str(len(get_today_slots(st.session_state.full_schedule)) if st.session_state.schedule_loaded else 0),"Classes Today","#22D3EE"),
+    (kpi4,"📝",str(len(st.session_state.notes_list)),"Active Notes","#A78BFA"),
+]:
+    with col:
+        st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px 14px;margin-bottom:14px;"><div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div><div style="font-size:1.7rem;font-weight:800;color:{c};font-family:\'DM Mono\',monospace;line-height:1.1;">{val}</div><div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div></div>', unsafe_allow_html=True)
+
+# Attendance Tracker
+st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>', unsafe_allow_html=True)
+
+def render_subj_rows(subj_list: list, section: str):
+    att = st.session_state.attendance
+    for idx, subj in enumerate(subj_list):
+        if subj not in att: att[subj]={"present":0,"total":0}
+        r=att[subj]; pct=att_pct(r); c=att_color(pct)
+        kb = f"{section}_{idx}_{_safe_key(subj)}"
+        sc1,sc2,sc3,sc4,sc5,sc6 = st.columns([3.5,1.2,0.9,0.9,0.9,0.9])
+        with sc1:
+            st.markdown(f'<div style="font-size:0.80rem;color:#E2E8F0;font-weight:600;padding:8px 0 4px;">{subj}</div><div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;overflow:hidden;width:90%;"><div style="width:{pct}%;height:100%;background:linear-gradient(90deg,{c},{c}88);border-radius:99px;"></div></div>', unsafe_allow_html=True)
+        with sc2:
+            st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
+        with sc3:
+            st.markdown('<div class="present-btn">', unsafe_allow_html=True)
+            if st.button("P", key=f"pp_{kb}", use_container_width=True):
+                att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc4:
+            st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
+            if st.button("A", key=f"pa_{kb}", use_container_width=True):
+                att[subj]["total"]+=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc5:
+            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+            if st.button("-P", key=f"rp_{kb}", use_container_width=True):
+                if r["present"]>0 and r["total"]>0: att[subj]["present"]-=1; att[subj]["total"]-=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc6:
+            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
+            if st.button("-A", key=f"ra_{kb}", use_container_width=True):
+                if r["total"]>0: att[subj]["total"]-=1; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+branch_only = BRANCH_SUBJECTS.get(st.session_state.branch,[])
+with st.expander("Common Subjects ("+str(len(COMMON_SUBJECTS))+")", expanded=True):
+    render_subj_rows(COMMON_SUBJECTS,"cmn")
+if branch_only:
+    with st.expander(st.session_state.branch+" Subjects ("+str(len(branch_only))+")", expanded=True):
+        render_subj_rows(branch_only,"brnch")
+st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+
+# Schedule Section
+today_name = datetime.datetime.now().strftime("%A")
+now_hm = datetime.datetime.now().hour*60+datetime.datetime.now().minute
+st.markdown(
+    '<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;">'
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
+    '<span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S CLASS SCHEDULE</span>'
+    f'<span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;color:rgba(96,165,250,.65);">{today_name.upper()}</span></div>',
+    unsafe_allow_html=True,
+)
+if st.session_state.schedule_loaded:
+    today_slots=get_today_slots(st.session_state.full_schedule); nxt=get_next_class(today_slots)
+    if nxt:
+        mins=nxt["minutes_away"]; hrs=mins//60; rem=mins%60
+        cd_str=(f"{hrs}h {rem}m" if hrs else f"{rem} min")+" away"
+        urg_c="#EF4444" if mins<15 else "#F59E0B" if mins<45 else "#22D3EE"
+        st.markdown(f'<div style="background:linear-gradient(90deg,rgba(34,211,238,.06),rgba(37,99,235,.04));border:1px solid rgba(34,211,238,.18);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.57rem;color:rgba(148,163,184,.46);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div><div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">{nxt["subject"]}  <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">{nxt["room"]}</span></div></div><div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;font-weight:600;color:{urg_c};text-align:right;">{cd_str}<div style="font-size:0.57rem;color:rgba(148,163,184,.42);font-weight:400;margin-top:1px;">{fmt_time(nxt["time_start"])} – {fmt_time(nxt["time_end"])}</div></div></div>', unsafe_allow_html=True)
+    if today_slots:
+        rows=[today_slots[i:i+3] for i in range(0,len(today_slots),3)]
+        for row in rows:
+            cols=st.columns(len(row))
+            for ci,(col,slot) in enumerate(zip(cols,row)):
+                sh,sm=map(int,slot["time_start"].split(":")); is_past=(sh*60+sm)<now_hm
+                tc=TYPE_COLORS.get(slot["type"],"#60A5FA")
+                is_next=(nxt is not None and slot["time_start"]==nxt["time_start"] and slot["subject"]==nxt["subject"])
+                bc=tc if not is_past else "rgba(255,255,255,0.06)"
+                cbg="linear-gradient(160deg,rgba(34,211,238,0.06),rgba(37,99,235,0.03))" if is_next else "rgba(255,255,255,0.02)" if not is_past else "rgba(255,255,255,0.01)"
+                with col:
+                    st.markdown(f'<div style="background:{cbg};border:1px solid {bc};border-left:3px solid {bc};border-radius:12px;padding:13px 14px;margin-bottom:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;font-weight:700;color:{"#E2E8F0" if not is_past else "rgba(148,163,184,0.32)"};margin-bottom:6px;">{fmt_time(slot["time_start"])}<br><span style="font-size:0.62rem;font-weight:400;color:rgba(148,163,184,0.45);">– {fmt_time(slot["time_end"])}</span></div><div style="font-size:0.82rem;font-weight:700;color:{"#F1F5F9" if not is_past else "rgba(148,163,184,0.28)"};margin-bottom:5px;">{slot["subject"]}</div><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:0.62rem;color:rgba(148,163,184,.48);">{slot["room"]}</span><span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;background:{tc}1A;color:{tc};font-weight:600;">{slot["type"]}</span>{"  <span style=\"font-size:0.58rem;color:#22D3EE;font-weight:700;\">NEXT</span>" if is_next else ""}</div>{"<div style=\"font-size:0.58rem;color:rgba(148,163,184,.28);margin-top:4px;text-decoration:line-through;\">Done</div>" if is_past else ""}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);font-size:0.80rem;">No classes for {today_name}.</div>', unsafe_allow_html=True)
 else:
-    tok = int(st.session_state.total_tokens)
+    st.markdown('<div style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.20);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;color:rgba(148,163,184,.48);">Use <b>Upload Schedule</b> to activate the planner.</div>', unsafe_allow_html=True)
+    if "planner_overrides" not in st.session_state: st.session_state.planner_overrides={}
+    for st_start,st_end in [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]:
+        override=st.session_state.planner_overrides.get(st_start,"")
+        mp1,mp2,mp3,mp4=st.columns([1.6,4,0.8,2.2])
+        with mp1: st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#60A5FA;padding-top:10px;white-space:nowrap;font-weight:700;">{fmt_time(st_start)}<br><span style="font-size:0.56rem;font-weight:400;color:rgba(148,163,184,.38);">– {fmt_time(st_end)}</span></div>', unsafe_allow_html=True)
+        with mp2: note_v=st.text_input("",value=override,placeholder="Task...",key="mp_"+st_start,label_visibility="collapsed")
+        with mp3:
+            st.markdown('<div class="save-btn">', unsafe_allow_html=True)
+            if st.button("Save",key="sv_mp_"+st_start,use_container_width=True): st.session_state.planner_overrides[st_start]=note_v; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with mp4:
+            saved=st.session_state.planner_overrides.get(st_start,"")
+            if saved: st.markdown(f'<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{saved}</div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
-    # Navbar with token counter
-    st.markdown(f"""
-    <div class="navbar">
-      <div class="nav-brand">
-        <div class="nav-logo">AM</div>
-        <div>
-          <div class="nav-title">AskMNIT</div>
-          <div class="nav-sub">Malaviya National Institute of Technology Jaipur</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div class="tok-badge">~{tok:,} tokens</div>
-        <div class="nav-live"><div class="live-dot"></div>LIVE</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Messages
-    st.markdown("<div class='msg-area'>", unsafe_allow_html=True)
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-    _, msg_col, _ = st.columns([0.4, 5.8, 0.4])
-    with msg_col:
-        for msg in st.session_state.messages:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-                st.markdown(
-                    f'<div class="msg-ts">{msg.get("ts", "")}</div>',
-                    unsafe_allow_html=True,
-                )
-
+# Notes & Quick Links
+ql_col,notes_col=st.columns([1,1.5],gap="large")
+with ql_col:
+    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
+    QL=[("Upload Syllabus","Syllabus uploader will be enabled here."),("Add PYQ Link","PYQ link manager will open here."),("Library Search","Library search will open here.")]
+    st.markdown('<div class="ql-btn">', unsafe_allow_html=True)
+    for lbl,fb in QL:
+        if st.button(lbl,key="ql_"+lbl,use_container_width=True): st.session_state.ql_feedback=fb; st.rerun()
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    if st.session_state.ql_feedback: st.markdown(f'<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;color:rgba(186,230,253,.58);line-height:1.5;">{st.session_state.ql_feedback}</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Anchored bottom bar
-    st.markdown('<div class="bar-anch">', unsafe_allow_html=True)
+with notes_col:
+    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>', unsafe_allow_html=True)
+    new_note_input=st.text_input("",placeholder="Type a new note...",key="new_note_input_field",label_visibility="collapsed")
+    ac,_=st.columns([1,3])
+    with ac:
+        if st.button("Add Note",key="add_note_btn",use_container_width=True):
+            txt=new_note_input.strip()
+            if txt: st.session_state.notes_list.append({"text":txt,"pinned":False}); st.rerun()
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    unpinned=[(i,n) for i,n in enumerate(st.session_state.notes_list) if not n["pinned"]]
+    if not unpinned:
+        st.markdown('<div style="font-size:0.76rem;color:rgba(148,163,184,.38);text-align:center;padding:16px;font-style:italic;">No notes yet.</div>', unsafe_allow_html=True)
+    else:
+        for list_idx,(i,note) in enumerate(unpinned):
+            nr1,nr2,nr3=st.columns([5,1.2,1])
+            with nr1: st.markdown(f'<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">{note["text"]}</div>', unsafe_allow_html=True)
+            with nr2:
+                st.markdown('<div class="pin-btn">', unsafe_allow_html=True)
+                if st.button("Pin",key=f"pin_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True):
+                    st.session_state.notes_list[i]["pinned"]=True; st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+            with nr3:
+                st.markdown('<div class="del-btn">', unsafe_allow_html=True)
+                if st.button("Del",key=f"del_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True):
+                    st.session_state.notes_list.pop(i); st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Quick chips (HTML only — visual, clickable via suggestion pills below)
-    chips_html = "".join(
-        f'<span class="q-chip">{chip}</span>'
-        for chip in QUICK_CHIPS
-    )
-    st.markdown(f'<div class="quick-chips">{chips_html}</div>', unsafe_allow_html=True)
-
-    # Actual clickable quick chips via Streamlit buttons
-    chip_cols = st.columns(len(QUICK_CHIPS))
-    for i, chip in enumerate(QUICK_CHIPS):
-        with chip_cols[i]:
-            # Invisible buttons behind chips for click handling
-            st.markdown(f"""
-            <style>
-            div[data-testid="column"]:nth-child({i+1}) .stButton > button {{
-              background: transparent !important;
-              border: none !important; color: transparent !important;
-              box-shadow: none !important; height: 0 !important;
-              padding: 0 !important; overflow: hidden !important;
-              font-size: 0 !important; min-height: 0 !important;
-              position: absolute; pointer-events: none;
-            }}
-            </style>
-            """, unsafe_allow_html=True)
-
-    _, bar_col2, _ = st.columns([0.2, 6, 0.2])
-    with bar_col2:
-        sub2, txt2 = render_input_bar("active_form", "Continue the conversation…")
-        if sub2 and txt2:
-            process_message(txt2)
-
-    st.markdown(
-        f'<p style="text-align:center;font-size:0.56rem;color:{C["disc_c"]};'
-        f'margin-top:4px;font-family:\'JetBrains Mono\',monospace;">'
-        f'AskMNIT · Claude claude-sonnet-4-20250514 · MNIT Jaipur · May make mistakes</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; SESSION-STATE ONLY</span></div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)

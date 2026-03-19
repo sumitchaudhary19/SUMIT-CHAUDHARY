@@ -678,135 +678,159 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
 # ═════════════════════════════════════════════════════════════════════════════
 def render_left_rail():
     """
-    Renders the fixed 58px left icon rail using Streamlit native buttons
-    placed inside a fixed-position HTML container.
-    Buttons are actual st.button calls — fully functional, no JS onclick needed.
+    Uses Streamlit's native sidebar as the icon rail.
+    Sidebar is styled via CSS to be 62px wide with icon-only buttons.
+    This is the only reliable approach in Streamlit — no fixed-position hacks.
     """
     p = st.session_state.left_panel
 
-    # ── CSS for the rail button column overlay ────────────────────────────────
+    # ── Style sidebar as narrow icon rail ─────────────────────────────────────
     st.markdown("""
     <style>
-    /* Rail button column — sits on top of the fixed HTML rail */
-    .rail-btn-col {
-      position: fixed !important;
-      top: 0; left: 0; bottom: 0;
-      width: 58px !important;
-      z-index: 1001;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 60px 0 14px;
-      gap: 4px;
-      pointer-events: none; /* let clicks pass through to buttons */
+    /* ── Make sidebar into a narrow 62px icon rail ── */
+    [data-testid="stSidebar"] {
+      min-width: 62px !important;
+      max-width: 62px !important;
+      background: #090D1A !important;
+      border-right: 1px solid rgba(59,130,246,0.16) !important;
     }
-    /* Override ALL buttons inside rail to be icon-style */
-    .rail-btn-col .stButton { pointer-events: all; width: 42px !important; }
-    .rail-btn-col .stButton > button {
+    [data-testid="stSidebar"] > div:first-child {
+      padding: 0 !important;
+      width: 62px !important;
+    }
+    /* Hide sidebar collapse button */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] { display: none !important; }
+
+    /* ── All sidebar buttons → icon style ── */
+    [data-testid="stSidebar"] .stButton > button {
       background: transparent !important;
       border: 1px solid transparent !important;
       border-radius: 11px !important;
       color: rgba(148,163,184,0.55) !important;
-      font-size: 1.05rem !important;
-      width: 42px !important; height: 42px !important;
-      min-width: 42px !important; padding: 0 !important;
+      font-size: 1.15rem !important;
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px !important;
+      padding: 0 !important;
       box-shadow: none !important;
-      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
-    .rail-btn-col .stButton > button:hover {
-      background: rgba(59,130,246,0.14) !important;
-      border-color: rgba(59,130,246,0.30) !important;
+    [data-testid="stSidebar"] .stButton > button:hover {
+      background: rgba(59,130,246,0.16) !important;
+      border-color: rgba(59,130,246,0.35) !important;
       color: #BAE6FD !important;
-      transform: none !important; opacity: 1 !important;
+      transform: none !important;
+      opacity: 1 !important;
     }
-    /* Active state for toggled drawer buttons */
-    .rail-active-btn .stButton > button {
-      background: rgba(59,130,246,0.20) !important;
-      border-color: rgba(59,130,246,0.45) !important;
+    /* Active state */
+    [data-testid="stSidebar"] .rail-active .stButton > button {
+      background: rgba(59,130,246,0.22) !important;
+      border-color: rgba(59,130,246,0.50) !important;
       color: #60A5FA !important;
     }
-    /* Danger (logout) */
-    .rail-danger-btn .stButton > button {
+    /* Logout danger button */
+    [data-testid="stSidebar"] .rail-danger .stButton > button {
       color: rgba(252,165,165,0.55) !important;
     }
-    .rail-danger-btn .stButton > button:hover {
-      background: rgba(239,68,68,0.14) !important;
-      border-color: rgba(239,68,68,0.30) !important;
+    [data-testid="stSidebar"] .rail-danger .stButton > button:hover {
+      background: rgba(239,68,68,0.16) !important;
+      border-color: rgba(239,68,68,0.35) !important;
       color: #FCA5A5 !important;
     }
-    /* Spacer div between button groups */
-    .rail-btn-spacer { flex: 1; pointer-events: none; }
-    .rail-btn-divider {
-      width: 30px; height: 1px;
-      background: rgba(255,255,255,0.07);
-      margin: 4px 0; flex-shrink: 0; pointer-events: none;
+    /* Remove all extra padding Streamlit adds in sidebar */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+      gap: 0px !important;
     }
+    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
+      padding: 0 !important;
+    }
+    [data-testid="stSidebar"] .block-container {
+      padding: 0 !important;
+    }
+    /* Divider line inside sidebar */
+    .rail-sidebar-divider {
+      width: 34px;
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+      margin: 6px auto;
+    }
+    /* Logo block */
+    .rail-sidebar-logo {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg,#2563EB,#4F46E5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; font-weight: 700; color: white;
+      box-shadow: 0 3px 12px rgba(37,99,235,0.30);
+      margin: 14px auto 10px;
+    }
+    /* Push logout to bottom of sidebar */
+    .rail-sidebar-spacer { height: 100vh; max-height: calc(100vh - 460px); }
     </style>
     """, unsafe_allow_html=True)
 
-    # ── Fixed HTML shell (visual background rail) ─────────────────────────────
-    st.markdown('<div class="chat-left-rail"></div>', unsafe_allow_html=True)
+    # ── Render buttons inside sidebar ─────────────────────────────────────────
+    with st.sidebar:
+        # Logo
+        st.markdown('<div class="rail-sidebar-logo">A</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rail-sidebar-divider"></div>', unsafe_allow_html=True)
 
-    # ── Streamlit buttons rendered in fixed overlay column ────────────────────
-    st.markdown('<div class="rail-btn-col">', unsafe_allow_html=True)
+        # History
+        css_h = "rail-active" if p == "history" else ""
+        st.markdown(f'<div class="{css_h}">', unsafe_allow_html=True)
+        if st.button("⏱", key="rail_history", help="Chat History", use_container_width=True):
+            st.session_state.left_panel = None if p == "history" else "history"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # History
-    css_h = "rail-active-btn" if p == "history" else ""
-    st.markdown(f'<div class="{css_h}" title="Chat History">', unsafe_allow_html=True)
-    if st.button("⏱", key="rail_history"):
-        st.session_state.left_panel = None if p == "history" else "history"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Settings
+        css_s = "rail-active" if p == "settings" else ""
+        st.markdown(f'<div class="{css_s}">', unsafe_allow_html=True)
+        if st.button("⚙️", key="rail_settings", help="Settings", use_container_width=True):
+            st.session_state.left_panel = None if p == "settings" else "settings"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Settings
-    css_s = "rail-active-btn" if p == "settings" else ""
-    st.markdown(f'<div class="{css_s}" title="Settings">', unsafe_allow_html=True)
-    if st.button("⚙️", key="rail_settings"):
-        st.session_state.left_panel = None if p == "settings" else "settings"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Theme
+        css_t = "rail-active" if p == "theme" else ""
+        st.markdown(f'<div class="{css_t}">', unsafe_allow_html=True)
+        if st.button("🌗", key="rail_theme", help="Theme", use_container_width=True):
+            st.session_state.left_panel = None if p == "theme" else "theme"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # Theme
-    css_t = "rail-active-btn" if p == "theme" else ""
-    st.markdown(f'<div class="{css_t}" title="Theme">', unsafe_allow_html=True)
-    if st.button("🌗", key="rail_theme"):
-        st.session_state.left_panel = None if p == "theme" else "theme"
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rail-sidebar-divider"></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="rail-btn-divider"></div>', unsafe_allow_html=True)
+        # New Chat
+        if st.button("✚", key="rail_new_chat", help="New Chat", use_container_width=True):
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"] == "user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu + "...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages      = []
+            st.session_state.show_uploader      = False
+            st.session_state.attached_file_name = ""
+            st.session_state.left_panel         = None
+            st.rerun()
 
-    # New Chat
-    st.markdown('<div title="New Chat">', unsafe_allow_html=True)
-    if st.button("✚", key="rail_new_chat"):
-        if st.session_state.chat_messages:
-            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"] == "user"), "Session")
-            st.session_state.chat_sessions.append({"label": fu + "...", "messages": list(st.session_state.chat_messages)})
-        st.session_state.chat_messages      = []
-        st.session_state.show_uploader      = False
-        st.session_state.attached_file_name = ""
-        st.session_state.left_panel         = None
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Dashboard
+        if st.button("🏠", key="rail_dashboard", help="Dashboard", use_container_width=True):
+            st.session_state.view       = "dashboard"
+            st.session_state.left_panel = None
+            st.rerun()
 
-    # Dashboard
-    st.markdown('<div title="Dashboard">', unsafe_allow_html=True)
-    if st.button("🏠", key="rail_dashboard"):
-        st.session_state.view       = "dashboard"
-        st.session_state.left_panel = None
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Spacer
+        st.markdown('<div class="rail-sidebar-spacer"></div>', unsafe_allow_html=True)
 
-    # Spacer then Logout at bottom
-    st.markdown('<div class="rail-btn-spacer"></div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="rail-danger-btn" title="Logout">', unsafe_allow_html=True)
-    if st.button("🚪", key="rail_logout"):
-        for k in list(st.session_state.keys()): del st.session_state[k]
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)  # close .rail-btn-col
+        # Logout
+        st.markdown('<div class="rail-danger">', unsafe_allow_html=True)
+        if st.button("🚪", key="rail_logout", help="Logout", use_container_width=True):
+            for k in list(st.session_state.keys()): del st.session_state[k]
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_drawer():
@@ -903,31 +927,17 @@ view = st.session_state.view
 ###############################################################################
 if view == "chat":
 
-    # ── 1. Hide Streamlit sidebar completely ──────────────────────────────────
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"]{display:none !important;}
-    [data-testid="stSidebarCollapseButton"]{display:none !important;}
-    [data-testid="collapsedControl"]{display:none !important;}
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ── 2. Render icon rail + drawer ──────────────────────────────────────────
+    # ── 1. Render icon rail (native sidebar styled as rail) + optional drawer ──
     render_left_rail()
     render_drawer()
 
-    # ── 3. Body offset CSS (shifts content right of rail / drawer) ────────────
-    drawer_open = st.session_state.left_panel is not None
-    body_ml     = "302px" if drawer_open else "58px"
-    bar_left    = "302px" if drawer_open else "58px"
-
-    st.markdown(f"""
+    # ── 2. Main content area tweaks ───────────────────────────────────────────
+    st.markdown("""
     <style>
-    [data-testid="stAppViewContainer"]>[data-testid="stMainBlockContainer"]{{
-      padding-left:{body_ml} !important;
-      transition:padding-left 0.22s cubic-bezier(0.22,0.61,0.36,1);
-    }}
-    .gemini-bar-anchored{{left:{bar_left} !important;transition:left 0.22s cubic-bezier(0.22,0.61,0.36,1);}}
+    [data-testid="stAppViewContainer"]>[data-testid="stMainBlockContainer"]{
+      padding-top: 0 !important;
+    }
+    .gemini-bar-anchored{ left: 62px !important; }
     </style>
     """, unsafe_allow_html=True)
 

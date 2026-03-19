@@ -803,10 +803,10 @@ if view == "chat":
             except: pass
             st.rerun()
 
-    # ── FIXED TOPBAR (logo only) ──────────────────────────────────────────
+    # ── FIXED TOPBAR + HAMBURGER (real st.button) ────────────────────────
     st.markdown("""
     <div class="chat-topbar">
-      <div class="chat-topbar-logo" style="margin-left:48px;">
+      <div class="chat-topbar-logo" style="margin-left:52px;">
         <div class="chat-topbar-logo-icon">A</div>
         <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
         <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
@@ -816,212 +816,164 @@ if view == "chat":
     <div class="chat-topbar-divider"></div>
     """, unsafe_allow_html=True)
 
-    # ── HAMBURGER + SIDEBAR via components.html (iframe — JS works freely) ─
-    # The hamburger button lives in the iframe, controls the sidebar div
-    # that also lives in the SAME iframe. No Streamlit interference.
-    _h_open = "true" if st.session_state.get("show_history_panel") else "false"
-    _s_open = "true" if st.session_state.get("show_settings_panel") else "false"
+    # Sidebar open/close state
+    if "sb_open" not in st.session_state:
+        st.session_state.sb_open = False
 
-    components.html(f"""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:transparent; font-family:'Outfit',sans-serif; overflow:hidden; }}
-
-/* Hamburger button */
-#hbtn {{
-  position:fixed; top:58px; left:10px;
-  width:34px; height:34px; border-radius:9px;
-  background:rgba(80,30,160,0.32);
-  border:1px solid rgba(160,90,240,0.42);
-  cursor:pointer;
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:5px;
-  z-index:99999;
-  transition:all 0.18s ease;
-  box-shadow:0 2px 14px rgba(80,20,160,0.30);
-}}
-#hbtn:hover {{
-  background:rgba(110,45,210,0.45);
-  border-color:rgba(200,130,255,0.55);
-  box-shadow:0 4px 20px rgba(100,30,200,0.40);
-}}
-.hbar {{
-  display:block; width:15px; height:2px;
-  background:rgba(220,190,255,0.88);
-  border-radius:2px;
-  transition:all 0.24s ease;
-}}
-#hbtn.open .hbar:nth-child(1) {{ transform:rotate(45deg) translate(5px,5px); }}
-#hbtn.open .hbar:nth-child(2) {{ opacity:0; transform:scaleX(0); }}
-#hbtn.open .hbar:nth-child(3) {{ transform:rotate(-45deg) translate(5px,-5px); }}
-
-/* Sidebar panel */
-#sb {{
-  position:fixed; top:52px; left:0;
-  width:175px; height:calc(100vh - 52px);
-  background:rgba(8,4,22,0.97);
-  border-right:1px solid rgba(130,65,210,0.24);
-  box-shadow:5px 0 36px rgba(60,10,130,0.32);
-  transform:translateX(-100%);
-  transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
-  padding:60px 10px 20px;
-  display:flex; flex-direction:column; gap:0;
-  z-index:9998;
-  backdrop-filter:blur(20px);
-}}
-#sb.open {{ transform:translateX(0); }}
-
-/* Nav label */
-.nv-label {{
-  font-size:0.52rem; color:rgba(180,140,255,0.38);
-  text-transform:uppercase; letter-spacing:1.6px;
-  padding:0 6px 8px; margin-bottom:6px;
-  border-bottom:1px solid rgba(130,65,210,0.16);
-  font-family:'DM Mono',monospace;
-}}
-
-/* Nav items */
-.nv-item {{
-  display:flex; align-items:center; gap:8px;
-  padding:9px 12px; border-radius:9px;
-  font-size:0.78rem; font-weight:500;
-  color:rgba(200,175,255,0.78);
-  cursor:pointer; user-select:none;
-  transition:all 0.14s ease;
-  border:1px solid transparent;
-  margin-bottom:3px;
-}}
-.nv-item:hover {{
-  background:rgba(110,45,210,0.22);
-  border-color:rgba(180,100,255,0.28);
-  color:#DCC8FF;
-}}
-.nv-item.active {{
-  background:rgba(120,50,220,0.28);
-  border-color:rgba(180,100,255,0.40);
-  color:#E0CCFF;
-}}
-.nv-item.new {{
-  background:rgba(37,99,235,0.14);
-  border-color:rgba(59,130,246,0.28);
-  color:#93C5FD;
-}}
-.nv-item.new:hover {{
-  background:rgba(37,99,235,0.24);
-  border-color:rgba(59,130,246,0.45);
-  color:#BAE6FD;
-}}
-.nv-icon {{ font-size:0.88rem; width:18px; text-align:center; flex-shrink:0; }}
-
-/* Overlay */
-#ov {{
-  position:fixed; inset:0; z-index:9997;
-  background:rgba(0,0,0,0);
-  pointer-events:none;
-  transition:background 0.28s ease;
-}}
-#ov.open {{
-  background:rgba(0,0,0,0.38);
-  pointer-events:auto;
-}}
-</style>
-</head>
-<body>
-
-<div id="ov" onclick="closeSb()"></div>
-
-<button id="hbtn" onclick="toggleSb()">
-  <span class="hbar"></span>
-  <span class="hbar"></span>
-  <span class="hbar"></span>
-</button>
-
-<div id="sb">
-  <div class="nv-label">Navigation</div>
-  <div class="nv-item {'active' if st.session_state.get('show_history_panel') else ''}" onclick="sendAction('history')">
-    <span class="nv-icon">🕐</span> History
-  </div>
-  <div class="nv-item new" onclick="sendAction('new_chat')">
-    <span class="nv-icon">✦</span> New Chat
-  </div>
-  <div class="nv-item {'active' if st.session_state.get('show_settings_panel') else ''}" onclick="sendAction('settings')">
-    <span class="nv-icon">⚙</span> Settings
-  </div>
-  <div class="nv-item" onclick="sendAction('dashboard')">
-    <span class="nv-icon">⊞</span> Dashboard
-  </div>
-</div>
-
-<script>
-var isOpen = false;
-
-function toggleSb() {{
-  isOpen ? closeSb() : openSb();
-}}
-function openSb() {{
-  isOpen = true;
-  document.getElementById('sb').classList.add('open');
-  document.getElementById('ov').classList.add('open');
-  document.getElementById('hbtn').classList.add('open');
-}}
-function closeSb() {{
-  isOpen = false;
-  document.getElementById('sb').classList.remove('open');
-  document.getElementById('ov').classList.remove('open');
-  document.getElementById('hbtn').classList.remove('open');
-}}
-function sendAction(action) {{
-  closeSb();
-  // Post message to parent Streamlit window
-  window.parent.postMessage({{type:'streamlit:setComponentValue', value:action}}, '*');
-}}
-document.addEventListener('keydown', function(e){{
-  if(e.key==='Escape') closeSb();
-}});
-</script>
-</body>
-</html>
-""", height=0, scrolling=False)
-
-    # ── Handle sidebar actions from component ─────────────────────────────
-    # Since components.html can't directly call st.rerun, we use query params
-    _sb_action = st.query_params.get("_sb", "")
-    if _sb_action:
-        try: del st.query_params["_sb"]
-        except: pass
-        if _sb_action == "history":
-            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-            st.session_state.show_settings_panel = False; st.rerun()
-        elif _sb_action == "settings":
-            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-            st.session_state.show_history_panel = False; st.rerun()
-        elif _sb_action == "dashboard":
-            st.session_state.view = "dashboard"; st.rerun()
-        elif _sb_action == "new_chat":
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.show_uploader = False
-            st.session_state.attached_file_name = ""
-            st.rerun()
-
-    # ── JS: wire component postMessage → query param → rerun ─────────────
+    # ── Hamburger button — real st.button, always works ──────────────────
+    _sb_icon = "✕" if st.session_state.sb_open else "☰"
     st.markdown("""
-    <script>
-    window.addEventListener('message', function(e) {
-      if (!e.data || e.data.type !== 'streamlit:setComponentValue') return;
-      var action = e.data.value;
-      if (!action) return;
-      var url = new URL(window.location.href);
-      url.searchParams.set('_sb', action);
-      window.location.href = url.toString();
-    });
-    </script>
+    <style>
+    /* Position the hamburger button fixed at top-left */
+    div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stHorizontalBlock"] > div[data-testid="column"] > div > div > button[kind="secondary"]#hamburger-anchor) {
+      position: fixed !important; top: 58px !important; left: 10px !important;
+      z-index: 10001 !important; width: 36px !important;
+    }
+    /* Hamburger button style */
+    .hbtn-wrap .stButton > button {
+      position: fixed !important;
+      top: 58px !important; left: 10px !important;
+      z-index: 10001 !important;
+      width: 36px !important; height: 36px !important;
+      min-width: 36px !important; min-height: 36px !important;
+      border-radius: 9px !important;
+      background: rgba(80,30,160,0.30) !important;
+      border: 1px solid rgba(160,90,240,0.40) !important;
+      color: rgba(220,190,255,0.90) !important;
+      font-size: 1.1rem !important; font-weight: 400 !important;
+      padding: 0 !important; line-height: 1 !important;
+      box-shadow: 0 2px 14px rgba(80,20,160,0.28) !important;
+      transition: all 0.16s ease !important;
+    }
+    .hbtn-wrap .stButton > button:hover {
+      background: rgba(110,45,210,0.45) !important;
+      border-color: rgba(200,130,255,0.55) !important;
+      box-shadow: 0 4px 22px rgba(100,30,200,0.42) !important;
+      transform: none !important;
+    }
+    /* Sidebar panel */
+    .chat-sidebar-panel {
+      position: fixed !important;
+      top: 52px !important; left: 0 !important;
+      width: 185px !important;
+      height: calc(100vh - 52px) !important;
+      z-index: 9998 !important;
+      background: rgba(8,4,22,0.97) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+      border-right: 1px solid rgba(130,65,210,0.24) !important;
+      box-shadow: 5px 0 36px rgba(60,10,130,0.32) !important;
+      padding: 16px 10px 20px !important;
+      display: flex !important; flex-direction: column !important; gap: 4px !important;
+      transform: translateX(-100%) !important;
+      transition: transform 0.28s cubic-bezier(0.22,0.61,0.36,1) !important;
+    }
+    .chat-sidebar-panel.sb-is-open {
+      transform: translateX(0) !important;
+    }
+    /* Overlay */
+    .sb-overlay-div {
+      position: fixed !important; inset: 0 !important;
+      z-index: 9997 !important;
+      background: rgba(0,0,0,0) !important;
+      pointer-events: none !important;
+      transition: background 0.28s ease !important;
+      display: none !important;
+    }
+    .sb-overlay-div.sb-is-open {
+      display: block !important;
+      background: rgba(0,0,0,0.38) !important;
+      pointer-events: auto !important;
+    }
+    /* Nav label inside sidebar */
+    .sb-nav-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.52rem; color: rgba(180,140,255,0.38);
+      text-transform: uppercase; letter-spacing: 1.6px;
+      padding: 2px 8px 10px;
+      border-bottom: 1px solid rgba(130,65,210,0.16);
+      margin-bottom: 6px;
+    }
+    /* Nav item buttons inside sidebar */
+    .chat-sidebar-panel .stButton > button {
+      border-radius: 9px !important;
+      padding: 8px 12px !important;
+      font-size: 0.78rem !important; font-weight: 500 !important;
+      height: 36px !important; min-height: 36px !important;
+      border: 1px solid rgba(140,80,220,0.16) !important;
+      background: rgba(60,20,120,0.16) !important;
+      color: rgba(200,175,255,0.78) !important;
+      box-shadow: none !important;
+      transition: all 0.14s !important;
+      width: 100% !important; text-align: left !important;
+      justify-content: flex-start !important;
+    }
+    .chat-sidebar-panel .stButton > button:hover {
+      background: rgba(110,45,210,0.26) !important;
+      border-color: rgba(180,100,255,0.35) !important;
+      color: #E0CCFF !important; transform: none !important;
+    }
+    .chat-sidebar-panel .sb-new .stButton > button {
+      background: rgba(37,99,235,0.14) !important;
+      border-color: rgba(59,130,246,0.28) !important;
+      color: #93C5FD !important;
+    }
+    .chat-sidebar-panel .sb-active .stButton > button {
+      background: rgba(120,50,220,0.26) !important;
+      border-color: rgba(180,100,255,0.40) !important;
+      color: #D4AAFF !important;
+    }
+    .chat-sidebar-panel [data-testid="column"] { padding: 0 !important; }
+    </style>
     """, unsafe_allow_html=True)
+
+    # Render hamburger button
+    st.markdown('<div class="hbtn-wrap">', unsafe_allow_html=True)
+    if st.button(_sb_icon, key="_hbtn"):
+        st.session_state.sb_open = not st.session_state.sb_open
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Overlay (click to close)
+    _sb_cls = "sb-is-open" if st.session_state.sb_open else ""
+    st.markdown(f'<div class="sb-overlay-div {_sb_cls}" onclick="document.querySelector(\'.hbtn-wrap button\').click()"></div>', unsafe_allow_html=True)
+
+    # ── SIDEBAR PANEL ─────────────────────────────────────────────────────
+    st.markdown(f'<div class="chat-sidebar-panel {_sb_cls}">', unsafe_allow_html=True)
+    st.markdown('<div class="sb-nav-label">Navigation</div>', unsafe_allow_html=True)
+
+    _hcls = "sb-active" if st.session_state.get("show_history_panel") else ""
+    st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
+    if st.button("🕐  History", key="_btn_history"):
+        st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+        st.session_state.show_settings_panel = False
+        st.session_state.sb_open = False; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="sb-new">', unsafe_allow_html=True)
+    if st.button("✦  New Chat", key="_btn_new_chat"):
+        if st.session_state.chat_messages:
+            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+            st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+        st.session_state.chat_messages = []
+        st.session_state.show_uploader = False
+        st.session_state.attached_file_name = ""
+        st.session_state.sb_open = False; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    _scls = "sb-active" if st.session_state.get("show_settings_panel") else ""
+    st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
+    if st.button("⚙  Settings", key="_btn_settings"):
+        st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+        st.session_state.show_history_panel = False
+        st.session_state.sb_open = False; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.button("⊞  Dashboard", key="_btn_dashboard"):
+        st.session_state.view = "dashboard"
+        st.session_state.sb_open = False; st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close sidebar panel
 
     # ── Rotating animated placeholder injection ───────────────────────────
     st.markdown("""

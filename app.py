@@ -143,6 +143,7 @@ _DEFAULTS: dict = {
     "voice_transcript":  "",
     "_voice_submit":     False,
     "show_settings_panel": False,
+    "show_history_panel":  False,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -1162,12 +1163,11 @@ if view == "chat":
             except Exception: pass
             st.rerun()
 
-    # ── Handle navbar button clicks via query params ───────────────────────
-    _qp = st.query_params
-    _nav_action = _qp.get("nav_action", "")
-    if _nav_action == "new_chat":
-        try: del st.query_params["nav_action"]
-        except Exception: pass
+    # ── Navbar button actions via session_state flags (NOT query params) ──────
+    # Buttons set ss flags directly → rerun → flags read here → action taken
+    # This avoids the URL-replace bug where ?nav_action= clears session state
+    if st.session_state.get("_nav_new_chat"):
+        st.session_state._nav_new_chat = False
         if st.session_state.chat_messages:
             fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
             st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
@@ -1175,136 +1175,472 @@ if view == "chat":
         st.session_state.show_uploader = False
         st.session_state.attached_file_name = ""
         st.rerun()
-    elif _nav_action == "dashboard":
-        try: del st.query_params["nav_action"]
-        except Exception: pass
+
+    if st.session_state.get("_nav_dashboard"):
+        st.session_state._nav_dashboard = False
         st.session_state.view = "dashboard"
         st.rerun()
-    elif _nav_action == "settings":
-        try: del st.query_params["nav_action"]
-        except Exception: pass
-        st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-        st.rerun()
 
-    # ── PURE HTML FIXED NAVBAR — 100% works in Streamlit ─────────────────
-    # All 3 buttons are real <a> tags that set query params → triggers rerun
-    _base_url = "?"  # relative URL, works on any host
-    st.markdown(f"""
+    # ── FIXED NAVBAR — pure Streamlit buttons inside columns ─────────────
+    # Rendered BEFORE content so spacer pushes content down
+    st.markdown("""
     <style>
-    .askmnt-navbar {{
+    /* Fixed navbar strip */
+    div[data-testid="stVerticalBlock"] > div:first-child > div[data-testid="stHorizontalBlock"].navbar-row {
+      position: fixed !important; top:0 !important; left:0 !important; right:0 !important;
+    }
+    .askmnt-navbar {
       position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 99999;
+      top: 0; left: 0; right: 0; z-index: 99999;
       height: 52px;
-      background: rgba(7,11,20,0.97);
+      background: rgba(7,11,20,0.98);
       backdrop-filter: blur(24px) saturate(200%);
       -webkit-backdrop-filter: blur(24px) saturate(200%);
       border-bottom: 1px solid rgba(59,130,246,0.18);
-      box-shadow: 0 2px 20px rgba(0,0,0,0.60);
-      display: flex;
-      align-items: center;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.65);
+      display: flex; align-items: center;
       justify-content: space-between;
-      padding: 0 22px;
-    }}
-    .askmnt-navbar-logo {{
-      display: flex; align-items: center; gap: 9px;
-      text-decoration: none;
-    }}
-    .askmnt-navbar-logo-icon {{
-      width: 28px; height: 28px; border-radius: 8px;
-      background: linear-gradient(135deg,#2563EB,#4F46E5);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.82rem; font-weight: 700; color: white;
-      box-shadow: 0 3px 10px rgba(37,99,235,0.35);
-      flex-shrink: 0;
-    }}
-    .askmnt-navbar-logo-text {{
-      font-family: 'DM Mono', monospace;
-      font-size: 0.88rem; color: #E2E8F0; font-weight: 500;
-    }}
-    .askmnt-navbar-logo-dot {{
-      font-size: 0.52rem; color: #10B981;
-      font-weight: 700; margin-left: 3px;
-    }}
-    .askmnt-navbar-actions {{
-      display: flex; align-items: center; gap: 8px;
-    }}
-    .askmnt-nav-btn {{
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.78rem; font-weight: 500;
-      cursor: pointer; text-decoration: none;
-      transition: all 0.15s ease;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.06);
-      color: rgba(226,232,240,0.78);
-      white-space: nowrap;
-    }}
-    .askmnt-nav-btn:hover {{
-      background: rgba(59,130,246,0.18);
-      border-color: rgba(59,130,246,0.40);
-      color: #BAE6FD;
-    }}
-    .askmnt-nav-btn-primary {{
-      background: rgba(59,130,246,0.12);
-      border-color: rgba(59,130,246,0.30);
-      color: #93C5FD;
-    }}
-    .askmnt-nav-btn-primary:hover {{
-      background: rgba(59,130,246,0.25);
-      border-color: rgba(59,130,246,0.55);
-      color: #BAE6FD;
-    }}
-    /* Spacer so content doesn't hide behind fixed navbar */
-    .askmnt-navbar-spacer {{ height: 60px; width: 100%; }}
-    /* Gradient divider below navbar */
-    .askmnt-navbar-divider {{
-      height: 1px;
-      background: linear-gradient(90deg,transparent,rgba(59,130,246,0.30),rgba(34,211,238,0.14),transparent);
-    }}
-    </style>
+      padding: 0 20px;
+    }
+    .askmnt-nb-left { display:flex; align-items:center; gap:8px; }
+    .askmnt-nb-logo-icon {
+      width:28px; height:28px; border-radius:8px;
+      background:linear-gradient(135deg,#2563EB,#4F46E5);
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.82rem; font-weight:700; color:#fff;
+      box-shadow:0 3px 10px rgba(37,99,235,0.35); flex-shrink:0;
+    }
+    .askmnt-nb-logo-name {
+      font-family:'DM Mono',monospace; font-size:0.87rem;
+      color:#E2E8F0; font-weight:500;
+    }
+    .askmnt-nb-logo-dot { font-size:0.50rem; color:#10B981; font-weight:700; margin-left:2px; }
+    .askmnt-nb-right { display:flex; align-items:center; gap:7px; }
+    /* Pill button base */
+    .nb-pill {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:5px 14px; border-radius:999px; cursor:pointer;
+      font-family:'Outfit',sans-serif; font-size:0.77rem; font-weight:500;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.06);
+      color:rgba(226,232,240,0.80);
+      transition:all 0.15s ease; white-space:nowrap; text-decoration:none;
+      user-select:none;
+    }
+    .nb-pill:hover { background:rgba(59,130,246,0.18); border-color:rgba(59,130,246,0.40); color:#BAE6FD; }
+    .nb-pill-blue { background:rgba(59,130,246,0.13); border-color:rgba(59,130,246,0.32); color:#93C5FD; }
+    .nb-pill-blue:hover { background:rgba(59,130,246,0.26); border-color:rgba(59,130,246,0.58); color:#BAE6FD; }
+    .askmnt-navbar-spacer { height:60px; width:100%; }
+    .askmnt-navbar-divider {
+      height:1px;
+      background:linear-gradient(90deg,transparent,rgba(59,130,246,0.28),rgba(34,211,238,0.12),transparent);
+      margin-bottom:4px;
+    }
 
+    /* ── Chat History Modal ── */
+    .ch-overlay {
+      position:fixed; inset:0; z-index:99998;
+      background:rgba(0,0,0,0.55);
+      backdrop-filter:blur(6px);
+      display:flex; align-items:flex-start; justify-content:center;
+      padding-top:64px;
+      animation:fadeIn 0.18s ease;
+    }
+    .ch-panel {
+      width:min(520px,92vw);
+      max-height:72vh;
+      background:#0B1120;
+      border:1px solid rgba(59,130,246,0.22);
+      border-radius:18px;
+      box-shadow:0 24px 80px rgba(0,0,0,0.70);
+      overflow:hidden;
+      display:flex; flex-direction:column;
+      animation:slideDown 0.22s cubic-bezier(0.22,0.61,0.36,1);
+    }
+    .ch-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      flex-shrink:0;
+    }
+    .ch-title {
+      font-family:'DM Mono',monospace; font-size:0.72rem;
+      color:rgba(148,163,184,0.55); text-transform:uppercase; letter-spacing:1.2px;
+    }
+    .ch-close {
+      width:26px; height:26px; border-radius:50%;
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10);
+      color:rgba(148,163,184,0.60); font-size:0.82rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all 0.14s;
+    }
+    .ch-close:hover { background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.35); color:#FCA5A5; }
+    .ch-list { overflow-y:auto; padding:12px 14px; flex:1; }
+    .ch-list::-webkit-scrollbar { width:3px; }
+    .ch-list::-webkit-scrollbar-thumb { background:rgba(59,130,246,0.25); border-radius:3px; }
+    .ch-capsule {
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(255,255,255,0.030);
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px; padding:11px 14px; margin-bottom:8px;
+      transition:all 0.14s; cursor:pointer;
+    }
+    .ch-capsule:hover { background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.22); }
+    .ch-capsule-pinned {
+      border-color:rgba(245,158,11,0.28);
+      background:rgba(245,158,11,0.05);
+    }
+    .ch-capsule-label {
+      font-size:0.82rem; color:rgba(226,232,240,0.80);
+      font-family:'Outfit',sans-serif; font-weight:500;
+      flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      margin-right:10px;
+    }
+    .ch-capsule-actions { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+    .ch-action-btn {
+      font-size:0.68rem; padding:3px 9px; border-radius:6px; cursor:pointer;
+      font-family:'Outfit',sans-serif; font-weight:600; border:1px solid;
+      transition:all 0.14s; background:transparent;
+    }
+    .ch-pin-btn { color:#FCD34D; border-color:rgba(245,158,11,0.28); }
+    .ch-pin-btn:hover { background:rgba(245,158,11,0.14); }
+    .ch-del-btn { color:rgba(252,165,165,0.70); border-color:rgba(239,68,68,0.20); }
+    .ch-del-btn:hover { background:rgba(239,68,68,0.14); color:#FCA5A5; }
+    .ch-empty {
+      text-align:center; padding:36px 20px;
+      font-size:0.80rem; color:rgba(148,163,184,0.40);
+      font-family:'Outfit',sans-serif;
+    }
+    @keyframes slideDown { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+    /* ── Settings Modal ── */
+    .st-modal-overlay {
+      position:fixed; inset:0; z-index:99998;
+      background:rgba(0,0,0,0.55);
+      backdrop-filter:blur(6px);
+      display:flex; align-items:flex-start; justify-content:center;
+      padding-top:64px;
+      animation:fadeIn 0.18s ease;
+    }
+    .st-modal-panel {
+      width:min(480px,92vw);
+      background:#0B1120;
+      border:1px solid rgba(59,130,246,0.22);
+      border-radius:18px;
+      box-shadow:0 24px 80px rgba(0,0,0,0.70);
+      overflow:hidden;
+      animation:slideDown 0.22s cubic-bezier(0.22,0.61,0.36,1);
+    }
+    .st-modal-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px 14px;
+      border-bottom:1px solid rgba(255,255,255,0.06);
+    }
+    .st-modal-title {
+      font-family:'DM Mono',monospace; font-size:0.72rem;
+      color:rgba(148,163,184,0.55); text-transform:uppercase; letter-spacing:1.2px;
+    }
+    .st-modal-body { padding:18px 20px 22px; }
+    .st-setting-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);
+    }
+    .st-setting-row:last-child { border-bottom:none; }
+    .st-setting-label {
+      font-family:'Outfit',sans-serif; font-size:0.86rem;
+      color:rgba(226,232,240,0.80); font-weight:500;
+    }
+    .st-setting-desc {
+      font-size:0.68rem; color:rgba(148,163,184,0.45); margin-top:2px;
+    }
+    .theme-toggle-group { display:flex; gap:6px; }
+    .theme-btn {
+      padding:5px 14px; border-radius:8px; cursor:pointer;
+      font-family:'Outfit',sans-serif; font-size:0.75rem; font-weight:600;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(255,255,255,0.05); color:rgba(226,232,240,0.60);
+      transition:all 0.14s;
+    }
+    .theme-btn-active-dark {
+      background:rgba(15,23,42,0.90); border-color:rgba(59,130,246,0.45);
+      color:#60A5FA;
+    }
+    .theme-btn-active-light {
+      background:rgba(240,244,255,0.15); border-color:rgba(148,163,184,0.40);
+      color:#E2E8F0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Render the fixed navbar HTML (logo + buttons) ────────────────────
+    _hist_active = "nb-pill-blue" if st.session_state.get("show_history_panel") else ""
+    _sets_active = "nb-pill-blue" if st.session_state.get("show_settings_panel") else ""
+    st.markdown(f"""
     <div class="askmnt-navbar">
-      <div class="askmnt-navbar-logo">
-        <div class="askmnt-navbar-logo-icon">A</div>
-        <span class="askmnt-navbar-logo-text">AskMNIT</span>
-        <span class="askmnt-navbar-logo-dot">&#9679; AI</span>
+      <div class="askmnt-nb-left">
+        <div class="askmnt-nb-logo-icon">A</div>
+        <span class="askmnt-nb-logo-name">AskMNIT</span>
+        <span class="askmnt-nb-logo-dot">&#9679; AI</span>
       </div>
-      <div class="askmnt-navbar-actions">
-        <a class="askmnt-nav-btn askmnt-nav-btn-primary"
-           href="?nav_action=new_chat"
-           onclick="window.location.href='?nav_action=new_chat';return false;">
-          + New Chat
-        </a>
-        <a class="askmnt-nav-btn"
-           href="?nav_action=settings"
-           onclick="window.location.href='?nav_action=settings';return false;">
-          ⚙ Settings
-        </a>
-        <a class="askmnt-nav-btn"
-           href="?nav_action=dashboard"
-           onclick="window.location.href='?nav_action=dashboard';return false;">
-          Dashboard
-        </a>
+      <div class="askmnt-nb-right">
+        <span class="nb-pill {_hist_active}" onclick="stAction('history')" style="cursor:pointer;">🕐 History</span>
+        <span class="nb-pill nb-pill-blue" onclick="stAction('new_chat')" style="cursor:pointer;">+ New Chat</span>
+        <span class="nb-pill {_sets_active}" onclick="stAction('settings')" style="cursor:pointer;">⚙ Settings</span>
+        <span class="nb-pill" onclick="stAction('dashboard')" style="cursor:pointer;">Dashboard</span>
       </div>
     </div>
     <div class="askmnt-navbar-spacer"></div>
     <div class="askmnt-navbar-divider"></div>
+
+    <script>
+    function stAction(action) {{
+      // Use Streamlit's internal mechanism: set a hidden input value and trigger change
+      // This works by posting a message to the parent Streamlit frame
+      var inputs = window.parent.document.querySelectorAll('input[type="text"]');
+      // Fallback: use URL with replaceState so session state is preserved
+      var url = new URL(window.parent.location.href);
+      url.searchParams.set('_nb', action);
+      window.parent.history.replaceState(null, '', url.toString());
+      // Trigger Streamlit rerun via the keyboard event trick
+      var evt = new KeyboardEvent('keydown', {{key:'Enter', bubbles:true}});
+      // Best approach: directly update the hidden stActionKey input
+      var hiddenInputs = window.parent.document.querySelectorAll('[data-testid="stTextInput"] input');
+      for (var i=0; i<hiddenInputs.length; i++) {{
+        if (hiddenInputs[i].getAttribute('aria-label') === '__nb_action__') {{
+          var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+          nativeInputValueSetter.call(hiddenInputs[i], action);
+          hiddenInputs[i].dispatchEvent(new Event('input', {{bubbles:true}}));
+          break;
+        }}
+      }}
+    }}
+    </script>
     """, unsafe_allow_html=True)
 
-    # Settings panel (replaces popover — shown inline below navbar)
+    # ── Hidden text input to receive navbar clicks ────────────────────────
+    # This is the RELIABLE way — no query param URL bug
+    _nb_val = st.text_input("__nb_action__", value="", key="_nb_action_input",
+                             label_visibility="collapsed")
+    if _nb_val:
+        # Clear it immediately and process action
+        st.session_state["_nb_action_input"] = ""
+        if _nb_val == "new_chat":
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        elif _nb_val == "dashboard":
+            st.session_state.view = "dashboard"; st.rerun()
+        elif _nb_val == "settings":
+            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+            st.session_state.show_history_panel = False
+            st.rerun()
+        elif _nb_val == "history":
+            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+            st.session_state.show_settings_panel = False
+            st.rerun()
+
+    # ── Actual working navbar with st.columns + st.button ────────────────
+    # Since JS hidden input trick is unreliable, use the most robust Streamlit
+    # approach: render REAL st.buttons absolutely positioned over the navbar
+    st.markdown("""
+    <style>
+    /* Hide the hidden nb_action input from view */
+    [data-testid="stTextInput"]:has(input[aria-label="__nb_action__"]) {
+      position:fixed !important; top:-999px !important; opacity:0 !important;
+      pointer-events:none !important; height:0 !important;
+    }
+    /* Position the navbar button row fixed at top */
+    .nb-btn-row {
+      position: fixed !important;
+      top: 6px !important; right: 16px !important;
+      z-index: 100000 !important;
+      display: flex !important; align-items: center !important; gap: 6px !important;
+    }
+    .nb-btn-row .stButton > button {
+      border-radius: 999px !important;
+      padding: 5px 13px !important;
+      font-size: 0.77rem !important;
+      font-weight: 500 !important;
+      border: 1px solid rgba(255,255,255,0.10) !important;
+      background: rgba(255,255,255,0.06) !important;
+      color: rgba(226,232,240,0.80) !important;
+      box-shadow: none !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      line-height: 1 !important;
+    }
+    .nb-btn-row .stButton > button:hover {
+      background: rgba(59,130,246,0.18) !important;
+      border-color: rgba(59,130,246,0.40) !important;
+      color: #BAE6FD !important;
+      transform: none !important;
+    }
+    .nb-btn-new .stButton > button {
+      background: rgba(59,130,246,0.13) !important;
+      border-color: rgba(59,130,246,0.32) !important;
+      color: #93C5FD !important;
+    }
+    .nb-btn-active .stButton > button {
+      background: rgba(59,130,246,0.22) !important;
+      border-color: rgba(59,130,246,0.50) !important;
+      color: #BAE6FD !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Render actual working buttons in a fixed-positioned container
+    st.markdown('<div class="nb-btn-row">', unsafe_allow_html=True)
+    _nb1, _nb2, _nb3, _nb4 = st.columns([1, 1, 1, 1])
+    with _nb1:
+        _hist_cls = "nb-btn-active" if st.session_state.get("show_history_panel") else ""
+        st.markdown(f'<div class="{_hist_cls}">', unsafe_allow_html=True)
+        if st.button("🕐 History", key="_btn_history"):
+            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+            st.session_state.show_settings_panel = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb2:
+        st.markdown('<div class="nb-btn-new">', unsafe_allow_html=True)
+        if st.button("+ New Chat", key="_btn_new_chat"):
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb3:
+        _sets_cls = "nb-btn-active" if st.session_state.get("show_settings_panel") else ""
+        st.markdown(f'<div class="{_sets_cls}">', unsafe_allow_html=True)
+        if st.button("⚙ Settings", key="_btn_settings"):
+            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+            st.session_state.show_history_panel = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb4:
+        if st.button("Dashboard", key="_btn_dashboard"):
+            st.session_state.view = "dashboard"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── CHAT HISTORY PANEL ────────────────────────────────────────────────
+    if st.session_state.get("show_history_panel", False):
+        all_sessions = st.session_state.chat_sessions
+        st.markdown('<div style="max-width:560px;margin:0 auto 14px;">', unsafe_allow_html=True)
+        with st.expander("🕐 Chat History", expanded=True):
+            if not all_sessions:
+                st.markdown('<div style="text-align:center;padding:28px 0;font-size:0.82rem;color:rgba(148,163,184,0.40);">No saved chats yet. Start a conversation!</div>', unsafe_allow_html=True)
+            else:
+                # Pinned first
+                _pinned   = [(i,s) for i,s in enumerate(all_sessions) if s.get("pinned")]
+                _unpinned = [(i,s) for i,s in enumerate(all_sessions) if not s.get("pinned")]
+                for _grp_label, _grp in [("📌 Pinned", _pinned), ("Recent", _unpinned)]:
+                    if not _grp: continue
+                    st.markdown(f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.40);text-transform:uppercase;letter-spacing:1px;padding:4px 0 6px;">{_grp_label}</div>', unsafe_allow_html=True)
+                    for _i, _sess in reversed(_grp):
+                        _label = _sess.get("label","Chat")[:48]
+                        _is_pinned = _sess.get("pinned", False)
+                        _c1, _c2, _c3, _c4 = st.columns([5, 0.9, 0.9, 0.9])
+                        with _c1:
+                            st.markdown(
+                                f'<div style="background:rgba(255,255,255,0.03);border:1px solid {"rgba(245,158,11,0.25)" if _is_pinned else "rgba(255,255,255,0.07)"};'
+                                f'border-radius:10px;padding:10px 14px;font-size:0.82rem;color:rgba(226,232,240,0.80);'
+                                f'font-family:\'Outfit\',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                                f'{"📌 " if _is_pinned else ""}{_label}</div>',
+                                unsafe_allow_html=True
+                            )
+                        with _c2:
+                            if st.button("↩", key=f"_load_sess_{_i}", help="Load chat"):
+                                st.session_state.chat_messages = list(_sess["messages"])
+                                st.session_state.show_history_panel = False
+                                st.rerun()
+                        with _c3:
+                            _pin_lbl = "📌" if not _is_pinned else "📍"
+                            if st.button(_pin_lbl, key=f"_pin_sess_{_i}", help="Pin/Unpin"):
+                                st.session_state.chat_sessions[_i]["pinned"] = not _is_pinned
+                                st.rerun()
+                        with _c4:
+                            if st.button("🗑", key=f"_del_sess_{_i}", help="Delete"):
+                                st.session_state.chat_sessions.pop(_i)
+                                st.rerun()
+            # Clear all button
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            if all_sessions:
+                if st.button("🗑 Clear All History", key="_clear_all_hist"):
+                    st.session_state.chat_sessions = []
+                    st.toast("History cleared!", icon="🗑")
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── SETTINGS PANEL ────────────────────────────────────────────────────
     if st.session_state.get("show_settings_panel", False):
-        with st.expander("⚙ Bot Settings", expanded=True):
-            _sc1, _sc2, _sc3 = st.columns([2, 2, 1])
-            with _sc1:
-                st.session_state.voice_output = st.toggle("Voice Output", value=st.session_state.voice_output, key="toggle_voice")
-            with _sc2:
-                st.session_state.strict_mode = st.toggle("Strict Mode", value=st.session_state.strict_mode, key="toggle_strict")
-            with _sc3:
-                if st.button("Close", key="close_settings_panel"):
-                    st.session_state.show_settings_panel = False; st.rerun()
+        st.markdown('<div style="max-width:520px;margin:0 auto 14px;">', unsafe_allow_html=True)
+        with st.expander("⚙ Chatbot Settings", expanded=True):
+            st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(148,163,184,0.40);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;">Customize AskMNIT</div>', unsafe_allow_html=True)
+
+            # Theme
+            _ts1, _ts2 = st.columns([2, 3])
+            with _ts1:
+                st.markdown('<div style="font-size:0.84rem;color:rgba(226,232,240,0.80);font-weight:500;padding-top:6px;">🎨 Interface Theme</div><div style="font-size:0.68rem;color:rgba(148,163,184,0.42);margin-top:2px;">Dark or light mode</div>', unsafe_allow_html=True)
+            with _ts2:
+                _t1, _t2 = st.columns(2)
+                with _t1:
+                    _d_active = st.session_state.get("chat_theme","dark") == "dark"
+                    st.markdown(f'<div class="{"nb-btn-active" if _d_active else ""}">', unsafe_allow_html=True)
+                    if st.button("🌙 Dark", key="_theme_dark", use_container_width=True):
+                        st.session_state.chat_theme = "dark"; st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+                with _t2:
+                    _l_active = st.session_state.get("chat_theme","dark") == "light"
+                    st.markdown(f'<div class="{"nb-btn-active" if _l_active else ""}">', unsafe_allow_html=True)
+                    if st.button("☀️ Light", key="_theme_light", use_container_width=True):
+                        st.session_state.chat_theme = "light"; st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("<hr style='border-color:rgba(255,255,255,0.06);margin:10px 0;'>", unsafe_allow_html=True)
+
+            # Response style
+            _rs1, _rs2 = st.columns([2, 3])
+            with _rs1:
+                st.markdown('<div style="font-size:0.84rem;color:rgba(226,232,240,0.80);font-weight:500;padding-top:6px;">💬 Response Style</div><div style="font-size:0.68rem;color:rgba(148,163,184,0.42);margin-top:2px;">How AI replies</div>', unsafe_allow_html=True)
+            with _rs2:
+                _new_style = st.selectbox("", ["Concise","Detailed","Bullet Points"],
+                    index=["Concise","Detailed","Bullet Points"].index(st.session_state.get("response_style","Concise")),
+                    key="_sets_response_style", label_visibility="collapsed")
+                if _new_style != st.session_state.response_style:
+                    st.session_state.response_style = _new_style; st.rerun()
+
+            st.markdown("<hr style='border-color:rgba(255,255,255,0.06);margin:10px 0;'>", unsafe_allow_html=True)
+
+            # Toggles
+            _tog1, _tog2 = st.columns(2)
+            with _tog1:
+                st.session_state.voice_output = st.toggle("🔊 Voice Output", value=st.session_state.voice_output, key="_sets_voice")
+            with _tog2:
+                st.session_state.strict_mode = st.toggle("🎓 Strict Academic Mode", value=st.session_state.strict_mode, key="_sets_strict")
+
+            st.markdown("<hr style='border-color:rgba(255,255,255,0.06);margin:10px 0;'>", unsafe_allow_html=True)
+
+            # Clear chats
+            _cl1, _cl2 = st.columns([3, 1])
+            with _cl1:
+                st.markdown('<div style="font-size:0.84rem;color:rgba(226,232,240,0.80);font-weight:500;padding-top:6px;">🗑 Clear All Chats</div><div style="font-size:0.68rem;color:rgba(148,163,184,0.42);margin-top:2px;">Remove current session messages</div>', unsafe_allow_html=True)
+            with _cl2:
+                if st.button("Clear", key="_sets_clear_chats"):
+                    st.session_state.chat_messages = []
+                    st.session_state.chat_sessions = []
+                    st.session_state.attached_file_name = ""
+                    st.toast("Chats cleared!", icon="🗑"); st.rerun()
+
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if st.button("✕ Close Settings", key="_sets_close", use_container_width=True):
+                st.session_state.show_settings_panel = False; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── FILE UPLOADER PANEL ───────────────────────────────────────────────
     if st.session_state.show_uploader:

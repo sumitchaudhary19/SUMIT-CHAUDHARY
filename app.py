@@ -325,77 +325,157 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .chat-topbar-spacer{height:60px;width:100%;}
 .chat-topbar-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.28),rgba(34,211,238,0.12),transparent);margin-bottom:6px;}
 
-/* Navbar real Streamlit buttons — fixed at top-right, one tight row */
+/* Navbar real Streamlit buttons — vertical stack, upper LEFT corner */
 .nb-real{
-  position:fixed!important;top:0!important;right:0!important;
+  position:fixed!important;
+  top:60px!important;   /* below the topbar */
+  left:12px!important;
   z-index:10000!important;
-  height:52px!important;
-  display:flex!important;align-items:center!important;gap:6px!important;
-  padding-right:20px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:5px!important;
   background:transparent!important;
+  pointer-events:auto!important;
 }
 .nb-real .stButton>button{
-  border-radius:999px!important;padding:5px 15px!important;
-  font-size:0.76rem!important;font-weight:500!important;
-  height:32px!important;min-height:32px!important;line-height:1!important;
-  border:1px solid rgba(255,255,255,0.11)!important;
-  background:rgba(255,255,255,0.06)!important;
-  color:rgba(226,232,240,0.82)!important;
+  border-radius:10px!important;
+  padding:5px 14px!important;
+  font-size:0.74rem!important;font-weight:500!important;
+  height:30px!important;min-height:30px!important;line-height:1!important;
+  border:1px solid rgba(255,255,255,0.10)!important;
+  background:rgba(10,12,28,0.82)!important;
+  color:rgba(200,212,240,0.78)!important;
   box-shadow:none!important;
-  transition:all 0.15s!important;
+  transition:all 0.14s!important;
   white-space:nowrap!important;
+  width:auto!important;
+  min-width:110px!important;
+  backdrop-filter:blur(8px)!important;
 }
-.nb-real .stButton>button:hover{background:rgba(59,130,246,0.18)!important;border-color:rgba(59,130,246,0.42)!important;color:#BAE6FD!important;transform:none!important;}
-.nb-new .stButton>button{background:rgba(59,130,246,0.14)!important;border-color:rgba(59,130,246,0.34)!important;color:#93C5FD!important;}
-.nb-on  .stButton>button{background:rgba(59,130,246,0.22)!important;border-color:rgba(59,130,246,0.52)!important;color:#BAE6FD!important;}
-/* Hide the st.columns wrapper gap/padding so buttons sit flush */
-.nb-real [data-testid="stHorizontalBlock"]{gap:6px!important;flex-wrap:nowrap!important;width:auto!important;}
-.nb-real [data-testid="column"]{padding:0!important;flex:0 0 auto!important;min-width:unset!important;width:auto!important;}
+.nb-real .stButton>button:hover{
+  background:rgba(59,130,246,0.16)!important;
+  border-color:rgba(59,130,246,0.38)!important;
+  color:#BAE6FD!important;transform:none!important;
+}
+.nb-new .stButton>button{
+  background:rgba(59,130,246,0.14)!important;
+  border-color:rgba(59,130,246,0.32)!important;
+  color:#93C5FD!important;
+}
+.nb-on .stButton>button{
+  background:rgba(59,130,246,0.22)!important;
+  border-color:rgba(59,130,246,0.50)!important;
+  color:#BAE6FD!important;
+}
+/* Each column in the vertical stack = auto-width, no stretch */
+.nb-real [data-testid="stVerticalBlock"]{gap:5px!important;}
+.nb-real [data-testid="column"]{padding:0!important;width:auto!important;flex:0 0 auto!important;min-width:unset!important;}
+.nb-real [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:5px!important;align-items:flex-start!important;}
 
 /* ── Chat messages ── */
 [data-testid="stChatMessage"]{background:rgba(255,255,255,0.025)!important;border:1px solid rgba(255,255,255,0.06)!important;border-radius:14px!important;font-family:'Outfit',sans-serif!important;}
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]){background:rgba(37,99,235,0.08)!important;border-color:rgba(59,130,246,0.16)!important;}
 
-/* ── GEMINI BAR ── */
-.gemini-bar [data-testid="stForm"]{background:#1A1E2E!important;border:1.5px solid rgba(255,255,255,0.10)!important;border-radius:28px!important;padding:6px 8px 6px 2px!important;min-height:60px!important;box-shadow:0 4px 32px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.04) inset!important;transition:border-color 0.22s,box-shadow 0.22s!important;}
-.gemini-bar [data-testid="stForm"]:focus-within{border-color:rgba(59,130,246,0.55)!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12),0 6px 40px rgba(37,99,235,0.18)!important;}
+/* ── GEMINI BAR — Purple 3D Premium ── */
+@keyframes bar3dShine {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes barIdleGlow {
+  0%,100% {
+    box-shadow:
+      0 8px 32px rgba(80,20,140,0.55),
+      0 2px 0 rgba(180,100,255,0.18) inset,
+      0 -1px 0 rgba(30,5,60,0.70) inset;
+  }
+  50% {
+    box-shadow:
+      0 8px 48px rgba(120,40,200,0.70),
+      0 0 0 1.5px rgba(160,80,255,0.30),
+      0 0 40px rgba(140,60,220,0.22),
+      0 2px 0 rgba(200,120,255,0.22) inset,
+      0 -1px 0 rgba(30,5,60,0.70) inset;
+  }
+}
+.gemini-bar [data-testid="stForm"]{
+  /* Deep purple base — screenshot 2 color */
+  background: linear-gradient(135deg, #2D1B69 0%, #1E0E4A 40%, #3B1380 100%) !important;
+  border: 1.5px solid rgba(160,80,255,0.35) !important;
+  border-radius: 28px !important;
+  padding: 6px 8px 6px 2px !important;
+  min-height: 60px !important;
+  /* 3D top-highlight + bottom shadow */
+  box-shadow:
+    0 8px 32px rgba(80,20,140,0.55),
+    0 2px 0 rgba(180,100,255,0.18) inset,
+    0 -1px 0 rgba(30,5,60,0.70) inset !important;
+  animation: barIdleGlow 4s ease-in-out infinite !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+/* Shine streak pseudo-element via a child overlay div */
+.gemini-bar [data-testid="stForm"]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important; left: -100% !important;
+  width: 60% !important; height: 100% !important;
+  background: linear-gradient(105deg, transparent 20%, rgba(220,180,255,0.10) 50%, transparent 80%) !important;
+  animation: bar3dShine 5s linear infinite !important;
+  pointer-events: none !important;
+  border-radius: 28px !important;
+}
+.gemini-bar [data-testid="stForm"]:focus-within {
+  animation: none !important;
+  background: linear-gradient(135deg, #3D2580 0%, #2A1260 40%, #4E1FA0 100%) !important;
+  border-color: rgba(180,100,255,0.65) !important;
+  box-shadow:
+    0 0 0 3px rgba(140,60,220,0.22),
+    0 8px 48px rgba(120,40,200,0.60),
+    0 2px 0 rgba(200,140,255,0.25) inset,
+    0 -1px 0 rgba(30,5,60,0.70) inset !important;
+}
 .gemini-bar [data-testid="stForm"]>div:first-child{padding:0!important;}
 .gemini-bar [data-testid="stHorizontalBlock"]{align-items:center!important;gap:2px!important;}
 .gemini-bar [data-testid="stTextInput"] label{display:none!important;}
 .gemini-bar [data-testid="stTextInput"]>div{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;}
-.gemini-bar [data-testid="stTextInput"] input{background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;color:#E2E8F0!important;font-family:'Outfit',sans-serif!important;font-size:0.97rem!important;caret-color:#60A5FA!important;padding:11px 8px!important;height:44px!important;border-radius:0!important;width:100%!important;}
-.gemini-bar [data-testid="stTextInput"] input:focus{border:none!important;box-shadow:none!important;outline:none!important;}
-.gemini-bar>.stHorizontalBlock,.gemini-bar>[data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:0!important;}
-
-/* ── ANIMATED PLACEHOLDER — typewriter shimmer ── */
-@keyframes placeholderShimmer {
-  0%,100% { opacity: 0.38; }
-  50%      { opacity: 0.72; }
+/* Text input area — bright purple (screenshot 3 color) */
+.gemini-bar [data-testid="stTextInput"] input{
+  background: rgba(140,50,220,0.22) !important;
+  border: none !important;
+  border-radius: 18px !important;
+  outline: none !important;
+  box-shadow:
+    inset 0 2px 8px rgba(50,10,100,0.40),
+    inset 0 -1px 0 rgba(200,150,255,0.12) !important;
+  color: #EDE0FF !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.97rem !important;
+  caret-color: #D4AAFF !important;
+  padding: 11px 12px !important;
+  height: 44px !important;
+  width: 100% !important;
+  transition: background 0.2s, box-shadow 0.2s !important;
 }
-@keyframes placeholderSlide {
-  0%   { transform: translateY(4px); opacity: 0; }
-  8%   { transform: translateY(0);   opacity: 1; }
-  88%  { transform: translateY(0);   opacity: 1; }
-  96%  { transform: translateY(-4px);opacity: 0; }
-  100% { transform: translateY(-4px);opacity: 0; }
+.gemini-bar [data-testid="stTextInput"] input:focus {
+  background: rgba(160,70,240,0.28) !important;
+  box-shadow:
+    inset 0 2px 10px rgba(60,10,120,0.50),
+    inset 0 -1px 0 rgba(210,160,255,0.16),
+    0 0 0 1.5px rgba(180,110,255,0.30) !important;
+  outline: none !important;
+  border: none !important;
+}
+/* Animated placeholder shimmer */
+@keyframes placeholderShimmer {
+  0%,100% { opacity: 0.45; }
+  50%      { opacity: 0.75; }
 }
 .gemini-bar [data-testid="stTextInput"] input::placeholder {
-  color: rgba(148,163,184,0.38)!important;
-  animation: placeholderShimmer 3s ease-in-out infinite!important;
+  color: rgba(210,170,255,0.55) !important;
+  animation: placeholderShimmer 3s ease-in-out infinite !important;
 }
-/* Premium glow pulse on the bar when idle */
-@keyframes barIdleGlow {
-  0%,100% { box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset; }
-  50%      { box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(59,130,246,0.14), 0 0 28px rgba(59,130,246,0.08), 0 1px 0 rgba(255,255,255,0.04) inset; }
-}
-.gemini-bar [data-testid="stForm"] {
-  animation: barIdleGlow 4s ease-in-out infinite!important;
-}
-.gemini-bar [data-testid="stForm"]:focus-within {
-  animation: none!important;
-  border-color: rgba(59,130,246,0.55)!important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 6px 40px rgba(37,99,235,0.18)!important;
-}
+.gemini-bar>.stHorizontalBlock,.gemini-bar>[data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:0!important;}
 .gemini-attach .stButton>button{background:transparent!important;border:none!important;border-radius:50%!important;color:rgba(148,163,184,0.55)!important;font-size:1.2rem!important;width:42px!important;height:42px!important;min-width:42px!important;padding:0!important;box-shadow:none!important;}
 .gemini-attach .stButton>button:hover{background:rgba(255,255,255,0.08)!important;color:rgba(186,230,253,0.80)!important;transform:none!important;opacity:1!important;}
 .gemini-mic .stButton>button{background:rgba(255,255,255,0.05)!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:50%!important;color:rgba(148,163,184,0.60)!important;font-size:1.05rem!important;width:38px!important;height:38px!important;min-width:38px!important;padding:0!important;box-shadow:none!important;}
@@ -404,7 +484,7 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .gemini-send [data-testid="stFormSubmitButton"]>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;border:none!important;border-radius:50%!important;color:#fff!important;font-size:1.25rem!important;font-weight:700!important;width:38px!important;height:38px!important;min-width:38px!important;padding:0!important;line-height:1!important;box-shadow:0 3px 14px rgba(37,99,235,0.38)!important;transition:opacity 0.16s,transform 0.14s!important;}
 .gemini-send [data-testid="stFormSubmitButton"]>button:hover{opacity:0.88!important;transform:scale(1.07)!important;}
 .file-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.35);border-radius:20px;padding:3px 10px 3px 8px;font-size:0.72rem;color:#BAE6FD;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:4px;flex-shrink:0;}
-.gemini-bar-anchored{position:fixed;bottom:0;left:0;right:0;z-index:900;background:rgba(7,11,20,0.97);backdrop-filter:blur(24px) saturate(160%);border-top:1px solid rgba(59,130,246,0.12);padding:10px max(16px,calc((100% - 860px)/2)) 12px;}
+.gemini-bar-anchored{position:fixed;bottom:0;left:0;right:0;z-index:900;background:rgba(20,8,50,0.97);backdrop-filter:blur(24px) saturate(160%);border-top:1px solid rgba(140,60,220,0.22);padding:10px max(16px,calc((100% - 680px)/2)) 12px;}
 .listening-banner{display:flex;align-items:center;gap:8px;margin:10px auto 0;padding:8px 18px;background:rgba(239,68,68,0.09);border:1px solid rgba(239,68,68,0.22);border-radius:10px;font-size:0.80rem;color:#FCA5A5;max-width:800px;}
 .listening-dot{width:7px;height:7px;border-radius:50%;background:#EF4444;animation:blinkDot 1.1s ease infinite;flex-shrink:0;}
 @keyframes blinkDot{0%,100%{opacity:1;}50%{opacity:0.25;}}
@@ -667,37 +747,37 @@ if view == "chat":
     <div class="chat-topbar-divider"></div>
     """, unsafe_allow_html=True)
 
-    # Real st.buttons — CSS positions them fixed at top-right, all in one row
+    # Vertical left-side nav — 4 buttons stacked, each in own row
     st.markdown('<div class="nb-real">', unsafe_allow_html=True)
-    _nc1, _nc2, _nc3, _nc4 = st.columns([1.1, 1.1, 1.1, 1.0])
-    with _nc1:
-        _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
-        st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
-        if st.button("🕐 History", key="_btn_history"):
-            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-            st.session_state.show_settings_panel = False; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nc2:
-        st.markdown('<div class="nb-new">', unsafe_allow_html=True)
-        if st.button("+ New Chat", key="_btn_new_chat"):
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.show_uploader = False
-            st.session_state.attached_file_name = ""
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nc3:
-        _scls = "nb-on" if st.session_state.get("show_settings_panel") else ""
-        st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
-        if st.button("⚙ Settings", key="_btn_settings"):
-            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-            st.session_state.show_history_panel = False; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nc4:
-        if st.button("Dashboard", key="_btn_dashboard"):
-            st.session_state.view = "dashboard"; st.rerun()
+
+    _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
+    st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
+    if st.button("🕐 History", key="_btn_history"):
+        st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+        st.session_state.show_settings_panel = False; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="nb-new">', unsafe_allow_html=True)
+    if st.button("+ New Chat", key="_btn_new_chat"):
+        if st.session_state.chat_messages:
+            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+            st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+        st.session_state.chat_messages = []
+        st.session_state.show_uploader = False
+        st.session_state.attached_file_name = ""
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    _scls = "nb-on" if st.session_state.get("show_settings_panel") else ""
+    st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
+    if st.button("⚙ Settings", key="_btn_settings"):
+        st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+        st.session_state.show_history_panel = False; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.button("Dashboard", key="_btn_dashboard"):
+        st.session_state.view = "dashboard"; st.rerun()
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Rotating animated placeholder injection ───────────────────────────

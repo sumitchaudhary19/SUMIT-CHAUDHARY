@@ -1,6 +1,6 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║  AskMNIT — Premium AI Chatbot + Student Dashboard                           ║
-# ║  v4.0 — Sidebar, Native File Picker, Voice Auto-Reply                       ║
+# ║  v4.1 — Sticky Navbar, Centered Input Bar                                   ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
@@ -37,7 +37,6 @@ SEMESTERS = [f"Semester {i}" for i in range(1, 9)]
 DAYS      = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 TYPE_COLORS = {"Lecture": "#22D3EE", "Lab": "#F59E0B", "Tutorial": "#A78BFA"}
 
-# Sidebar chat history items
 SIDEBAR_HISTORY = [
     ("Today",       "Attendance analysis request"),
     ("Today",       "Mineral Processing PYQs"),
@@ -138,12 +137,11 @@ _DEFAULTS: dict = {
     "is_recording":      False,
     "planner_overrides": {},
     "show_uploader":     False,
-    # NEW v4
-    "chat_theme":        "dark",          # "dark" | "light"
-    "response_style":    "Concise",       # "Concise" | "Detailed" | "Bullet Points"
-    "attached_file_name":"",              # filename chip shown inside bar
-    "voice_transcript":  "",              # transcript from voice recording
-    "_voice_submit":     False,           # flag to auto-submit after voice
+    "chat_theme":        "dark",
+    "response_style":    "Concise",
+    "attached_file_name":"",
+    "voice_transcript":  "",
+    "_voice_submit":     False,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -305,7 +303,7 @@ html, body,
 """
 
 # ═════════════════════════════════════════════════════════════════════════════
-# GLOBAL CSS (static, theme-independent parts)
+# GLOBAL CSS  ← PATCH 1: sticky navbar CSS added here
 # ═════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -329,7 +327,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 }
 [data-testid="stSidebar"] > div { padding: 0 !important; }
 
-/* Sidebar section headers */
 .sb-section-header {
   font-family: 'DM Mono', monospace;
   font-size: 0.60rem;
@@ -356,7 +353,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 .sb-history-item:hover { background: rgba(59,130,246,0.09); color: #BAE6FD; }
 .sb-history-dot { width:5px; height:5px; border-radius:50%; background:#3B82F6; flex-shrink:0; }
 
-/* Sidebar selectbox + toggle override */
 [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
   background: rgba(255,255,255,0.05) !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
@@ -384,7 +380,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 [data-testid="stSidebar"] .stButton > button:hover {
   background: rgba(239,68,68,0.20) !important; transform: none !important;
 }
-/* Theme toggle buttons in sidebar */
 .sb-theme-dark-btn .stButton > button {
   background: rgba(15,23,42,0.80) !important;
   border: 1.5px solid rgba(59,130,246,0.35) !important;
@@ -422,9 +417,9 @@ header[data-testid="stHeader"], footer, #MainMenu,
   border-color: rgba(59,130,246,0.16) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   GEMINI BAR — native st.form styled as Gemini pill
-   ═══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   GEMINI BAR
+   ══════════════════════════════════════════════════════════════════════════ */
 .gemini-bar [data-testid="stForm"] {
   background: #1A1E2E !important;
   border: 1.5px solid rgba(255,255,255,0.10) !important;
@@ -441,7 +436,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 .gemini-bar [data-testid="stForm"] > div:first-child { padding: 0 !important; }
 .gemini-bar [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 2px !important; }
 
-/* Text input — transparent */
 .gemini-bar [data-testid="stTextInput"] label { display: none !important; }
 .gemini-bar [data-testid="stTextInput"] > div {
   background: transparent !important; border: none !important;
@@ -458,7 +452,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 .gemini-bar [data-testid="stTextInput"] input::placeholder { color: rgba(148,163,184,0.38) !important; }
 .gemini-bar [data-testid="stTextInput"] input:focus { border: none !important; box-shadow: none !important; outline: none !important; }
 
-/* Attach button */
 .gemini-attach .stButton > button {
   background: transparent !important; border: none !important;
   border-radius: 50% !important; color: rgba(148,163,184,0.55) !important;
@@ -471,7 +464,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
   color: rgba(186,230,253,0.80) !important; transform: none !important; opacity: 1 !important;
 }
 
-/* Mic idle */
 .gemini-mic .stButton > button {
   background: rgba(255,255,255,0.05) !important;
   border: 1px solid rgba(255,255,255,0.09) !important;
@@ -484,7 +476,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
   color: rgba(186,230,253,0.80) !important; transform: none !important; opacity: 1 !important;
 }
 
-/* Mic recording */
 .gemini-mic-active .stButton > button {
   background: rgba(239,68,68,0.18) !important;
   border: 1px solid rgba(239,68,68,0.45) !important;
@@ -498,7 +489,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
   50%      { box-shadow: 0 0 0 7px rgba(239,68,68,0.00); }
 }
 
-/* Send button */
 .gemini-send [data-testid="stFormSubmitButton"] > button {
   background: linear-gradient(135deg, #2563EB, #4F46E5) !important;
   border: none !important; border-radius: 50% !important;
@@ -511,7 +501,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
 .gemini-send [data-testid="stFormSubmitButton"] > button:hover { opacity: 0.88 !important; transform: scale(1.07) !important; }
 .gemini-send [data-testid="stFormSubmitButton"] > button:active { transform: scale(0.95) !important; }
 
-/* File chip inside bar */
 .file-chip {
   display: inline-flex; align-items: center; gap: 5px;
   background: rgba(59,130,246,0.15);
@@ -528,7 +517,6 @@ header[data-testid="stHeader"], footer, #MainMenu,
   to   { opacity:1; transform:scale(1); }
 }
 
-/* Voice banner */
 .listening-banner {
   display: flex; align-items: center; gap: 8px;
   margin: 10px auto 0; padding: 8px 18px;
@@ -542,27 +530,12 @@ header[data-testid="stHeader"], footer, #MainMenu,
 }
 @keyframes blinkDot { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
 
-/* Voice processing banner */
-.processing-banner {
-  display: flex; align-items: center; gap: 8px;
-  margin: 10px auto 0; padding: 8px 18px;
-  background: rgba(59,130,246,0.09); border: 1px solid rgba(59,130,246,0.22);
-  border-radius: 10px; font-size: 0.80rem; color: #BAE6FD;
-  max-width: 800px; animation: fadeInUp 0.25s ease both;
-}
-.processing-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: #3B82F6;
-  animation: blinkDot 0.7s ease infinite; flex-shrink: 0;
-}
-
-/* Attach file panel */
 .attach-panel {
   max-width: 800px; margin: 10px auto 4px; padding: 14px 16px;
   background: rgba(59,130,246,0.05); border: 1px dashed rgba(59,130,246,0.28);
   border-radius: 14px; animation: fadeInUp 0.2s ease both;
 }
 
-/* Fixed bottom bar */
 .gemini-bar-anchored {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
   background: rgba(7,11,20,0.97);
@@ -749,6 +722,38 @@ hr { border-color: rgba(255,255,255,0.08) !important; }
 ::-webkit-scrollbar-thumb { background: rgba(59,130,246,.22); border-radius: 4px; }
 [data-testid="column"] { padding: 0 4px !important; }
 
+/* ══════════════════════════════════════════════════════════════════
+   PATCH 1 — Chat view sticky/fixed top navbar
+   ══════════════════════════════════════════════════════════════════ */
+.chat-navbar-wrap {
+  position: fixed;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  z-index: 9999;
+  background: rgba(7,11,20,0.97);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-bottom: 1px solid rgba(59,130,246,0.18);
+  box-shadow: 0 4px 28px rgba(0,0,0,0.55);
+}
+.chat-navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 24px;
+}
+.chat-navbar-logo {
+  display: flex; align-items: center; gap: 9px;
+}
+.chat-navbar-logo-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg,#2563EB,#4F46E5);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; font-weight: 700; color: white;
+  box-shadow: 0 3px 12px rgba(37,99,235,0.28);
+}
+/* Spacer pushes content below the fixed navbar */
+.chat-navbar-spacer { height: 58px; width: 100%; }
+
 /* ── Animations ── */
 @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
@@ -765,20 +770,8 @@ st.markdown(f"<style>{get_theme_css()}</style>", unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # FEATURE 2: NATIVE FILE PICKER COMPONENT
-# Uses a hidden HTML <input type="file"> linked to the 📎 button via JS.
-# When user picks a file, JS sends its name back via a hidden Streamlit
-# query-param update trick — we read it via st.query_params.
-# Architecture: components.html renders the picker; filename flows back
-# through URL query params which Streamlit reads on next rerun.
 # ═════════════════════════════════════════════════════════════════════════════
 def render_native_file_picker(picker_id: str):
-    """
-    Renders an invisible HTML file picker. When a file is selected,
-    it dispatches a CustomEvent 'fileSelected' with the filename,
-    AND calls window.parent.postMessage to set a Streamlit query param.
-    Returns the selected filename or empty string.
-    """
-    # Check if a filename was posted back via query params
     qp = st.query_params
     fname = qp.get(f"fp_{picker_id}", "")
 
@@ -790,26 +783,18 @@ def render_native_file_picker(picker_id: str):
     onchange="handleFileChange_{picker_id}(this)">
 </div>
 <script>
-// Expose trigger function to parent
 window.triggerFilePicker_{picker_id} = function() {{
   document.getElementById('fileinput-{picker_id}').click();
 }};
-
 function handleFileChange_{picker_id}(input) {{
   if (!input.files || !input.files[0]) return;
   var fname = input.files[0].name;
-  // Send filename to Streamlit via URL query param update
   var url = new URL(window.parent.location.href);
   url.searchParams.set('fp_{picker_id}', fname);
   window.parent.history.replaceState(null, '', url.toString());
-  // Also trigger a Streamlit rerun via hidden input focus trick
   window.parent.postMessage({{type:'streamlit:forceRerun', filename: fname}}, '*');
-  // Fallback: use a short timeout to reload
-  setTimeout(function() {{
-    window.parent.location.href = url.toString();
-  }}, 100);
+  setTimeout(function() {{ window.parent.location.href = url.toString(); }}, 100);
 }}
-// Listen for trigger from parent
 window.addEventListener('message', function(e) {{
   if (e.data && e.data.type === 'triggerPicker_{picker_id}') {{
     document.getElementById('fileinput-{picker_id}').click();
@@ -823,17 +808,8 @@ window.addEventListener('message', function(e) {{
 
 # ═════════════════════════════════════════════════════════════════════════════
 # FEATURE 3: VOICE RECORDER COMPONENT
-# Uses Web Audio API (MediaRecorder) inside components.html.
-# On stop: encodes audio to base64, posts back via URL param.
-# Python side: detects the audio param → dispatches a voice reply immediately.
 # ═════════════════════════════════════════════════════════════════════════════
 def render_voice_recorder(recorder_id: str) -> str | None:
-    """
-    Renders an invisible voice recorder.
-    Returns "DONE" when recording is complete and audio is ready,
-    or None otherwise.
-    Actual start/stop is triggered by JS messages from the bar buttons.
-    """
     qp = st.query_params
     voice_done = qp.get(f"vr_{recorder_id}", "")
 
@@ -844,19 +820,12 @@ def render_voice_recorder(recorder_id: str) -> str | None:
   var mediaRecorder = null;
   var audioChunks = [];
   var isRecording = false;
-
-  // Listen for start/stop commands from parent
   window.addEventListener('message', function(evt) {{
     var d = evt.data;
     if (!d || !d.type) return;
-
-    if (d.type === 'startRecording_{recorder_id}') {{
-      startRec();
-    }} else if (d.type === 'stopRecording_{recorder_id}') {{
-      stopRec();
-    }}
+    if (d.type === 'startRecording_{recorder_id}') {{ startRec(); }}
+    else if (d.type === 'stopRecording_{recorder_id}') {{ stopRec(); }}
   }});
-
   function startRec() {{
     if (isRecording) return;
     navigator.mediaDevices.getUserMedia({{ audio: true }}).then(function(stream) {{
@@ -864,7 +833,6 @@ def render_voice_recorder(recorder_id: str) -> str | None:
       var options = {{ mimeType: 'audio/webm' }};
       try {{ mediaRecorder = new MediaRecorder(stream, options); }}
       catch(e) {{ mediaRecorder = new MediaRecorder(stream); }}
-
       mediaRecorder.ondataavailable = function(e) {{
         if (e.data && e.data.size > 0) audioChunks.push(e.data);
       }};
@@ -872,38 +840,27 @@ def render_voice_recorder(recorder_id: str) -> str | None:
         var blob = new Blob(audioChunks, {{ type: 'audio/webm' }});
         var reader = new FileReader();
         reader.onloadend = function() {{
-          var base64 = reader.result.split(',')[1];
-          // Send done signal back via URL param
           var url = new URL(window.parent.location.href);
           url.searchParams.set('vr_{recorder_id}', 'DONE');
           url.searchParams.set('vr_{recorder_id}_ts', Date.now().toString());
           window.parent.history.replaceState(null, '', url.toString());
-          setTimeout(function() {{
-            window.parent.location.href = url.toString();
-          }}, 80);
+          setTimeout(function() {{ window.parent.location.href = url.toString(); }}, 80);
         }};
         reader.readAsDataURL(blob);
         stream.getTracks().forEach(function(t) {{ t.stop(); }});
         isRecording = false;
       }};
-
       mediaRecorder.start(200);
       isRecording = true;
-      // Notify parent that recording started
       window.parent.postMessage({{ type: 'recordingStarted_{recorder_id}' }}, '*');
     }}).catch(function(err) {{
       window.parent.postMessage({{ type: 'micError_{recorder_id}', error: err.message }}, '*');
     }});
   }}
-
   function stopRec() {{
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {{
-      mediaRecorder.stop();
-    }}
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {{ mediaRecorder.stop(); }}
     isRecording = false;
   }}
-
-  // Expose for direct call
   window.startRecording_{recorder_id} = startRec;
   window.stopRecording_{recorder_id}  = stopRec;
 }})();
@@ -914,23 +871,14 @@ def render_voice_recorder(recorder_id: str) -> str | None:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# GEMINI INPUT BAR — render_gemini_bar()
-# Updated: 📎 triggers native file picker, 🎤 triggers Web Audio recorder
+# GEMINI INPUT BAR
 # ═════════════════════════════════════════════════════════════════════════════
 def render_gemini_bar(bar_key: str, hero_mode: bool = True):
-    """
-    Renders the Gemini-style input bar.
-    📎 → opens native file picker (via JS message to hidden component)
-    🎤 → starts/stops voice recording (via JS message to hidden component)
-    ↑  → sends text message
-    Returns ("send", text) | ("mic", "start"|"stop") | ("attach",) | None
-    """
     recording  = st.session_state.is_recording
     mic_class  = "gemini-mic-active" if recording else "gemini-mic"
     mic_icon   = "⏹" if recording else "🎤"
     anim_style = "animation:slideUp 0.35s cubic-bezier(0.22,0.61,0.36,1) both;" if hero_mode else ""
 
-    # Show attached file chip if one is selected
     chip_html = ""
     if st.session_state.attached_file_name:
         fname = st.session_state.attached_file_name
@@ -941,13 +889,11 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
             f'</div>'
         )
 
-    # Bar wrapper
     st.markdown(
         f'<div class="gemini-bar" style="max-width:800px;margin:0 auto;{anim_style}">',
         unsafe_allow_html=True,
     )
 
-    # If file chip exists, render it above the bar (inside the wrapper, outside form)
     if chip_html:
         st.markdown(
             f'<div style="display:flex;align-items:center;padding:0 16px 6px;">'
@@ -984,12 +930,8 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
             send_clicked = st.form_submit_button("↑", help="Send")
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # JS: wire mic/attach clicks to their respective hidden components
     st.markdown(f"""
     <script>
-    // When 🎤 form button fires, tell the recorder component
-    // We detect the Streamlit rerun that follows mic_clicked=True server-side.
-    // For direct JS-triggered start/stop:
     function clearChip_{bar_key}() {{
       var url = new URL(window.location.href);
       url.searchParams.delete('fp_{bar_key}');
@@ -998,9 +940,8 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
     </script>
     """, unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close .gemini-bar
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Decode actions
     if mic_clicked:
         return ("mic", "stop" if recording else "start")
     if attach_clicked:
@@ -1018,17 +959,10 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# SHARED SIDEBAR (used in chat view only — defined as a reusable function)
+# SHARED SIDEBAR
 # ═════════════════════════════════════════════════════════════════════════════
 def render_chat_sidebar():
-    """
-    Renders the chat-view sidebar with:
-      1. ⏱ Chat History
-      2. ⚙ Chatbot Settings
-      3. 🌗 Theme Change
-    """
     with st.sidebar:
-        # ── LOGO ──
         st.markdown(
             '<div style="padding:18px 16px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">'
             '<div style="display:flex;align-items:center;gap:9px;">'
@@ -1044,10 +978,8 @@ def render_chat_sidebar():
             unsafe_allow_html=True,
         )
 
-        # ── ⏱ CHAT HISTORY ──────────────────────────────────────────────────
         st.markdown('<div class="sb-section-header">⏱️ Chat History</div>', unsafe_allow_html=True)
 
-        # Live sessions first
         if st.session_state.chat_sessions:
             st.markdown(
                 '<div style="font-size:0.60rem;color:rgba(59,130,246,0.60);'
@@ -1068,7 +1000,6 @@ def render_chat_sidebar():
                         st.session_state.chat_messages = list(sess["messages"]); st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
 
-        # Mock history grouped by day
         current_day = ""
         for day_lbl, title in SIDEBAR_HISTORY:
             if day_lbl != current_day:
@@ -1083,7 +1014,6 @@ def render_chat_sidebar():
                 unsafe_allow_html=True,
             )
 
-        # ── ⚙ CHATBOT SETTINGS ──────────────────────────────────────────────
         st.markdown('<div class="sb-section-header">⚙️ Chatbot Settings</div>', unsafe_allow_html=True)
         st.markdown('<div style="padding:8px 16px 4px;">', unsafe_allow_html=True)
 
@@ -1115,7 +1045,6 @@ def render_chat_sidebar():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── 🌗 THEME CHANGE ─────────────────────────────────────────────────
         st.markdown('<div class="sb-section-header">🌗 Theme</div>', unsafe_allow_html=True)
         st.markdown('<div style="padding:8px 16px 14px;display:flex;gap:8px;">', unsafe_allow_html=True)
 
@@ -1123,23 +1052,20 @@ def render_chat_sidebar():
         with t1:
             active_dark = st.session_state.chat_theme == "dark"
             btn_label_d = "🟢 Dark" if active_dark else "Dark"
-            css_d = "sb-theme-dark-btn"
-            st.markdown(f'<div class="{css_d}">', unsafe_allow_html=True)
+            st.markdown('<div class="sb-theme-dark-btn">', unsafe_allow_html=True)
             if st.button(btn_label_d, key="sb_theme_dark", use_container_width=True):
                 st.session_state.chat_theme = "dark"; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with t2:
             active_light = st.session_state.chat_theme == "light"
             btn_label_l = "⚪ Light" if not active_light else "🟡 Light"
-            css_l = "sb-theme-light-btn"
-            st.markdown(f'<div class="{css_l}">', unsafe_allow_html=True)
+            st.markdown('<div class="sb-theme-light-btn">', unsafe_allow_html=True)
             if st.button(btn_label_l, key="sb_theme_light", use_container_width=True):
                 st.session_state.chat_theme = "light"; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ── Footer ──
         st.markdown(
             '<div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.05);margin-top:auto;">'
             f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.30);font-family:\'DM Mono\',monospace;">'
@@ -1159,8 +1085,6 @@ view = st.session_state.view
 ###############################################################################
 if view == "chat":
 
-    # ── Sidebar always visible in chat view ───────────────────────────────────
-    # Re-enable sidebar (it's hidden in global CSS reset, re-show it here)
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: flex !important; }
@@ -1174,8 +1098,6 @@ if view == "chat":
 
     has_messages = len(st.session_state.chat_messages) > 0
 
-    # ── Process voice-done signal from recorder ───────────────────────────────
-    # Check both hero and anchored recorder params
     for rkey in ["hero", "anchored"]:
         qp = st.query_params
         vdone = qp.get(f"vr_{rkey}", "")
@@ -1183,14 +1105,12 @@ if view == "chat":
             st.session_state._voice_submit    = True
             st.session_state.is_recording     = False
             st.session_state.voice_transcript = "[Voice message recorded]"
-            # Clear the query param
             try:
                 del st.query_params[f"vr_{rkey}"]
                 st.query_params.pop(f"vr_{rkey}_ts", None)
             except Exception:
                 pass
 
-    # Auto-submit voice message
     if st.session_state._voice_submit:
         st.session_state._voice_submit = False
         msg = st.session_state.voice_transcript or "[Voice message]"
@@ -1199,7 +1119,6 @@ if view == "chat":
         st.toast("Voice message sent!", icon="🎤")
         st.rerun()
 
-    # ── Detect native file picker result ─────────────────────────────────────
     for rkey in ["hero", "anchored"]:
         qp = st.query_params
         fpname = qp.get(f"fp_{rkey}", "")
@@ -1210,27 +1129,36 @@ if view == "chat":
             except Exception: pass
             st.rerun()
 
-    # ── NAVBAR ────────────────────────────────────────────────────────────────
+    # ── PATCH 2: STICKY FIXED NAVBAR — logo left, 3 buttons right ─────────
     st.markdown(
-        '<div style="background:rgba(7,11,20,0.96);'
-        'backdrop-filter:blur(20px) saturate(180%);'
-        'border-bottom:1px solid rgba(59,130,246,0.16);'
-        'box-shadow:0 2px 24px rgba(0,0,0,0.50);'
-        'padding:10px 22px;display:flex;align-items:center;">'
-        '<div style="display:flex;align-items:center;gap:9px;">'
-        '<div style="width:28px;height:28px;border-radius:8px;'
-        'background:linear-gradient(135deg,#2563EB,#4F46E5);'
-        'display:flex;align-items:center;justify-content:center;'
-        'font-size:0.82rem;font-weight:700;color:white;">A</div>'
-        '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;">AskMNIT</span>'
-        '<span style="font-size:0.56rem;color:#10B981;font-weight:700;margin-left:2px;">&#9679; AI</span>'
-        '</div></div>',
+        '<div class="chat-navbar-wrap">'
+        '<div class="chat-navbar-inner">'
+        '<div class="chat-navbar-logo">'
+        '<div class="chat-navbar-logo-icon">A</div>'
+        '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>'
+        '<span style="font-size:0.56rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>'
+        '</div></div></div>'
+        '<div class="chat-navbar-spacer"></div>',
         unsafe_allow_html=True,
     )
 
-    _, nc1, nc2, nc3 = st.columns([4.5, 1.3, 1.3, 1.4])
+    # 3 nav buttons in one tight row — CSS floats them into the fixed navbar
+    _gap, nb1_col, nb2_col, nb3_col = st.columns([6.0, 1.15, 1.05, 1.15])
+    st.markdown("""<style>
+    /* Float the nav-button row up into the fixed navbar strip */
+    section[data-testid="stMain"] > div > div[data-testid="stVerticalBlockBorderWrapper"]:nth-of-type(2) > div > div[data-testid="stHorizontalBlock"],
+    section[data-testid="stMain"] > div > div > div[data-testid="stVerticalBlock"] > div:nth-child(3) > div[data-testid="stHorizontalBlock"] {
+      position: fixed !important;
+      top: 5px !important;
+      right: 16px !important;
+      z-index: 10000 !important;
+      width: auto !important;
+      background: transparent !important;
+      gap: 8px !important;
+    }
+    </style>""", unsafe_allow_html=True)
 
-    with nc1:
+    with nb1_col:
         st.markdown('<div class="nav-pill">', unsafe_allow_html=True)
         if st.button("+ New Chat", key="btn_new_chat"):
             if st.session_state.chat_messages:
@@ -1242,13 +1170,13 @@ if view == "chat":
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with nc2:
+    with nb2_col:
         with st.popover("Settings", use_container_width=True):
             st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(148,163,184,0.45);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px;">Bot Settings</div>', unsafe_allow_html=True)
             st.session_state.voice_output = st.toggle("Voice Output", value=st.session_state.voice_output, key="toggle_voice")
             st.session_state.strict_mode  = st.toggle("Strict Mode",  value=st.session_state.strict_mode,  key="toggle_strict")
 
-    with nc3:
+    with nb3_col:
         st.markdown('<div class="nav-back">', unsafe_allow_html=True)
         if st.button("Dashboard", key="btn_dashboard"):
             st.session_state.view = "dashboard"; st.rerun()
@@ -1256,7 +1184,7 @@ if view == "chat":
 
     st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.30),rgba(34,211,238,0.14),transparent);"></div>', unsafe_allow_html=True)
 
-    # ── FILE UPLOADER PANEL (Streamlit native fallback, shown when attach toggled) ──
+    # ── FILE UPLOADER PANEL ───────────────────────────────────────────────
     if st.session_state.show_uploader:
         st.markdown('<div class="attach-panel">', unsafe_allow_html=True)
         up_c1, up_c2 = st.columns([6, 1])
@@ -1279,7 +1207,7 @@ if view == "chat":
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── HERO STATE ────────────────────────────────────────────────────────────
+    # ── HERO STATE ────────────────────────────────────────────────────────
     if not has_messages:
         st.markdown("<div style='height:5vh'></div>", unsafe_allow_html=True)
 
@@ -1304,7 +1232,8 @@ if view == "chat":
         PILLS_ROW1 = ["Analyse my attendance", "What's next on my schedule?", f"PYQs for {br}", "Check my fee status"]
         PILLS_ROW2 = [f"Subjects for {br}", "Exam schedule tips"]
 
-        _, pills_col, _ = st.columns([0.5, 5, 0.5])
+        # PATCH 3: pills shifted toward center (column ratio adjusted)
+        _, pills_col, _ = st.columns([0.9, 4.8, 0.3])
         with pills_col:
             r1_cols = st.columns(len(PILLS_ROW1))
             for i, pill in enumerate(PILLS_ROW1):
@@ -1324,12 +1253,11 @@ if view == "chat":
 
         st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
 
-        # Hero bar + voice recorder
-        _, bar_col, _ = st.columns([0.5, 5, 0.5])
+        # PATCH 3: input bar shifted toward center
+        _, bar_col, _ = st.columns([0.9, 4.8, 0.3])
         with bar_col:
             hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
 
-        # Render hidden voice recorder for hero
         render_voice_recorder("hero")
         render_native_file_picker("hero")
 
@@ -1338,7 +1266,6 @@ if view == "chat":
 
         st.markdown('<p style="text-align:center;font-size:0.59rem;color:rgba(100,116,139,0.38);margin-top:10px;font-family:\'DM Mono\',monospace;">AskMNIT AI can make mistakes &nbsp;·&nbsp; Verify with official ERP or faculty</p>', unsafe_allow_html=True)
 
-        # Handle hero actions
         if hero_action is not None:
             act = hero_action[0]
             if act == "send":
@@ -1349,7 +1276,6 @@ if view == "chat":
                 direction = hero_action[1]
                 if direction == "start":
                     st.session_state.is_recording = True
-                    # Tell recorder component to start
                     st.markdown("""<script>
                     (function poll(){ var f = document.querySelector('iframe');
                     if(f && f.contentWindow){ f.contentWindow.postMessage({type:'startRecording_hero'},'*'); }
@@ -1365,18 +1291,16 @@ if view == "chat":
                     st.toast("⏹ Processing voice...", icon="⏳")
                 st.rerun()
             elif act == "attach":
-                # Open native file picker
                 st.markdown("""<script>
                 setTimeout(function(){
                   var frames = document.querySelectorAll('iframe');
                   frames.forEach(function(f){ if(f.contentWindow) f.contentWindow.postMessage({type:'triggerPicker_hero'},'*'); });
                 }, 100);
                 </script>""", unsafe_allow_html=True)
-                # Fallback: show Streamlit uploader
                 st.session_state.show_uploader = True
                 st.rerun()
 
-    # ── ACTIVE STATE ──────────────────────────────────────────────────────────
+    # ── ACTIVE STATE ──────────────────────────────────────────────────────
     else:
         st.markdown("<div class='chat-scroll-area'>", unsafe_allow_html=True)
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
@@ -1387,11 +1311,9 @@ if view == "chat":
                     st.markdown(msg["content"])
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Anchored bottom bar
         st.markdown('<div class="gemini-bar-anchored">', unsafe_allow_html=True)
         anchored_action = render_gemini_bar(bar_key="anchored", hero_mode=False)
 
-        # Hidden voice/file components inside anchored bar
         render_voice_recorder("anchored")
         render_native_file_picker("anchored")
 
@@ -1401,7 +1323,6 @@ if view == "chat":
         st.markdown('<p style="text-align:center;font-size:0.59rem;color:rgba(100,116,139,0.38);margin-top:4px;font-family:\'DM Mono\',monospace;">AskMNIT AI can make mistakes &nbsp;·&nbsp; Verify with official ERP or faculty</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Handle anchored actions
         if anchored_action is not None:
             act = anchored_action[0]
             if act == "send":
@@ -1446,7 +1367,6 @@ if view == "chat":
 # ████████████████████  DASHBOARD VIEW  ██████████████████████████████████████
 ###############################################################################
 
-# Dashboard sidebar
 NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]
 with st.sidebar:
     st.markdown(
@@ -1483,7 +1403,6 @@ with st.sidebar:
         st.rerun()
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# Placeholder pages
 dash_page = st.session_state.nav_page
 if dash_page != "My Dashboard":
     PMETA = {
@@ -1540,7 +1459,6 @@ with h_right:
 
 st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
 
-# Settings toggle row
 srow1,srow2,srow3,_,srow5 = st.columns([1,1,1,1,1])
 with srow1:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)

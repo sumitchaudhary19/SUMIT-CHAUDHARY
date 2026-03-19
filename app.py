@@ -152,82 +152,170 @@ for k, v in _DEFAULTS.items():
 # ─────────────────────────────────────────────────────────────────────────────
 # AI RESPONSE GENERATOR
 # ─────────────────────────────────────────────────────────────────────────────
-def generate_ai_response(last: str) -> str:
-    lower = last.lower()
-    att   = st.session_state.attendance
-    br    = st.session_state.branch
-    style = st.session_state.response_style
+# ─────────────────────────────────────────────────────────────────────────────
+# GROQ AI — Mood-aware, Human-like, Hinglish campus buddy
+# ─────────────────────────────────────────────────────────────────────────────
+def _build_student_context() -> str:
+    att  = st.session_state.attendance
+    br   = st.session_state.branch
+    nm   = st.session_state.student_name
+    sem  = st.session_state.semester
+    ov   = overall_pct(att)
+    low  = [(s, att_pct(r)) for s, r in att.items() if att_pct(r) < 75 and r["total"] > 0]
+    good = [(s, att_pct(r)) for s, r in att.items() if att_pct(r) >= 75 and r["total"] > 0]
 
-    def fmt(resp):
-        if style == "Bullet Points":
-            lines = resp.split("\n")
-            return "\n".join(f"• {l}" if l.strip() and not l.startswith(("•","#","*","-","1","2","3","4","5")) else l for l in lines)
-        if style == "Detailed":
-            return resp + "\n\n---\n*Need more detail? Just ask a follow-up!*"
-        return resp
+    att_summary = f"Overall attendance: {ov}%\n"
+    if low:
+        att_summary += "BELOW 75% (critical):\n"
+        for s, p in low:
+            r = att[s]
+            need = max(0, int((0.75 * r["total"] - r["present"]) / 0.25) + 1)
+            att_summary += f"  - {s}: {p}% ({r['present']}/{r['total']}) — needs {need} more classes\n"
+    if good:
+        att_summary += "Above 75%:\n"
+        for s, p in good[:5]:
+            att_summary += f"  - {s}: {p}%\n"
 
-    if any(w in lower for w in ["attendance","present","absent","%"]):
-        ov  = overall_pct(att)
-        low = [(s,att_pct(r)) for s,r in att.items() if att_pct(r)<75 and r["total"]>0]
-        resp = f"**Attendance — {st.session_state.student_name}**\n\nOverall: **{ov}%**\n\n"
-        if low:
-            resp += "**Below 75%:**\n"
-            for s,p in low:
-                need = max(0,int((0.75*att[s]["total"]-att[s]["present"])/0.25)+1)
-                resp += f"- **{s}**: {p}% — need **{need}** more\n"
+    sched_summary = "Schedule not uploaded yet."
+    if st.session_state.schedule_loaded:
+        today_slots = get_today_slots(st.session_state.full_schedule)
+        nxt = get_next_class(today_slots)
+        dn  = datetime.datetime.now().strftime("%A")
+        if today_slots:
+            sched_summary = f"Today ({dn}):\n"
+            for sl in today_slots:
+                sched_summary += f"  {fmt_time(sl['time_start'])}–{fmt_time(sl['time_end'])}: {sl['subject']} @ {sl['room']} ({sl['type']})\n"
+            sched_summary += f"Next class: {nxt['subject']} in {nxt['minutes_away']} min\n" if nxt else "No more classes today.\n"
         else:
-            resp += "All subjects above 75%. Stay consistent!"
-        return fmt(resp)
+            sched_summary = f"No classes today ({dn})."
 
-    if any(w in lower for w in ["schedule","class","next","today","timetable"]):
-        if st.session_state.schedule_loaded:
-            slots = get_today_slots(st.session_state.full_schedule)
-            nxt   = get_next_class(slots)
-            dn    = datetime.datetime.now().strftime("%A")
-            resp  = f"**Today's Classes ({dn})**\n\n"
-            for s in slots:
-                resp += f"- **{fmt_time(s['time_start'])}–{fmt_time(s['time_end'])}** — {s['subject']} in {s['room']} _({s['type']})_\n"
-            if nxt:
-                resp += f"\nNext: {nxt['subject']} in **{nxt['minutes_away']} min**"
-            else:
-                resp += "\nNo more classes today."
-            return fmt(resp)
-        return "No schedule loaded. Go to **Upload Schedule** on the dashboard."
+    return f"""
+Student: {nm} | Branch: {br} | Semester: {sem} | ID: {st.session_state.college_id}
+Subjects: {", ".join(subjects_for_branch(br))}
+Attendance: {att_summary}
+Schedule: {sched_summary}
+Response style pref: {st.session_state.response_style}
+"""
 
-    if any(w in lower for w in ["pyq","previous year","question paper","past paper"]):
-        return fmt(f"**PYQ Resources for {br}**\n\nAccess via PYQs in the dashboard.\n\nBranch subjects: {', '.join(BRANCH_SUBJECTS.get(br,[]))}")
 
-    if any(w in lower for w in ["fee","pay","due","payment"]):
-        return fmt("Fee details are in the **Fee Portal** section on the dashboard.")
+def _detect_mood(text: str) -> str:
+    """Lightweight mood hint for system prompt injection."""
+    t = text.lower()
+    if any(w in t for w in ["stressed", "tension", "worried", "dar", "bhot pressure", "exam tension", "fail", "nahi hua", "rona", "roo", "samajh nahi", "confused"]):
+        return "STRESSED/ANXIOUS — be warm and reassuring first, solutions after"
+    if any(w in t for w in ["happy", "khush", "amazing", "got", "cleared", "hogaya", "yay", "😄","🎉","🥳","woah","lets go"]):
+        return "EXCITED/HAPPY — match their energy, celebrate with them"
+    if any(w in t for w in ["bored", "kya karu", "nothing", "bakwaas", "boring", "time pass"]):
+        return "BORED — be playful and engaging"
+    if any(w in t for w in ["angry", "gussa", "bakwas", "worst", "hate", "ugh", "aarrgh", "irritating", "frustrat"]):
+        return "FRUSTRATED — validate their feelings immediately before solving"
+    if any(w in t for w in ["thak", "tired", "neend", "so raha", "sleep", "exhausted"]):
+        return "TIRED — be gentle, keep it short and supportive"
+    return "NEUTRAL/CASUAL — be friendly and natural"
 
-    if any(w in lower for w in ["subject","syllabus","branch","course"]):
-        common   = "\n".join(f"- {s}" for s in COMMON_SUBJECTS)
-        branch_s = "\n".join(f"- {s}" for s in BRANCH_SUBJECTS.get(br,[]))
-        return fmt(f"**Subjects — {br} · {st.session_state.semester}**\n\n**Common:**\n{common}\n\n**{br} specific:**\n{branch_s}")
 
-    if any(w in lower for w in ["exam","tip","strategy","prepare","study"]):
-        first_bs = BRANCH_SUBJECTS.get(br,["your core subject"])[0]
-        return fmt(f"**Exam Prep — {br}**\n\n1. **Triage by attendance** — below-75% subjects first.\n2. **PYQ pattern** — last 5 years covers ~70%.\n3. **Block schedule** — 2-hour deep-work slots.\n4. **Group study** — 3-person group for {first_bs}.\n5. **ERP deadlines** — check submissions weekly.")
+def generate_ai_response(last: str) -> str:
+    """
+    Calls Groq API (llama model) with a rich, mood-aware system prompt.
+    Responds like a brilliant MNIT senior — warm, Hinglish, funny, real.
+    """
+    import requests, json
 
-    if any(w in lower for w in ["hi","hello","hey","hii"]):
-        fn = st.session_state.student_name.split()[0]
-        return fmt(f"Hey {fn}! 👋 I'm AskMNIT. I can help with:\n\n- Attendance analysis\n- Today's schedule\n- Previous year papers\n- Fee status\n- Exam strategy\n\nYou're on **{br} · {st.session_state.semester}**. What can I help with?")
+    nm          = st.session_state.student_name.split()[0]
+    br          = st.session_state.branch
+    student_ctx = _build_student_context()
+    mood_hint   = _detect_mood(last)
 
-    if "voice" in lower or "recorded" in lower or "[voice" in lower:
-        fn = st.session_state.student_name.split()[0]
-        return fmt(f"🎤 Voice message received, {fn}! I heard your question. For best results, try asking about attendance, schedule, PYQs, fees, or exam strategy.")
+    system_prompt = f"""You are AskMNIT — not a bot, but {nm}'s most brilliant and chill senior at MNIT Jaipur. You're that one senior everyone wants as a friend: academically sharp, funny, real, always there.
 
-    if "attached" in lower or "file" in lower:
-        return fmt("File received! Tell me what you'd like to do with this file.")
+DETECTED STUDENT MOOD RIGHT NOW: {mood_hint}
+→ Adjust your tone accordingly IMMEDIATELY from the first word.
 
-    fn = st.session_state.student_name.split()[0]
-    return fmt(f"I'm AskMNIT — built for **{fn}** · **{br}**.\n\n| Topic | Try asking... |\n|---|---|\n| Attendance | _Analyse my attendance_ |\n| Schedule | _What's next today?_ |\n| PYQs | _Find PYQs for my branch_ |\n| Fees | _Check fee due date_ |\n| Exams | _Give me an exam strategy_ |")
+YOUR PERSONALITY:
+- Warm like a best friend, sharp like a topper
+- Naturally mix Hindi + English (Hinglish) if student uses it — words like "yaar", "bhai", "arrey", "sahi baat hai", "chill kar", "dekh", "sun", "tera", "teri" etc. flow naturally
+- Funny when appropriate — light jokes, relatable meme references, MNIT inside vibes
+- NEVER sound like a corporate chatbot or say things like "Certainly! I'd be happy to help"
+- Use emojis like a real person — sparingly and naturally, not forced
+- Short punchy sentences > long paragraphs (unless explaining something technical)
+- When student is stressed → first acknowledge their feeling genuinely, THEN help
+- When student is excited → vibe with them before being informative
+- Remember the full conversation — refer back to it naturally
+
+STUDENT DATA (use exact numbers, be precise):
+{student_ctx}
+
+YOUR KNOWLEDGE:
+- MNIT Jaipur academics, attendance rules (75% minimum mandatory)
+- Branch-specific subjects for {br}
+- Exam prep strategies, PYQ tips, study techniques
+- Fee portal, ERP system, hostel mess, college life
+- General student life advice
+
+HARD RULES:
+1. Call them "{nm}" or "yaar/bhai" — never "user" or "student"
+2. Attendance math must be EXACT using the data above
+3. Schedule info must come EXACTLY from the data above
+4. If you don't know something specific (exact exam date, a prof's name) → say honestly "yaar iske baare mein sure nahi hoon, ERP check kar" 
+5. NEVER say "I'm an AI" or "As an AI language model" — you're AskMNIT, {nm}'s senior
+6. Keep it conversational. One idea flows into the next naturally.
+7. End with something that keeps conversation alive — a question, a tip, or a fun remark. But don't ALWAYS end with a question — read the room.
+8. If student writes in pure Hindi → reply in Hinglish. Pure English → reply in English. Mixed → match their mix."""
+
+    # Full conversation history for context
+    history     = st.session_state.chat_messages[:-1]
+    api_messages = []
+    for msg in history[-16:]:
+        api_messages.append({"role": msg["role"], "content": msg["content"]})
+    api_messages.append({"role": "user", "content": last})
+
+    # ── Groq API call ─────────────────────────────────────────────────────
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "") or st.session_state.get("groq_api_key", "")
+
+    if not GROQ_API_KEY:
+        return (f"Yaar, Groq API key set nahi hai abhi 😅\n\n"
+                f"`.streamlit/secrets.toml` mein `GROQ_API_KEY = 'gsk_...'` add kar, "
+                f"phir restart kar — main ready hoon!")
+
+    try:
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    *api_messages,
+                ],
+                "max_tokens": 900,
+                "temperature": 0.82,      # slightly creative but grounded
+                "top_p": 0.90,
+                "stream": False,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+        if resp.status_code == 200:
+            return data["choices"][0]["message"]["content"].strip()
+        else:
+            err = data.get("error", {}).get("message", "Unknown Groq error")
+            return f"Arrey yaar, Groq API ne chakkar de diya 😬\n`{err}`\n\nThodi der baad try kar!"
+    except requests.Timeout:
+        return f"Yaar connection slow lag raha hai ⏳ — ek minute ruk ke dobara try kar!"
+    except Exception as e:
+        return f"Kuch toh gadbad hai yaar 😅 ({str(e)[:80]})\n\nInternet/API key check kar!"
+
 
 def dispatch_message(text: str):
     text = text.strip()
     if not text: return
-    st.session_state.chat_messages.append({"role":"user","content":text})
-    st.session_state.chat_messages.append({"role":"assistant","content":generate_ai_response(text)})
+    st.session_state.chat_messages.append({"role": "user", "content": text})
+    with st.spinner("AskMNIT soch raha hai... 🤔"):
+        reply = generate_ai_response(text)
+    st.session_state.chat_messages.append({"role": "assistant", "content": reply})
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1390,86 +1478,139 @@ if view == "chat":
 
 
 
-    # ── Actual st.buttons for navbar — hidden via CSS, triggered via JS ────
-    # These REAL Streamlit buttons are visually hidden (CSS above hides them).
-    # The HTML navbar's onclick calls triggerNbBtn() which clicks the real button.
-    # This is the ONLY reliable way to communicate HTML→Streamlit.
-    _nb_container = st.container()
-    with _nb_container:
-        st.markdown("""
-        <style>
-        /* Hide the real st.button navbar row from normal flow */
-        div[data-nb-buttons="true"] {
-          position: fixed !important;
-          top: 8px !important; right: 14px !important;
-          z-index: 100000 !important;
-          display: flex !important; gap: 6px !important;
-          align-items: center !important;
-          pointer-events: auto !important;
-        }
-        div[data-nb-buttons="true"] .stButton > button {
-          border-radius: 999px !important;
-          padding: 5px 13px !important;
-          font-size: 0.76rem !important; font-weight: 500 !important;
-          height: 34px !important; min-height: 34px !important;
-          border: 1px solid rgba(255,255,255,0.11) !important;
-          background: rgba(255,255,255,0.06) !important;
-          color: rgba(226,232,240,0.80) !important;
-          box-shadow: none !important; line-height: 1 !important;
-        }
-        div[data-nb-buttons="true"] .stButton > button:hover {
-          background: rgba(59,130,246,0.18) !important;
-          border-color: rgba(59,130,246,0.42) !important;
-          color: #BAE6FD !important; transform: none !important;
-        }
-        div[data-nb-buttons="true"] .nb-new .stButton > button {
-          background: rgba(59,130,246,0.13) !important;
-          border-color: rgba(59,130,246,0.32) !important;
-          color: #93C5FD !important;
-        }
-        div[data-nb-buttons="true"] .nb-active .stButton > button {
-          background: rgba(59,130,246,0.22) !important;
-          border-color: rgba(59,130,246,0.50) !important;
-          color: #BAE6FD !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+    # ── NAVBAR BUTTONS via components.html (100% reliable, no DOM issues) ──
+    # Rendered as a self-contained iframe that sits fixed over the navbar
+    _h_on  = "#3B82F6" if st.session_state.get("show_history_panel")  else "rgba(255,255,255,0.06)"
+    _s_on  = "#3B82F6" if st.session_state.get("show_settings_panel") else "rgba(255,255,255,0.06)"
+    _h_bdr = "rgba(59,130,246,0.55)" if st.session_state.get("show_history_panel")  else "rgba(255,255,255,0.11)"
+    _s_bdr = "rgba(59,130,246,0.55)" if st.session_state.get("show_settings_panel") else "rgba(255,255,255,0.11)"
 
-        st.markdown('<div data-nb-buttons="true">', unsafe_allow_html=True)
-        _c1, _c2, _c3, _c4 = st.columns([1,1,1,1])
-        with _c1:
-            _hcls = "nb-active" if st.session_state.get("show_history_panel") else ""
-            st.markdown(f'<div class="{_hcls}" id="nb-history-wrap">', unsafe_allow_html=True)
-            if st.button("🕐 History", key="_btn_history"):
-                st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-                st.session_state.show_settings_panel = False
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with _c2:
-            st.markdown('<div class="nb-new" id="nb-newchat-wrap">', unsafe_allow_html=True)
-            if st.button("+ New Chat", key="_btn_new_chat"):
-                if st.session_state.chat_messages:
-                    fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                    st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-                st.session_state.chat_messages = []
-                st.session_state.show_uploader = False
-                st.session_state.attached_file_name = ""
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with _c3:
-            _scls = "nb-active" if st.session_state.get("show_settings_panel") else ""
-            st.markdown(f'<div class="{_scls}" id="nb-settings-wrap">', unsafe_allow_html=True)
-            if st.button("⚙ Settings", key="_btn_settings"):
-                st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-                st.session_state.show_history_panel = False
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with _c4:
-            st.markdown('<div id="nb-dashboard-wrap">', unsafe_allow_html=True)
-            if st.button("Dashboard", key="_btn_dashboard"):
-                st.session_state.view = "dashboard"; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)  # close data-nb-buttons
+    components.html(f"""
+    <style>
+      * {{ margin:0; padding:0; box-sizing:border-box; }}
+      body {{ background:transparent; font-family:'Outfit',sans-serif; }}
+      .nb-wrap {{
+        display:flex; gap:7px; align-items:center;
+        position:fixed; top:9px; right:16px; z-index:2147483647;
+      }}
+      .nb-btn {{
+        display:inline-flex; align-items:center; justify-content:center;
+        padding:5px 14px; border-radius:999px; cursor:pointer;
+        font-size:0.76rem; font-weight:500; white-space:nowrap;
+        border:1px solid rgba(255,255,255,0.11);
+        background:rgba(255,255,255,0.06);
+        color:rgba(226,232,240,0.82);
+        transition:all 0.15s ease;
+        text-decoration:none; outline:none;
+        font-family:'Outfit',sans-serif;
+        height:33px;
+      }}
+      .nb-btn:hover {{ background:rgba(59,130,246,0.20); border-color:rgba(59,130,246,0.45); color:#BAE6FD; }}
+      .nb-new  {{ background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.35); color:#93C5FD; }}
+      .nb-new:hover {{ background:rgba(59,130,246,0.28); border-color:rgba(59,130,246,0.60); color:#BAE6FD; }}
+      .nb-hist {{ background:{_h_on}22; border-color:{_h_bdr}; color:{"#BAE6FD" if st.session_state.get("show_history_panel") else "rgba(226,232,240,0.82)"}; }}
+      .nb-sets {{ background:{_s_on}22; border-color:{_s_bdr}; color:{"#BAE6FD" if st.session_state.get("show_settings_panel") else "rgba(226,232,240,0.82)"}; }}
+    </style>
+    <div class="nb-wrap">
+      <button class="nb-btn nb-hist" onclick="send('history')">🕐 History</button>
+      <button class="nb-btn nb-new"  onclick="send('new_chat')">+ New Chat</button>
+      <button class="nb-btn nb-sets" onclick="send('settings')">⚙ Settings</button>
+      <button class="nb-btn"         onclick="send('dashboard')">Dashboard</button>
+    </div>
+    <script>
+    function send(action) {{
+      window.parent.postMessage({{type:'streamlit:setComponentValue', value:action}}, '*');
+    }}
+    </script>
+    """, height=52, scrolling=False)
+
+    # ── Read the component value (navbar click) ───────────────────────────
+    # components.html can't return values directly, so we use query_params
+    # with replaceState — but ONLY set by the component, not full page reload
+    _nb_click = st.query_params.get("_nb", "")
+    if _nb_click:
+        try: del st.query_params["_nb"]
+        except: pass
+        if _nb_click == "new_chat":
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        elif _nb_click == "dashboard":
+            st.session_state.view = "dashboard"; st.rerun()
+        elif _nb_click == "settings":
+            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+            st.session_state.show_history_panel = False
+            st.rerun()
+        elif _nb_click == "history":
+            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+            st.session_state.show_settings_panel = False
+            st.rerun()
+
+    # ── Real Streamlit buttons (rendered but visually hidden — CSS hides them)
+    # These serve as the ACTUAL click handlers via JS parent.document.querySelector
+    st.markdown("""<style>
+    .nb-real-btns { position:fixed; top:9px; right:16px; z-index:100001;
+      display:flex; gap:6px; align-items:center; }
+    .nb-real-btns .stButton > button {
+      border-radius:999px !important; padding:5px 14px !important;
+      font-size:0.76rem !important; font-weight:500 !important;
+      height:33px !important; min-height:33px !important;
+      border:1px solid rgba(255,255,255,0.11) !important;
+      background:rgba(255,255,255,0.06) !important;
+      color:rgba(226,232,240,0.82) !important;
+      box-shadow:none !important; line-height:1 !important;
+      transition:all 0.15s !important;
+    }
+    .nb-real-btns .stButton > button:hover {
+      background:rgba(59,130,246,0.18) !important;
+      border-color:rgba(59,130,246,0.42) !important;
+      color:#BAE6FD !important; transform:none !important;
+    }
+    .nb-real-btns .nb-new-wrap .stButton > button {
+      background:rgba(59,130,246,0.14) !important;
+      border-color:rgba(59,130,246,0.34) !important; color:#93C5FD !important;
+    }
+    .nb-real-btns .nb-on-wrap .stButton > button {
+      background:rgba(59,130,246,0.22) !important;
+      border-color:rgba(59,130,246,0.52) !important; color:#BAE6FD !important;
+    }
+    </style>""", unsafe_allow_html=True)
+
+    st.markdown('<div class="nb-real-btns">', unsafe_allow_html=True)
+    _nb_r1, _nb_r2, _nb_r3, _nb_r4 = st.columns([1,1,1,1])
+    with _nb_r1:
+        _hcls = "nb-on-wrap" if st.session_state.get("show_history_panel") else ""
+        st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
+        if st.button("🕐 History", key="_btn_history"):
+            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+            st.session_state.show_settings_panel = False; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb_r2:
+        st.markdown('<div class="nb-new-wrap">', unsafe_allow_html=True)
+        if st.button("+ New Chat", key="_btn_new_chat"):
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb_r3:
+        _scls = "nb-on-wrap" if st.session_state.get("show_settings_panel") else ""
+        st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
+        if st.button("⚙ Settings", key="_btn_settings"):
+            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+            st.session_state.show_history_panel = False; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _nb_r4:
+        if st.button("Dashboard", key="_btn_dashboard"):
+            st.session_state.view = "dashboard"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
     # ── CHAT HISTORY PANEL ────────────────────────────────────────────────

@@ -437,6 +437,18 @@ header[data-testid="stHeader"], footer, #MainMenu,
 .gemini-bar [data-testid="stForm"] > div:first-child { padding: 0 !important; }
 .gemini-bar [data-testid="stHorizontalBlock"] { align-items: center !important; gap: 2px !important; }
 
+/* The outer columns wrapper (attach + form + mic) must align vertically */
+.gemini-bar > div[data-testid="stHorizontalBlock"] {
+  align-items: stretch !important;
+  gap: 0 !important;
+}
+/* Make attach and mic buttons sit flush with the form pill */
+.gemini-bar .gemini-attach,
+.gemini-bar .gemini-mic,
+.gemini-bar .gemini-mic-active {
+  display: flex; align-items: center; height: 100%;
+}
+
 .gemini-bar [data-testid="stTextInput"] label { display: none !important; }
 .gemini-bar [data-testid="stTextInput"] > div {
   background: transparent !important; border: none !important;
@@ -875,11 +887,19 @@ def render_voice_recorder(recorder_id: str) -> str | None:
 # GEMINI INPUT BAR
 # ═════════════════════════════════════════════════════════════════════════════
 def render_gemini_bar(bar_key: str, hero_mode: bool = True):
+    """
+    BUG FIX v2: 📎 and 🎤 are now st.button (OUTSIDE the form).
+    Only ↑ (send) is a form_submit_button inside the form.
+    This means Enter key ONLY triggers Send — never Attach or Mic.
+    Layout: [📎] [___text input + ↑ send___] [🎤]
+    📎 and 🎤 are overlaid left/right using CSS absolute positioning.
+    """
     recording  = st.session_state.is_recording
     mic_class  = "gemini-mic-active" if recording else "gemini-mic"
     mic_icon   = "⏹" if recording else "🎤"
     anim_style = "animation:slideUp 0.35s cubic-bezier(0.22,0.61,0.36,1) both;" if hero_mode else ""
 
+    # File chip above bar
     chip_html = ""
     if st.session_state.attached_file_name:
         fname = st.session_state.attached_file_name
@@ -887,9 +907,13 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
         chip_html = (
             f'<div class="file-chip" title="{fname}">'
             f'<span class="file-chip-icon">📎</span>{short}'
+            f'<button onclick="clearChip_{bar_key}()" style="background:none;border:none;'
+            f'color:rgba(148,163,184,0.5);cursor:pointer;font-size:0.75rem;'
+            f'margin-left:4px;padding:0 4px;" title="Remove file">✕</button>'
             f'</div>'
         )
 
+    # Outer wrapper
     st.markdown(
         f'<div class="gemini-bar" style="max-width:780px;width:100%;margin:0 auto;{anim_style}">',
         unsafe_allow_html=True,
@@ -897,40 +921,47 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
 
     if chip_html:
         st.markdown(
-            f'<div style="display:flex;align-items:center;padding:0 16px 6px;">'
-            f'{chip_html}'
-            f'<button onclick="clearChip_{bar_key}()" style="background:none;border:none;color:rgba(148,163,184,0.5);cursor:pointer;font-size:0.75rem;margin-left:4px;padding:0 4px;" title="Remove file">✕</button>'
-            f'</div>',
+            f'<div style="display:flex;align-items:center;padding:0 16px 6px;">{chip_html}</div>',
             unsafe_allow_html=True,
         )
 
-    with st.form(key=f"gemini_form_{bar_key}", clear_on_submit=True):
-        c_attach, c_input, c_mic, c_send = st.columns([0.55, 10, 0.65, 0.65])
+    # ── Row: [attach_btn] [FORM: text + send] [mic_btn] ──────────────────
+    # attach and mic are st.button (outside form) → Enter never triggers them
+    outer_cols = st.columns([0.55, 10, 0.65])
 
-        with c_attach:
-            st.markdown('<div class="gemini-attach">', unsafe_allow_html=True)
-            attach_clicked = st.form_submit_button("📎", help="Attach file")
-            st.markdown('</div>', unsafe_allow_html=True)
+    with outer_cols[0]:
+        st.markdown('<div class="gemini-attach">', unsafe_allow_html=True)
+        attach_clicked = st.button("📎", key=f"attach_{bar_key}", help="Attach file")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with c_input:
-            placeholder = "Ask AskMNIT..." if not st.session_state.attached_file_name else "Add a message about the file..."
-            user_text = st.text_input(
-                label="__gi__",
-                placeholder=placeholder,
-                key=f"gi_text_{bar_key}",
-                label_visibility="collapsed",
-            )
+    with outer_cols[1]:
+        # Form contains ONLY text input + send button
+        # Enter key in text_input submits this form → triggers send_clicked
+        with st.form(key=f"gemini_form_{bar_key}", clear_on_submit=True):
+            f_input_col, f_send_col = st.columns([12, 0.75])
+            with f_input_col:
+                placeholder = (
+                    "Ask AskMNIT..."
+                    if not st.session_state.attached_file_name
+                    else "Add a message about the file..."
+                )
+                user_text = st.text_input(
+                    label="__gi__",
+                    placeholder=placeholder,
+                    key=f"gi_text_{bar_key}",
+                    label_visibility="collapsed",
+                )
+            with f_send_col:
+                st.markdown('<div class="gemini-send">', unsafe_allow_html=True)
+                send_clicked = st.form_submit_button("↑", help="Send")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        with c_mic:
-            st.markdown(f'<div class="{mic_class}">', unsafe_allow_html=True)
-            mic_clicked = st.form_submit_button(mic_icon, help="Voice input")
-            st.markdown('</div>', unsafe_allow_html=True)
+    with outer_cols[2]:
+        st.markdown(f'<div class="{mic_class}">', unsafe_allow_html=True)
+        mic_clicked = st.button(mic_icon, key=f"mic_{bar_key}", help="Voice input")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with c_send:
-            st.markdown('<div class="gemini-send">', unsafe_allow_html=True)
-            send_clicked = st.form_submit_button("↑", help="Send")
-            st.markdown('</div>', unsafe_allow_html=True)
-
+    # JS utility
     st.markdown(f"""
     <script>
     function clearChip_{bar_key}() {{
@@ -941,8 +972,9 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
     </script>
     """, unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # close .gemini-bar
 
+    # ── Return action ─────────────────────────────────────────────────────
     if mic_clicked:
         return ("mic", "stop" if recording else "start")
     if attach_clicked:

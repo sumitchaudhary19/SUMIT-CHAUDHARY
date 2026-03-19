@@ -677,68 +677,136 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
 #  Clicking New Chat / Dashboard / Logout fires action immediately.
 # ═════════════════════════════════════════════════════════════════════════════
 def render_left_rail():
-    """Injects the fixed 58px icon rail via HTML.
-    Actions are dispatched via ?lnav= query param which Streamlit reads on next rerun."""
-    p   = st.session_state.left_panel
-    ah  = "rail-active" if p == "history"  else ""
-    as_ = "rail-active" if p == "settings" else ""
-    at  = "rail-active" if p == "theme"    else ""
+    """
+    Renders the fixed 58px left icon rail using Streamlit native buttons
+    placed inside a fixed-position HTML container.
+    Buttons are actual st.button calls — fully functional, no JS onclick needed.
+    """
+    p = st.session_state.left_panel
 
-    st.markdown(f"""
-    <div class="chat-left-rail">
-      <div class="rail-logo">A</div>
-      <div class="rail-divider"></div>
-
-      <div class="rail-icon-btn {ah}"  data-tip="Chat History"  onclick="lnav('history')">⏱</div>
-      <div class="rail-icon-btn {as_}" data-tip="Settings"      onclick="lnav('settings')">⚙️</div>
-      <div class="rail-icon-btn {at}"  data-tip="Theme"         onclick="lnav('theme')">🌗</div>
-
-      <div class="rail-divider"></div>
-      <div class="rail-icon-btn" data-tip="New Chat"   onclick="lnav('new_chat')">✚</div>
-      <div class="rail-icon-btn" data-tip="Dashboard"  onclick="lnav('dashboard')">🏠</div>
-
-      <div class="rail-spacer"></div>
-      <div class="rail-icon-btn rail-danger" data-tip="Logout" onclick="lnav('logout')">🚪</div>
-    </div>
-    <script>
-    function lnav(val){{
-      var url = new URL(window.location.href);
-      url.searchParams.set('lnav', val);
-      window.location.href = url.toString();
-    }}
-    </script>
+    # ── CSS for the rail button column overlay ────────────────────────────────
+    st.markdown("""
+    <style>
+    /* Rail button column — sits on top of the fixed HTML rail */
+    .rail-btn-col {
+      position: fixed !important;
+      top: 0; left: 0; bottom: 0;
+      width: 58px !important;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 0 14px;
+      gap: 4px;
+      pointer-events: none; /* let clicks pass through to buttons */
+    }
+    /* Override ALL buttons inside rail to be icon-style */
+    .rail-btn-col .stButton { pointer-events: all; width: 42px !important; }
+    .rail-btn-col .stButton > button {
+      background: transparent !important;
+      border: 1px solid transparent !important;
+      border-radius: 11px !important;
+      color: rgba(148,163,184,0.55) !important;
+      font-size: 1.05rem !important;
+      width: 42px !important; height: 42px !important;
+      min-width: 42px !important; padding: 0 !important;
+      box-shadow: none !important;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rail-btn-col .stButton > button:hover {
+      background: rgba(59,130,246,0.14) !important;
+      border-color: rgba(59,130,246,0.30) !important;
+      color: #BAE6FD !important;
+      transform: none !important; opacity: 1 !important;
+    }
+    /* Active state for toggled drawer buttons */
+    .rail-active-btn .stButton > button {
+      background: rgba(59,130,246,0.20) !important;
+      border-color: rgba(59,130,246,0.45) !important;
+      color: #60A5FA !important;
+    }
+    /* Danger (logout) */
+    .rail-danger-btn .stButton > button {
+      color: rgba(252,165,165,0.55) !important;
+    }
+    .rail-danger-btn .stButton > button:hover {
+      background: rgba(239,68,68,0.14) !important;
+      border-color: rgba(239,68,68,0.30) !important;
+      color: #FCA5A5 !important;
+    }
+    /* Spacer div between button groups */
+    .rail-btn-spacer { flex: 1; pointer-events: none; }
+    .rail-btn-divider {
+      width: 30px; height: 1px;
+      background: rgba(255,255,255,0.07);
+      margin: 4px 0; flex-shrink: 0; pointer-events: none;
+    }
+    </style>
     """, unsafe_allow_html=True)
 
-    # Process action from query param
-    qp   = st.query_params
-    lnav = qp.get("lnav", "")
-    if lnav:
-        try: del st.query_params["lnav"]
-        except: pass
+    # ── Fixed HTML shell (visual background rail) ─────────────────────────────
+    st.markdown('<div class="chat-left-rail"></div>', unsafe_allow_html=True)
 
-        if lnav in ("history", "settings", "theme"):
-            # Toggle drawer
-            st.session_state.left_panel = None if st.session_state.left_panel == lnav else lnav
-            st.rerun()
+    # ── Streamlit buttons rendered in fixed overlay column ────────────────────
+    st.markdown('<div class="rail-btn-col">', unsafe_allow_html=True)
 
-        elif lnav == "new_chat":
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"] == "user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu + "...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages      = []
-            st.session_state.show_uploader      = False
-            st.session_state.attached_file_name = ""
-            st.session_state.left_panel         = None
-            st.rerun()
+    # History
+    css_h = "rail-active-btn" if p == "history" else ""
+    st.markdown(f'<div class="{css_h}" title="Chat History">', unsafe_allow_html=True)
+    if st.button("⏱", key="rail_history"):
+        st.session_state.left_panel = None if p == "history" else "history"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        elif lnav == "dashboard":
-            st.session_state.view       = "dashboard"
-            st.session_state.left_panel = None
-            st.rerun()
+    # Settings
+    css_s = "rail-active-btn" if p == "settings" else ""
+    st.markdown(f'<div class="{css_s}" title="Settings">', unsafe_allow_html=True)
+    if st.button("⚙️", key="rail_settings"):
+        st.session_state.left_panel = None if p == "settings" else "settings"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        elif lnav == "logout":
-            for k in list(st.session_state.keys()): del st.session_state[k]
-            st.rerun()
+    # Theme
+    css_t = "rail-active-btn" if p == "theme" else ""
+    st.markdown(f'<div class="{css_t}" title="Theme">', unsafe_allow_html=True)
+    if st.button("🌗", key="rail_theme"):
+        st.session_state.left_panel = None if p == "theme" else "theme"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="rail-btn-divider"></div>', unsafe_allow_html=True)
+
+    # New Chat
+    st.markdown('<div title="New Chat">', unsafe_allow_html=True)
+    if st.button("✚", key="rail_new_chat"):
+        if st.session_state.chat_messages:
+            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"] == "user"), "Session")
+            st.session_state.chat_sessions.append({"label": fu + "...", "messages": list(st.session_state.chat_messages)})
+        st.session_state.chat_messages      = []
+        st.session_state.show_uploader      = False
+        st.session_state.attached_file_name = ""
+        st.session_state.left_panel         = None
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Dashboard
+    st.markdown('<div title="Dashboard">', unsafe_allow_html=True)
+    if st.button("🏠", key="rail_dashboard"):
+        st.session_state.view       = "dashboard"
+        st.session_state.left_panel = None
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Spacer then Logout at bottom
+    st.markdown('<div class="rail-btn-spacer"></div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="rail-danger-btn" title="Logout">', unsafe_allow_html=True)
+    if st.button("🚪", key="rail_logout"):
+        for k in list(st.session_state.keys()): del st.session_state[k]
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close .rail-btn-col
 
 
 def render_drawer():

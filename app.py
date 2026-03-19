@@ -803,96 +803,225 @@ if view == "chat":
             except: pass
             st.rerun()
 
-    # ── FIXED TOPBAR + HAMBURGER TOGGLE ──────────────────────────────────
+    # ── FIXED TOPBAR (logo only) ──────────────────────────────────────────
     st.markdown("""
     <div class="chat-topbar">
-      <div style="display:flex;align-items:center;gap:36px;">
-        <!-- Hamburger toggle — pure HTML button, no Streamlit -->
-        <button class="sb-toggle-btn" id="sb-toggle" onclick="toggleSidebar()" title="Menu">
-          <span id="hb1"></span>
-          <span id="hb2"></span>
-          <span id="hb3"></span>
-        </button>
-        <div class="chat-topbar-logo" style="margin-left:4px;">
-          <div class="chat-topbar-logo-icon">A</div>
-          <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
-          <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
-        </div>
+      <div class="chat-topbar-logo" style="margin-left:48px;">
+        <div class="chat-topbar-logo-icon">A</div>
+        <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
+        <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
       </div>
     </div>
-
-    <!-- Overlay — click to close sidebar -->
-    <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
-
     <div class="chat-topbar-spacer"></div>
     <div class="chat-topbar-divider"></div>
-
-    <script>
-    var _sbOpen = false;
-    function toggleSidebar() {
-      _sbOpen ? closeSidebar() : openSidebar();
-    }
-    function openSidebar() {
-      _sbOpen = true;
-      var sb  = document.getElementById('chat-sidebar');
-      var ov  = document.getElementById('sb-overlay');
-      if (sb) sb.classList.add('sb-open');
-      if (ov) ov.classList.add('sb-open');
-      // Animate hamburger → X
-      var h1=document.getElementById('hb1'), h2=document.getElementById('hb2'), h3=document.getElementById('hb3');
-      if(h1){h1.style.transform='rotate(45deg) translate(4px,4px)';}
-      if(h2){h2.style.opacity='0';}
-      if(h3){h3.style.transform='rotate(-45deg) translate(4px,-4px)';}
-    }
-    function closeSidebar() {
-      _sbOpen = false;
-      var sb  = document.getElementById('chat-sidebar');
-      var ov  = document.getElementById('sb-overlay');
-      if (sb) sb.classList.remove('sb-open');
-      if (ov) ov.classList.remove('sb-open');
-      var h1=document.getElementById('hb1'), h2=document.getElementById('hb2'), h3=document.getElementById('hb3');
-      if(h1){h1.style.transform='';}
-      if(h2){h2.style.opacity='1';}
-      if(h3){h3.style.transform='';}
-    }
-    // Close on Escape
-    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSidebar(); });
-    </script>
     """, unsafe_allow_html=True)
 
-    # ── SIDEBAR — rendered as fixed div, Streamlit buttons inside ─────────
-    st.markdown('<div class="chat-sidebar" id="chat-sidebar">', unsafe_allow_html=True)
-    st.markdown('<div class="sb-label">Navigation</div>', unsafe_allow_html=True)
+    # ── HAMBURGER + SIDEBAR via components.html (iframe — JS works freely) ─
+    # The hamburger button lives in the iframe, controls the sidebar div
+    # that also lives in the SAME iframe. No Streamlit interference.
+    _h_open = "true" if st.session_state.get("show_history_panel") else "false"
+    _s_open = "true" if st.session_state.get("show_settings_panel") else "false"
 
-    _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
-    st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
-    if st.button("🕐  History", key="_btn_history"):
-        st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-        st.session_state.show_settings_panel = False; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    components.html(f"""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:transparent; font-family:'Outfit',sans-serif; overflow:hidden; }}
 
-    st.markdown('<div class="nb-new">', unsafe_allow_html=True)
-    if st.button("✦  New Chat", key="_btn_new_chat"):
-        if st.session_state.chat_messages:
-            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-            st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-        st.session_state.chat_messages = []
-        st.session_state.show_uploader = False
-        st.session_state.attached_file_name = ""
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+/* Hamburger button */
+#hbtn {{
+  position:fixed; top:58px; left:10px;
+  width:34px; height:34px; border-radius:9px;
+  background:rgba(80,30,160,0.32);
+  border:1px solid rgba(160,90,240,0.42);
+  cursor:pointer;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:5px;
+  z-index:99999;
+  transition:all 0.18s ease;
+  box-shadow:0 2px 14px rgba(80,20,160,0.30);
+}}
+#hbtn:hover {{
+  background:rgba(110,45,210,0.45);
+  border-color:rgba(200,130,255,0.55);
+  box-shadow:0 4px 20px rgba(100,30,200,0.40);
+}}
+.hbar {{
+  display:block; width:15px; height:2px;
+  background:rgba(220,190,255,0.88);
+  border-radius:2px;
+  transition:all 0.24s ease;
+}}
+#hbtn.open .hbar:nth-child(1) {{ transform:rotate(45deg) translate(5px,5px); }}
+#hbtn.open .hbar:nth-child(2) {{ opacity:0; transform:scaleX(0); }}
+#hbtn.open .hbar:nth-child(3) {{ transform:rotate(-45deg) translate(5px,-5px); }}
 
-    _scls = "nb-on" if st.session_state.get("show_settings_panel") else ""
-    st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
-    if st.button("⚙  Settings", key="_btn_settings"):
-        st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-        st.session_state.show_history_panel = False; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+/* Sidebar panel */
+#sb {{
+  position:fixed; top:52px; left:0;
+  width:175px; height:calc(100vh - 52px);
+  background:rgba(8,4,22,0.97);
+  border-right:1px solid rgba(130,65,210,0.24);
+  box-shadow:5px 0 36px rgba(60,10,130,0.32);
+  transform:translateX(-100%);
+  transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
+  padding:60px 10px 20px;
+  display:flex; flex-direction:column; gap:0;
+  z-index:9998;
+  backdrop-filter:blur(20px);
+}}
+#sb.open {{ transform:translateX(0); }}
 
-    if st.button("⊞  Dashboard", key="_btn_dashboard"):
-        st.session_state.view = "dashboard"; st.rerun()
+/* Nav label */
+.nv-label {{
+  font-size:0.52rem; color:rgba(180,140,255,0.38);
+  text-transform:uppercase; letter-spacing:1.6px;
+  padding:0 6px 8px; margin-bottom:6px;
+  border-bottom:1px solid rgba(130,65,210,0.16);
+  font-family:'DM Mono',monospace;
+}}
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close .chat-sidebar
+/* Nav items */
+.nv-item {{
+  display:flex; align-items:center; gap:8px;
+  padding:9px 12px; border-radius:9px;
+  font-size:0.78rem; font-weight:500;
+  color:rgba(200,175,255,0.78);
+  cursor:pointer; user-select:none;
+  transition:all 0.14s ease;
+  border:1px solid transparent;
+  margin-bottom:3px;
+}}
+.nv-item:hover {{
+  background:rgba(110,45,210,0.22);
+  border-color:rgba(180,100,255,0.28);
+  color:#DCC8FF;
+}}
+.nv-item.active {{
+  background:rgba(120,50,220,0.28);
+  border-color:rgba(180,100,255,0.40);
+  color:#E0CCFF;
+}}
+.nv-item.new {{
+  background:rgba(37,99,235,0.14);
+  border-color:rgba(59,130,246,0.28);
+  color:#93C5FD;
+}}
+.nv-item.new:hover {{
+  background:rgba(37,99,235,0.24);
+  border-color:rgba(59,130,246,0.45);
+  color:#BAE6FD;
+}}
+.nv-icon {{ font-size:0.88rem; width:18px; text-align:center; flex-shrink:0; }}
+
+/* Overlay */
+#ov {{
+  position:fixed; inset:0; z-index:9997;
+  background:rgba(0,0,0,0);
+  pointer-events:none;
+  transition:background 0.28s ease;
+}}
+#ov.open {{
+  background:rgba(0,0,0,0.38);
+  pointer-events:auto;
+}}
+</style>
+</head>
+<body>
+
+<div id="ov" onclick="closeSb()"></div>
+
+<button id="hbtn" onclick="toggleSb()">
+  <span class="hbar"></span>
+  <span class="hbar"></span>
+  <span class="hbar"></span>
+</button>
+
+<div id="sb">
+  <div class="nv-label">Navigation</div>
+  <div class="nv-item {'active' if st.session_state.get('show_history_panel') else ''}" onclick="sendAction('history')">
+    <span class="nv-icon">🕐</span> History
+  </div>
+  <div class="nv-item new" onclick="sendAction('new_chat')">
+    <span class="nv-icon">✦</span> New Chat
+  </div>
+  <div class="nv-item {'active' if st.session_state.get('show_settings_panel') else ''}" onclick="sendAction('settings')">
+    <span class="nv-icon">⚙</span> Settings
+  </div>
+  <div class="nv-item" onclick="sendAction('dashboard')">
+    <span class="nv-icon">⊞</span> Dashboard
+  </div>
+</div>
+
+<script>
+var isOpen = false;
+
+function toggleSb() {{
+  isOpen ? closeSb() : openSb();
+}}
+function openSb() {{
+  isOpen = true;
+  document.getElementById('sb').classList.add('open');
+  document.getElementById('ov').classList.add('open');
+  document.getElementById('hbtn').classList.add('open');
+}}
+function closeSb() {{
+  isOpen = false;
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('ov').classList.remove('open');
+  document.getElementById('hbtn').classList.remove('open');
+}}
+function sendAction(action) {{
+  closeSb();
+  // Post message to parent Streamlit window
+  window.parent.postMessage({{type:'streamlit:setComponentValue', value:action}}, '*');
+}}
+document.addEventListener('keydown', function(e){{
+  if(e.key==='Escape') closeSb();
+}});
+</script>
+</body>
+</html>
+""", height=0, scrolling=False)
+
+    # ── Handle sidebar actions from component ─────────────────────────────
+    # Since components.html can't directly call st.rerun, we use query params
+    _sb_action = st.query_params.get("_sb", "")
+    if _sb_action:
+        try: del st.query_params["_sb"]
+        except: pass
+        if _sb_action == "history":
+            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+            st.session_state.show_settings_panel = False; st.rerun()
+        elif _sb_action == "settings":
+            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+            st.session_state.show_history_panel = False; st.rerun()
+        elif _sb_action == "dashboard":
+            st.session_state.view = "dashboard"; st.rerun()
+        elif _sb_action == "new_chat":
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.show_uploader = False
+            st.session_state.attached_file_name = ""
+            st.rerun()
+
+    # ── JS: wire component postMessage → query param → rerun ─────────────
+    st.markdown("""
+    <script>
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'streamlit:setComponentValue') return;
+      var action = e.data.value;
+      if (!action) return;
+      var url = new URL(window.location.href);
+      url.searchParams.set('_sb', action);
+      window.location.href = url.toString();
+    });
+    </script>
+    """, unsafe_allow_html=True)
 
     # ── Rotating animated placeholder injection ───────────────────────────
     st.markdown("""

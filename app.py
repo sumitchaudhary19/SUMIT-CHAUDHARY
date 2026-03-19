@@ -339,7 +339,7 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
   box-shadow: 4px 0 32px rgba(60,10,120,0.28) !important;
   transform: translateX(-100%) !important;
   transition: transform 0.28s cubic-bezier(0.22,0.61,0.36,1) !important;
-  padding: 18px 10px 18px 10px !important;
+  padding: 54px 10px 18px 10px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
@@ -362,12 +362,12 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 /* Toggle hamburger button in topbar */
 .sb-toggle-btn {
   position: fixed !important;
-  top: 10px !important; left: 12px !important;
+  top: 58px !important; left: 10px !important;
   z-index: 10001 !important;
-  width: 32px !important; height: 32px !important;
-  border-radius: 8px !important;
-  background: rgba(80,30,160,0.22) !important;
-  border: 1px solid rgba(140,80,220,0.30) !important;
+  width: 34px !important; height: 34px !important;
+  border-radius: 9px !important;
+  background: rgba(80,30,160,0.30) !important;
+  border: 1px solid rgba(140,80,220,0.38) !important;
   cursor: pointer !important;
   display: flex !important;
   flex-direction: column !important;
@@ -375,6 +375,7 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
   justify-content: center !important;
   gap: 4px !important;
   transition: all 0.18s ease !important;
+  box-shadow: 0 2px 12px rgba(80,20,160,0.25) !important;
 }
 .sb-toggle-btn:hover {
   background: rgba(100,40,200,0.35) !important;

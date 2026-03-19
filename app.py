@@ -1373,160 +1373,104 @@ if view == "chat":
     </style>
     """, unsafe_allow_html=True)
 
-    # ── Render the fixed navbar HTML (logo + buttons) ────────────────────
-    _hist_active = "nb-pill-blue" if st.session_state.get("show_history_panel") else ""
-    _sets_active = "nb-pill-blue" if st.session_state.get("show_settings_panel") else ""
-    st.markdown(f"""
+    # ── Render the fixed navbar HTML (logo only - buttons rendered by Streamlit below) ──
+    st.markdown("""
     <div class="askmnt-navbar">
       <div class="askmnt-nb-left">
         <div class="askmnt-nb-logo-icon">A</div>
         <span class="askmnt-nb-logo-name">AskMNIT</span>
         <span class="askmnt-nb-logo-dot">&#9679; AI</span>
       </div>
-      <div class="askmnt-nb-right">
-        <span class="nb-pill {_hist_active}" onclick="stAction('history')" style="cursor:pointer;">🕐 History</span>
-        <span class="nb-pill nb-pill-blue" onclick="stAction('new_chat')" style="cursor:pointer;">+ New Chat</span>
-        <span class="nb-pill {_sets_active}" onclick="stAction('settings')" style="cursor:pointer;">⚙ Settings</span>
-        <span class="nb-pill" onclick="stAction('dashboard')" style="cursor:pointer;">Dashboard</span>
-      </div>
     </div>
     <div class="askmnt-navbar-spacer"></div>
     <div class="askmnt-navbar-divider"></div>
-
-    <script>
-    function stAction(action) {{
-      // Use Streamlit's internal mechanism: set a hidden input value and trigger change
-      // This works by posting a message to the parent Streamlit frame
-      var inputs = window.parent.document.querySelectorAll('input[type="text"]');
-      // Fallback: use URL with replaceState so session state is preserved
-      var url = new URL(window.parent.location.href);
-      url.searchParams.set('_nb', action);
-      window.parent.history.replaceState(null, '', url.toString());
-      // Trigger Streamlit rerun via the keyboard event trick
-      var evt = new KeyboardEvent('keydown', {{key:'Enter', bubbles:true}});
-      // Best approach: directly update the hidden stActionKey input
-      var hiddenInputs = window.parent.document.querySelectorAll('[data-testid="stTextInput"] input');
-      for (var i=0; i<hiddenInputs.length; i++) {{
-        if (hiddenInputs[i].getAttribute('aria-label') === '__nb_action__') {{
-          var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-          nativeInputValueSetter.call(hiddenInputs[i], action);
-          hiddenInputs[i].dispatchEvent(new Event('input', {{bubbles:true}}));
-          break;
-        }}
-      }}
-    }}
-    </script>
     """, unsafe_allow_html=True)
 
-    # ── Hidden text input to receive navbar clicks ────────────────────────
-    # This is the RELIABLE way — no query param URL bug
-    _nb_val = st.text_input("__nb_action__", value="", key="_nb_action_input",
-                             label_visibility="collapsed")
-    if _nb_val:
-        # Clear it immediately and process action
-        st.session_state["_nb_action_input"] = ""
-        if _nb_val == "new_chat":
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.show_uploader = False
-            st.session_state.attached_file_name = ""
-            st.rerun()
-        elif _nb_val == "dashboard":
-            st.session_state.view = "dashboard"; st.rerun()
-        elif _nb_val == "settings":
-            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-            st.session_state.show_history_panel = False
-            st.rerun()
-        elif _nb_val == "history":
-            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-            st.session_state.show_settings_panel = False
-            st.rerun()
 
-    # ── Actual working navbar with st.columns + st.button ────────────────
-    # Since JS hidden input trick is unreliable, use the most robust Streamlit
-    # approach: render REAL st.buttons absolutely positioned over the navbar
-    st.markdown("""
-    <style>
-    /* Hide the hidden nb_action input from view */
-    [data-testid="stTextInput"]:has(input[aria-label="__nb_action__"]) {
-      position:fixed !important; top:-999px !important; opacity:0 !important;
-      pointer-events:none !important; height:0 !important;
-    }
-    /* Position the navbar button row fixed at top */
-    .nb-btn-row {
-      position: fixed !important;
-      top: 6px !important; right: 16px !important;
-      z-index: 100000 !important;
-      display: flex !important; align-items: center !important; gap: 6px !important;
-    }
-    .nb-btn-row .stButton > button {
-      border-radius: 999px !important;
-      padding: 5px 13px !important;
-      font-size: 0.77rem !important;
-      font-weight: 500 !important;
-      border: 1px solid rgba(255,255,255,0.10) !important;
-      background: rgba(255,255,255,0.06) !important;
-      color: rgba(226,232,240,0.80) !important;
-      box-shadow: none !important;
-      height: 32px !important;
-      min-height: 32px !important;
-      line-height: 1 !important;
-    }
-    .nb-btn-row .stButton > button:hover {
-      background: rgba(59,130,246,0.18) !important;
-      border-color: rgba(59,130,246,0.40) !important;
-      color: #BAE6FD !important;
-      transform: none !important;
-    }
-    .nb-btn-new .stButton > button {
-      background: rgba(59,130,246,0.13) !important;
-      border-color: rgba(59,130,246,0.32) !important;
-      color: #93C5FD !important;
-    }
-    .nb-btn-active .stButton > button {
-      background: rgba(59,130,246,0.22) !important;
-      border-color: rgba(59,130,246,0.50) !important;
-      color: #BAE6FD !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
-    # Render actual working buttons in a fixed-positioned container
-    st.markdown('<div class="nb-btn-row">', unsafe_allow_html=True)
-    _nb1, _nb2, _nb3, _nb4 = st.columns([1, 1, 1, 1])
-    with _nb1:
-        _hist_cls = "nb-btn-active" if st.session_state.get("show_history_panel") else ""
-        st.markdown(f'<div class="{_hist_cls}">', unsafe_allow_html=True)
-        if st.button("🕐 History", key="_btn_history"):
-            st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-            st.session_state.show_settings_panel = False
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nb2:
-        st.markdown('<div class="nb-btn-new">', unsafe_allow_html=True)
-        if st.button("+ New Chat", key="_btn_new_chat"):
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.show_uploader = False
-            st.session_state.attached_file_name = ""
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nb3:
-        _sets_cls = "nb-btn-active" if st.session_state.get("show_settings_panel") else ""
-        st.markdown(f'<div class="{_sets_cls}">', unsafe_allow_html=True)
-        if st.button("⚙ Settings", key="_btn_settings"):
-            st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-            st.session_state.show_history_panel = False
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    with _nb4:
-        if st.button("Dashboard", key="_btn_dashboard"):
-            st.session_state.view = "dashboard"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+
+
+    # ── Actual st.buttons for navbar — hidden via CSS, triggered via JS ────
+    # These REAL Streamlit buttons are visually hidden (CSS above hides them).
+    # The HTML navbar's onclick calls triggerNbBtn() which clicks the real button.
+    # This is the ONLY reliable way to communicate HTML→Streamlit.
+    _nb_container = st.container()
+    with _nb_container:
+        st.markdown("""
+        <style>
+        /* Hide the real st.button navbar row from normal flow */
+        div[data-nb-buttons="true"] {
+          position: fixed !important;
+          top: 8px !important; right: 14px !important;
+          z-index: 100000 !important;
+          display: flex !important; gap: 6px !important;
+          align-items: center !important;
+          pointer-events: auto !important;
+        }
+        div[data-nb-buttons="true"] .stButton > button {
+          border-radius: 999px !important;
+          padding: 5px 13px !important;
+          font-size: 0.76rem !important; font-weight: 500 !important;
+          height: 34px !important; min-height: 34px !important;
+          border: 1px solid rgba(255,255,255,0.11) !important;
+          background: rgba(255,255,255,0.06) !important;
+          color: rgba(226,232,240,0.80) !important;
+          box-shadow: none !important; line-height: 1 !important;
+        }
+        div[data-nb-buttons="true"] .stButton > button:hover {
+          background: rgba(59,130,246,0.18) !important;
+          border-color: rgba(59,130,246,0.42) !important;
+          color: #BAE6FD !important; transform: none !important;
+        }
+        div[data-nb-buttons="true"] .nb-new .stButton > button {
+          background: rgba(59,130,246,0.13) !important;
+          border-color: rgba(59,130,246,0.32) !important;
+          color: #93C5FD !important;
+        }
+        div[data-nb-buttons="true"] .nb-active .stButton > button {
+          background: rgba(59,130,246,0.22) !important;
+          border-color: rgba(59,130,246,0.50) !important;
+          color: #BAE6FD !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div data-nb-buttons="true">', unsafe_allow_html=True)
+        _c1, _c2, _c3, _c4 = st.columns([1,1,1,1])
+        with _c1:
+            _hcls = "nb-active" if st.session_state.get("show_history_panel") else ""
+            st.markdown(f'<div class="{_hcls}" id="nb-history-wrap">', unsafe_allow_html=True)
+            if st.button("🕐 History", key="_btn_history"):
+                st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
+                st.session_state.show_settings_panel = False
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with _c2:
+            st.markdown('<div class="nb-new" id="nb-newchat-wrap">', unsafe_allow_html=True)
+            if st.button("+ New Chat", key="_btn_new_chat"):
+                if st.session_state.chat_messages:
+                    fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                    st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+                st.session_state.chat_messages = []
+                st.session_state.show_uploader = False
+                st.session_state.attached_file_name = ""
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with _c3:
+            _scls = "nb-active" if st.session_state.get("show_settings_panel") else ""
+            st.markdown(f'<div class="{_scls}" id="nb-settings-wrap">', unsafe_allow_html=True)
+            if st.button("⚙ Settings", key="_btn_settings"):
+                st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+                st.session_state.show_history_panel = False
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        with _c4:
+            st.markdown('<div id="nb-dashboard-wrap">', unsafe_allow_html=True)
+            if st.button("Dashboard", key="_btn_dashboard"):
+                st.session_state.view = "dashboard"; st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)  # close data-nb-buttons
+
 
     # ── CHAT HISTORY PANEL ────────────────────────────────────────────────
     if st.session_state.get("show_history_panel", False):

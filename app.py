@@ -325,25 +325,32 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .chat-topbar-spacer{height:60px;width:100%;}
 .chat-topbar-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.28),rgba(34,211,238,0.12),transparent);margin-bottom:6px;}
 
-/* Navbar real Streamlit buttons — positioned fixed at top right */
+/* Navbar real Streamlit buttons — fixed at top-right, one tight row */
 .nb-real{
-  position:fixed!important;top:9px!important;right:18px!important;
+  position:fixed!important;top:0!important;right:0!important;
   z-index:10000!important;
-  display:flex!important;align-items:center!important;gap:7px!important;
+  height:52px!important;
+  display:flex!important;align-items:center!important;gap:6px!important;
+  padding-right:20px!important;
+  background:transparent!important;
 }
 .nb-real .stButton>button{
-  border-radius:999px!important;padding:5px 14px!important;
+  border-radius:999px!important;padding:5px 15px!important;
   font-size:0.76rem!important;font-weight:500!important;
-  height:33px!important;min-height:33px!important;line-height:1!important;
+  height:32px!important;min-height:32px!important;line-height:1!important;
   border:1px solid rgba(255,255,255,0.11)!important;
   background:rgba(255,255,255,0.06)!important;
   color:rgba(226,232,240,0.82)!important;
   box-shadow:none!important;
   transition:all 0.15s!important;
+  white-space:nowrap!important;
 }
 .nb-real .stButton>button:hover{background:rgba(59,130,246,0.18)!important;border-color:rgba(59,130,246,0.42)!important;color:#BAE6FD!important;transform:none!important;}
 .nb-new .stButton>button{background:rgba(59,130,246,0.14)!important;border-color:rgba(59,130,246,0.34)!important;color:#93C5FD!important;}
 .nb-on  .stButton>button{background:rgba(59,130,246,0.22)!important;border-color:rgba(59,130,246,0.52)!important;color:#BAE6FD!important;}
+/* Hide the st.columns wrapper gap/padding so buttons sit flush */
+.nb-real [data-testid="stHorizontalBlock"]{gap:6px!important;flex-wrap:nowrap!important;width:auto!important;}
+.nb-real [data-testid="column"]{padding:0!important;flex:0 0 auto!important;min-width:unset!important;width:auto!important;}
 
 /* ── Chat messages ── */
 [data-testid="stChatMessage"]{background:rgba(255,255,255,0.025)!important;border:1px solid rgba(255,255,255,0.06)!important;border-radius:14px!important;font-family:'Outfit',sans-serif!important;}
@@ -357,9 +364,38 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .gemini-bar [data-testid="stTextInput"] label{display:none!important;}
 .gemini-bar [data-testid="stTextInput"]>div{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;}
 .gemini-bar [data-testid="stTextInput"] input{background:transparent!important;border:none!important;outline:none!important;box-shadow:none!important;color:#E2E8F0!important;font-family:'Outfit',sans-serif!important;font-size:0.97rem!important;caret-color:#60A5FA!important;padding:11px 8px!important;height:44px!important;border-radius:0!important;width:100%!important;}
-.gemini-bar [data-testid="stTextInput"] input::placeholder{color:rgba(148,163,184,0.38)!important;}
 .gemini-bar [data-testid="stTextInput"] input:focus{border:none!important;box-shadow:none!important;outline:none!important;}
 .gemini-bar>.stHorizontalBlock,.gemini-bar>[data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:0!important;}
+
+/* ── ANIMATED PLACEHOLDER — typewriter shimmer ── */
+@keyframes placeholderShimmer {
+  0%,100% { opacity: 0.38; }
+  50%      { opacity: 0.72; }
+}
+@keyframes placeholderSlide {
+  0%   { transform: translateY(4px); opacity: 0; }
+  8%   { transform: translateY(0);   opacity: 1; }
+  88%  { transform: translateY(0);   opacity: 1; }
+  96%  { transform: translateY(-4px);opacity: 0; }
+  100% { transform: translateY(-4px);opacity: 0; }
+}
+.gemini-bar [data-testid="stTextInput"] input::placeholder {
+  color: rgba(148,163,184,0.38)!important;
+  animation: placeholderShimmer 3s ease-in-out infinite!important;
+}
+/* Premium glow pulse on the bar when idle */
+@keyframes barIdleGlow {
+  0%,100% { box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.04) inset; }
+  50%      { box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(59,130,246,0.14), 0 0 28px rgba(59,130,246,0.08), 0 1px 0 rgba(255,255,255,0.04) inset; }
+}
+.gemini-bar [data-testid="stForm"] {
+  animation: barIdleGlow 4s ease-in-out infinite!important;
+}
+.gemini-bar [data-testid="stForm"]:focus-within {
+  animation: none!important;
+  border-color: rgba(59,130,246,0.55)!important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 6px 40px rgba(37,99,235,0.18)!important;
+}
 .gemini-attach .stButton>button{background:transparent!important;border:none!important;border-radius:50%!important;color:rgba(148,163,184,0.55)!important;font-size:1.2rem!important;width:42px!important;height:42px!important;min-width:42px!important;padding:0!important;box-shadow:none!important;}
 .gemini-attach .stButton>button:hover{background:rgba(255,255,255,0.08)!important;color:rgba(186,230,253,0.80)!important;transform:none!important;opacity:1!important;}
 .gemini-mic .stButton>button{background:rgba(255,255,255,0.05)!important;border:1px solid rgba(255,255,255,0.09)!important;border-radius:50%!important;color:rgba(148,163,184,0.60)!important;font-size:1.05rem!important;width:38px!important;height:38px!important;min-width:38px!important;padding:0!important;box-shadow:none!important;}
@@ -520,7 +556,7 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
         chip_html = (f'<div class="file-chip" title="{fname}"><span>📎</span>{short}'
                      f'<button onclick="clearChip_{bar_key}()" style="background:none;border:none;color:rgba(148,163,184,0.5);cursor:pointer;font-size:0.75rem;margin-left:4px;padding:0 4px;">✕</button></div>')
 
-    st.markdown(f'<div class="gemini-bar" style="max-width:780px;width:100%;margin:0 auto;{anim_style}">', unsafe_allow_html=True)
+    st.markdown(f'<div class="gemini-bar" style="max-width:580px;width:100%;margin:0 auto;{anim_style}">', unsafe_allow_html=True)
     if chip_html:
         st.markdown(f'<div style="display:flex;align-items:center;padding:0 16px 6px;">{chip_html}</div>', unsafe_allow_html=True)
 
@@ -631,9 +667,9 @@ if view == "chat":
     <div class="chat-topbar-divider"></div>
     """, unsafe_allow_html=True)
 
-    # Real st.buttons — CSS positions them fixed at top-right
+    # Real st.buttons — CSS positions them fixed at top-right, all in one row
     st.markdown('<div class="nb-real">', unsafe_allow_html=True)
-    _nc1, _nc2, _nc3, _nc4 = st.columns([1, 1, 1, 1])
+    _nc1, _nc2, _nc3, _nc4 = st.columns([1.1, 1.1, 1.1, 1.0])
     with _nc1:
         _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
         st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
@@ -663,6 +699,42 @@ if view == "chat":
         if st.button("Dashboard", key="_btn_dashboard"):
             st.session_state.view = "dashboard"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Rotating animated placeholder injection ───────────────────────────
+    st.markdown("""
+    <style>
+    @keyframes fadeInUp2 {
+      from { opacity:0; transform:translateY(3px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    </style>
+    <script>
+    (function() {
+      var hints = [
+        "Ask AskMNIT anything...",
+        "Check my attendance %...",
+        "What's my next class?",
+        "Find PYQs for my branch...",
+        "Give me an exam strategy...",
+        "Is my fee paid?",
+        "Subjects this semester?",
+      ];
+      var idx = 0;
+      function rotatePlaceholder() {
+        var inputs = window.parent.document.querySelectorAll('.gemini-bar input[type="text"]');
+        inputs.forEach(function(inp) {
+          if (document.activeElement === inp) return;
+          inp.setAttribute('placeholder', hints[idx]);
+          inp.style.transition = 'opacity 0.35s';
+          inp.style.opacity = '0';
+          setTimeout(function(){ inp.style.opacity = '1'; }, 50);
+        });
+        idx = (idx + 1) % hints.length;
+      }
+      setInterval(rotatePlaceholder, 2800);
+    })();
+    </script>
+    """, unsafe_allow_html=True)
 
     # ── HISTORY PANEL ─────────────────────────────────────────────────────
     if st.session_state.get("show_history_panel"):
@@ -805,7 +877,7 @@ if view == "chat":
         PILLS_ROW2 = [f"Subjects for {br}", "Exam schedule tips"]
 
         # Pills — centered with equal margins, no sidebar offset
-        _, pc, _ = st.columns([0.5, 9, 0.5])
+        _, pc, _ = st.columns([0.8, 8.4, 0.8])
         with pc:
             r1 = st.columns(4)
             for i, pill in enumerate(PILLS_ROW1):
@@ -825,8 +897,8 @@ if view == "chat":
 
         st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
 
-        # Input bar — perfectly centered, sidebar gone so this is truly centered
-        _, bc, _ = st.columns([0.5, 9, 0.5])
+        # Input bar — narrower, premium centered
+        _, bc, _ = st.columns([1.5, 7, 1.5])
         with bc:
             hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
 

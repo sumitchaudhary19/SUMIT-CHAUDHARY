@@ -142,6 +142,7 @@ _DEFAULTS: dict = {
     "attached_file_name":"",
     "voice_transcript":  "",
     "_voice_submit":     False,
+    "show_settings_panel": False,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -890,7 +891,7 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
         )
 
     st.markdown(
-        f'<div class="gemini-bar" style="max-width:800px;margin:0 auto;{anim_style}">',
+        f'<div class="gemini-bar" style="max-width:780px;width:100%;margin:0 auto;{anim_style}">',
         unsafe_allow_html=True,
     )
 
@@ -1129,60 +1130,149 @@ if view == "chat":
             except Exception: pass
             st.rerun()
 
-    # ── PATCH 2: STICKY FIXED NAVBAR — logo left, 3 buttons right ─────────
-    st.markdown(
-        '<div class="chat-navbar-wrap">'
-        '<div class="chat-navbar-inner">'
-        '<div class="chat-navbar-logo">'
-        '<div class="chat-navbar-logo-icon">A</div>'
-        '<span style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>'
-        '<span style="font-size:0.56rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>'
-        '</div></div></div>'
-        '<div class="chat-navbar-spacer"></div>',
-        unsafe_allow_html=True,
-    )
+    # ── Handle navbar button clicks via query params ───────────────────────
+    _qp = st.query_params
+    _nav_action = _qp.get("nav_action", "")
+    if _nav_action == "new_chat":
+        try: del st.query_params["nav_action"]
+        except Exception: pass
+        if st.session_state.chat_messages:
+            fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+            st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+        st.session_state.chat_messages = []
+        st.session_state.show_uploader = False
+        st.session_state.attached_file_name = ""
+        st.rerun()
+    elif _nav_action == "dashboard":
+        try: del st.query_params["nav_action"]
+        except Exception: pass
+        st.session_state.view = "dashboard"
+        st.rerun()
+    elif _nav_action == "settings":
+        try: del st.query_params["nav_action"]
+        except Exception: pass
+        st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
+        st.rerun()
 
-    # 3 nav buttons in one tight row — CSS floats them into the fixed navbar
-    _gap, nb1_col, nb2_col, nb3_col = st.columns([6.0, 1.15, 1.05, 1.15])
-    st.markdown("""<style>
-    /* Float the nav-button row up into the fixed navbar strip */
-    section[data-testid="stMain"] > div > div[data-testid="stVerticalBlockBorderWrapper"]:nth-of-type(2) > div > div[data-testid="stHorizontalBlock"],
-    section[data-testid="stMain"] > div > div > div[data-testid="stVerticalBlock"] > div:nth-child(3) > div[data-testid="stHorizontalBlock"] {
-      position: fixed !important;
-      top: 5px !important;
-      right: 16px !important;
-      z-index: 10000 !important;
-      width: auto !important;
-      background: transparent !important;
-      gap: 8px !important;
-    }
-    </style>""", unsafe_allow_html=True)
+    # ── PURE HTML FIXED NAVBAR — 100% works in Streamlit ─────────────────
+    # All 3 buttons are real <a> tags that set query params → triggers rerun
+    _base_url = "?"  # relative URL, works on any host
+    st.markdown(f"""
+    <style>
+    .askmnt-navbar {{
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 99999;
+      height: 52px;
+      background: rgba(7,11,20,0.97);
+      backdrop-filter: blur(24px) saturate(200%);
+      -webkit-backdrop-filter: blur(24px) saturate(200%);
+      border-bottom: 1px solid rgba(59,130,246,0.18);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.60);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+    }}
+    .askmnt-navbar-logo {{
+      display: flex; align-items: center; gap: 9px;
+      text-decoration: none;
+    }}
+    .askmnt-navbar-logo-icon {{
+      width: 28px; height: 28px; border-radius: 8px;
+      background: linear-gradient(135deg,#2563EB,#4F46E5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; font-weight: 700; color: white;
+      box-shadow: 0 3px 10px rgba(37,99,235,0.35);
+      flex-shrink: 0;
+    }}
+    .askmnt-navbar-logo-text {{
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem; color: #E2E8F0; font-weight: 500;
+    }}
+    .askmnt-navbar-logo-dot {{
+      font-size: 0.52rem; color: #10B981;
+      font-weight: 700; margin-left: 3px;
+    }}
+    .askmnt-navbar-actions {{
+      display: flex; align-items: center; gap: 8px;
+    }}
+    .askmnt-nav-btn {{
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.15s ease;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: rgba(226,232,240,0.78);
+      white-space: nowrap;
+    }}
+    .askmnt-nav-btn:hover {{
+      background: rgba(59,130,246,0.18);
+      border-color: rgba(59,130,246,0.40);
+      color: #BAE6FD;
+    }}
+    .askmnt-nav-btn-primary {{
+      background: rgba(59,130,246,0.12);
+      border-color: rgba(59,130,246,0.30);
+      color: #93C5FD;
+    }}
+    .askmnt-nav-btn-primary:hover {{
+      background: rgba(59,130,246,0.25);
+      border-color: rgba(59,130,246,0.55);
+      color: #BAE6FD;
+    }}
+    /* Spacer so content doesn't hide behind fixed navbar */
+    .askmnt-navbar-spacer {{ height: 60px; width: 100%; }}
+    /* Gradient divider below navbar */
+    .askmnt-navbar-divider {{
+      height: 1px;
+      background: linear-gradient(90deg,transparent,rgba(59,130,246,0.30),rgba(34,211,238,0.14),transparent);
+    }}
+    </style>
 
-    with nb1_col:
-        st.markdown('<div class="nav-pill">', unsafe_allow_html=True)
-        if st.button("+ New Chat", key="btn_new_chat"):
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.show_uploader = False
-            st.session_state.attached_file_name = ""
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    <div class="askmnt-navbar">
+      <div class="askmnt-navbar-logo">
+        <div class="askmnt-navbar-logo-icon">A</div>
+        <span class="askmnt-navbar-logo-text">AskMNIT</span>
+        <span class="askmnt-navbar-logo-dot">&#9679; AI</span>
+      </div>
+      <div class="askmnt-navbar-actions">
+        <a class="askmnt-nav-btn askmnt-nav-btn-primary"
+           href="?nav_action=new_chat"
+           onclick="window.location.href='?nav_action=new_chat';return false;">
+          + New Chat
+        </a>
+        <a class="askmnt-nav-btn"
+           href="?nav_action=settings"
+           onclick="window.location.href='?nav_action=settings';return false;">
+          ⚙ Settings
+        </a>
+        <a class="askmnt-nav-btn"
+           href="?nav_action=dashboard"
+           onclick="window.location.href='?nav_action=dashboard';return false;">
+          Dashboard
+        </a>
+      </div>
+    </div>
+    <div class="askmnt-navbar-spacer"></div>
+    <div class="askmnt-navbar-divider"></div>
+    """, unsafe_allow_html=True)
 
-    with nb2_col:
-        with st.popover("Settings", use_container_width=True):
-            st.markdown('<div style="font-family:\'DM Mono\',monospace;font-size:0.58rem;color:rgba(148,163,184,0.45);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px;">Bot Settings</div>', unsafe_allow_html=True)
-            st.session_state.voice_output = st.toggle("Voice Output", value=st.session_state.voice_output, key="toggle_voice")
-            st.session_state.strict_mode  = st.toggle("Strict Mode",  value=st.session_state.strict_mode,  key="toggle_strict")
-
-    with nb3_col:
-        st.markdown('<div class="nav-back">', unsafe_allow_html=True)
-        if st.button("Dashboard", key="btn_dashboard"):
-            st.session_state.view = "dashboard"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.30),rgba(34,211,238,0.14),transparent);"></div>', unsafe_allow_html=True)
+    # Settings panel (replaces popover — shown inline below navbar)
+    if st.session_state.get("show_settings_panel", False):
+        with st.expander("⚙ Bot Settings", expanded=True):
+            _sc1, _sc2, _sc3 = st.columns([2, 2, 1])
+            with _sc1:
+                st.session_state.voice_output = st.toggle("Voice Output", value=st.session_state.voice_output, key="toggle_voice")
+            with _sc2:
+                st.session_state.strict_mode = st.toggle("Strict Mode", value=st.session_state.strict_mode, key="toggle_strict")
+            with _sc3:
+                if st.button("Close", key="close_settings_panel"):
+                    st.session_state.show_settings_panel = False; st.rerun()
 
     # ── FILE UPLOADER PANEL ───────────────────────────────────────────────
     if st.session_state.show_uploader:
@@ -1232,8 +1322,9 @@ if view == "chat":
         PILLS_ROW1 = ["Analyse my attendance", "What's next on my schedule?", f"PYQs for {br}", "Check my fee status"]
         PILLS_ROW2 = [f"Subjects for {br}", "Exam schedule tips"]
 
-        # PATCH 3: pills shifted toward center (column ratio adjusted)
-        _, pills_col, _ = st.columns([0.9, 4.8, 0.3])
+        # PATCH 3: pills centered via padding
+        st.markdown('<div style="padding:0 6vw;">', unsafe_allow_html=True)
+        pills_col = st.container()
         with pills_col:
             r1_cols = st.columns(len(PILLS_ROW1))
             for i, pill in enumerate(PILLS_ROW1):
@@ -1251,12 +1342,14 @@ if view == "chat":
                         dispatch_message(pill); st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
 
+        st.markdown('</div>', unsafe_allow_html=True)  # close pills padding div
+
         st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
 
-        # PATCH 3: input bar shifted toward center
-        _, bar_col, _ = st.columns([0.9, 4.8, 0.3])
-        with bar_col:
-            hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
+        # Input bar — CSS centered, no columns needed
+        st.markdown('<div style="padding:0 6vw;">', unsafe_allow_html=True)
+        hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         render_voice_recorder("hero")
         render_native_file_picker("hero")

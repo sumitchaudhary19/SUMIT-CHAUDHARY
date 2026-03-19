@@ -325,53 +325,121 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .chat-topbar-spacer{height:60px;width:100%;}
 .chat-topbar-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.28),rgba(34,211,238,0.12),transparent);margin-bottom:6px;}
 
-/* Navbar real Streamlit buttons — vertical stack, upper LEFT corner */
-.nb-real{
-  position:fixed!important;
-  top:60px!important;   /* below the topbar */
-  left:12px!important;
-  z-index:10000!important;
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:flex-start!important;
-  gap:5px!important;
-  background:transparent!important;
-  pointer-events:auto!important;
+/* ── COLLAPSIBLE LEFT SIDEBAR ── */
+.chat-sidebar {
+  position: fixed !important;
+  top: 52px !important; left: 0 !important;
+  width: 180px !important;
+  height: calc(100vh - 52px) !important;
+  z-index: 9998 !important;
+  background: rgba(8,5,24,0.97) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-right: 1px solid rgba(120,60,200,0.22) !important;
+  box-shadow: 4px 0 32px rgba(60,10,120,0.28) !important;
+  transform: translateX(-100%) !important;
+  transition: transform 0.28s cubic-bezier(0.22,0.61,0.36,1) !important;
+  padding: 18px 10px 18px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  overflow: hidden !important;
 }
-.nb-real .stButton>button{
-  border-radius:10px!important;
-  padding:5px 14px!important;
-  font-size:0.74rem!important;font-weight:500!important;
-  height:30px!important;min-height:30px!important;line-height:1!important;
-  border:1px solid rgba(255,255,255,0.10)!important;
-  background:rgba(10,12,28,0.82)!important;
-  color:rgba(200,212,240,0.78)!important;
-  box-shadow:none!important;
-  transition:all 0.14s!important;
-  white-space:nowrap!important;
-  width:auto!important;
-  min-width:110px!important;
-  backdrop-filter:blur(8px)!important;
+.chat-sidebar.sb-open {
+  transform: translateX(0) !important;
 }
-.nb-real .stButton>button:hover{
-  background:rgba(59,130,246,0.16)!important;
-  border-color:rgba(59,130,246,0.38)!important;
-  color:#BAE6FD!important;transform:none!important;
+/* Sidebar section label */
+.sb-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.56rem;
+  color: rgba(180,140,255,0.40);
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid rgba(120,60,200,0.14);
+  margin-bottom: 4px;
 }
-.nb-new .stButton>button{
-  background:rgba(59,130,246,0.14)!important;
-  border-color:rgba(59,130,246,0.32)!important;
-  color:#93C5FD!important;
+/* Toggle hamburger button in topbar */
+.sb-toggle-btn {
+  position: fixed !important;
+  top: 10px !important; left: 12px !important;
+  z-index: 10001 !important;
+  width: 32px !important; height: 32px !important;
+  border-radius: 8px !important;
+  background: rgba(80,30,160,0.22) !important;
+  border: 1px solid rgba(140,80,220,0.30) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  transition: all 0.18s ease !important;
 }
-.nb-on .stButton>button{
-  background:rgba(59,130,246,0.22)!important;
-  border-color:rgba(59,130,246,0.50)!important;
-  color:#BAE6FD!important;
+.sb-toggle-btn:hover {
+  background: rgba(100,40,200,0.35) !important;
+  border-color: rgba(180,100,255,0.50) !important;
 }
-/* Each column in the vertical stack = auto-width, no stretch */
-.nb-real [data-testid="stVerticalBlock"]{gap:5px!important;}
-.nb-real [data-testid="column"]{padding:0!important;width:auto!important;flex:0 0 auto!important;min-width:unset!important;}
-.nb-real [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:5px!important;align-items:flex-start!important;}
+.sb-toggle-btn span {
+  display: block !important;
+  width: 14px !important; height: 1.5px !important;
+  background: rgba(210,180,255,0.80) !important;
+  border-radius: 2px !important;
+  transition: all 0.22s ease !important;
+}
+/* Overlay when sidebar open */
+.sb-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9997 !important;
+  background: rgba(0,0,0,0) !important;
+  pointer-events: none !important;
+  transition: background 0.28s ease !important;
+}
+.sb-overlay.sb-open {
+  background: rgba(0,0,0,0.35) !important;
+  pointer-events: auto !important;
+}
+
+/* Streamlit buttons inside sidebar */
+.chat-sidebar .stButton > button {
+  border-radius: 10px !important;
+  padding: 8px 14px !important;
+  font-size: 0.78rem !important; font-weight: 500 !important;
+  height: 36px !important; min-height: 36px !important;
+  line-height: 1 !important;
+  border: 1px solid rgba(140,80,220,0.18) !important;
+  background: rgba(60,20,120,0.18) !important;
+  color: rgba(210,185,255,0.82) !important;
+  box-shadow: none !important;
+  transition: all 0.14s !important;
+  white-space: nowrap !important;
+  width: 158px !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+.chat-sidebar .stButton > button:hover {
+  background: rgba(120,50,220,0.28) !important;
+  border-color: rgba(180,100,255,0.38) !important;
+  color: #E0CCFF !important;
+  transform: none !important;
+}
+.nb-new .stButton > button {
+  background: rgba(59,130,246,0.14) !important;
+  border-color: rgba(59,130,246,0.32) !important;
+  color: #93C5FD !important;
+}
+.nb-new .stButton > button:hover {
+  background: rgba(59,130,246,0.24) !important;
+  border-color: rgba(59,130,246,0.50) !important;
+}
+.nb-on .stButton > button {
+  background: rgba(120,50,220,0.30) !important;
+  border-color: rgba(180,100,255,0.45) !important;
+  color: #D4AAFF !important;
+}
+.chat-sidebar [data-testid="column"] { padding: 0 !important; }
+.chat-sidebar [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
 /* ── Chat messages ── */
 [data-testid="stChatMessage"]{background:rgba(255,255,255,0.025)!important;border:1px solid rgba(255,255,255,0.06)!important;border-radius:14px!important;font-family:'Outfit',sans-serif!important;}
@@ -734,31 +802,76 @@ if view == "chat":
             except: pass
             st.rerun()
 
-    # ── FIXED NAVBAR: logo HTML + real Streamlit buttons (position:fixed) ─
+    # ── FIXED TOPBAR + HAMBURGER TOGGLE ──────────────────────────────────
     st.markdown("""
     <div class="chat-topbar">
-      <div class="chat-topbar-logo">
-        <div class="chat-topbar-logo-icon">A</div>
-        <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
-        <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
+      <div style="display:flex;align-items:center;gap:36px;">
+        <!-- Hamburger toggle — pure HTML button, no Streamlit -->
+        <button class="sb-toggle-btn" id="sb-toggle" onclick="toggleSidebar()" title="Menu">
+          <span id="hb1"></span>
+          <span id="hb2"></span>
+          <span id="hb3"></span>
+        </button>
+        <div class="chat-topbar-logo" style="margin-left:4px;">
+          <div class="chat-topbar-logo-icon">A</div>
+          <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
+          <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
+        </div>
       </div>
     </div>
+
+    <!-- Overlay — click to close sidebar -->
+    <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
     <div class="chat-topbar-spacer"></div>
     <div class="chat-topbar-divider"></div>
+
+    <script>
+    var _sbOpen = false;
+    function toggleSidebar() {
+      _sbOpen ? closeSidebar() : openSidebar();
+    }
+    function openSidebar() {
+      _sbOpen = true;
+      var sb  = document.getElementById('chat-sidebar');
+      var ov  = document.getElementById('sb-overlay');
+      if (sb) sb.classList.add('sb-open');
+      if (ov) ov.classList.add('sb-open');
+      // Animate hamburger → X
+      var h1=document.getElementById('hb1'), h2=document.getElementById('hb2'), h3=document.getElementById('hb3');
+      if(h1){h1.style.transform='rotate(45deg) translate(4px,4px)';}
+      if(h2){h2.style.opacity='0';}
+      if(h3){h3.style.transform='rotate(-45deg) translate(4px,-4px)';}
+    }
+    function closeSidebar() {
+      _sbOpen = false;
+      var sb  = document.getElementById('chat-sidebar');
+      var ov  = document.getElementById('sb-overlay');
+      if (sb) sb.classList.remove('sb-open');
+      if (ov) ov.classList.remove('sb-open');
+      var h1=document.getElementById('hb1'), h2=document.getElementById('hb2'), h3=document.getElementById('hb3');
+      if(h1){h1.style.transform='';}
+      if(h2){h2.style.opacity='1';}
+      if(h3){h3.style.transform='';}
+    }
+    // Close on Escape
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSidebar(); });
+    </script>
     """, unsafe_allow_html=True)
 
-    # Vertical left-side nav — 4 buttons stacked, each in own row
-    st.markdown('<div class="nb-real">', unsafe_allow_html=True)
+    # ── SIDEBAR — rendered as fixed div, Streamlit buttons inside ─────────
+    st.markdown('<div class="chat-sidebar" id="chat-sidebar">', unsafe_allow_html=True)
+    st.markdown('<div class="sb-label">Navigation</div>', unsafe_allow_html=True)
 
     _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
     st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
-    if st.button("🕐 History", key="_btn_history"):
+    if st.button("🕐  History", key="_btn_history"):
         st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
         st.session_state.show_settings_panel = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="nb-new">', unsafe_allow_html=True)
-    if st.button("+ New Chat", key="_btn_new_chat"):
+    if st.button("✦  New Chat", key="_btn_new_chat"):
         if st.session_state.chat_messages:
             fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
             st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
@@ -770,15 +883,15 @@ if view == "chat":
 
     _scls = "nb-on" if st.session_state.get("show_settings_panel") else ""
     st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
-    if st.button("⚙ Settings", key="_btn_settings"):
+    if st.button("⚙  Settings", key="_btn_settings"):
         st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
         st.session_state.show_history_panel = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("Dashboard", key="_btn_dashboard"):
+    if st.button("⊞  Dashboard", key="_btn_dashboard"):
         st.session_state.view = "dashboard"; st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # close .chat-sidebar
 
     # ── Rotating animated placeholder injection ───────────────────────────
     st.markdown("""

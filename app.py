@@ -645,44 +645,70 @@ html,body{{
 
 /* ── Messages ── */
 .msgs-container{{
-  display:flex;flex-direction:column;gap:16px;
-  padding:0 20px;max-width:780px;width:100%;margin:0 auto;
+  display:flex;flex-direction:column;gap:14px;
+  padding:16px 24px;max-width:820px;width:100%;margin:0 auto;
 }}
 .msg-bubble{{
-  display:flex;gap:10px;
+  display:flex;gap:10px;align-items:flex-end;
   animation:msgIn 0.22s ease both;
+  max-width:80%;
 }}
 @keyframes msgIn{{from{{opacity:0;transform:translateY(8px);}}to{{opacity:1;transform:translateY(0);}}}}
-.msg-bubble.user{{flex-direction:row-reverse;}}
+
+/* AI — left aligned */
+.msg-bubble.ai{{
+  flex-direction:row;
+  align-self:flex-start;
+  margin-right:auto;
+}}
+/* User — right aligned */
+.msg-bubble.user{{
+  flex-direction:row-reverse;
+  align-self:flex-end;
+  margin-left:auto;
+}}
+
 .msg-avatar{{
-  width:32px;height:32px;border-radius:9px;
+  width:30px;height:30px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:0.82rem;font-weight:700;flex-shrink:0;
-  box-shadow:0 2px 10px rgba(0,0,0,0.25);
+  font-size:0.76rem;font-weight:700;flex-shrink:0;
+  box-shadow:0 2px 10px rgba(0,0,0,0.30);
 }}
-.msg-avatar.ai{{background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff;}}
-.msg-avatar.user{{background:rgba(255,255,255,0.10);color:rgba(220,200,255,0.80);border:1px solid rgba(255,255,255,0.12);}}
+.msg-avatar.ai{{
+  background:linear-gradient(135deg,#7C3AED,#A855F7);
+  color:#fff;
+  box-shadow:0 2px 12px rgba(124,58,237,0.40);
+}}
+.msg-avatar.user{{
+  background:rgba(255,255,255,0.10);
+  color:rgba(220,200,255,0.85);
+  border:1px solid rgba(255,255,255,0.14);
+}}
 .msg-text{{
-  max-width:72%;
-  padding:11px 15px;
-  border-radius:14px;
-  font-size:0.86rem;line-height:1.65;
+  padding:11px 16px;
+  border-radius:18px;
+  font-size:0.85rem;line-height:1.65;
+  word-break:break-word;
 }}
+/* AI bubble — left, purple tint */
 .msg-text.ai{{
-  background:rgba(30,12,60,0.70);
-  border:1px solid rgba(124,58,237,0.22);
-  color:rgba(220,200,255,0.90);
-  border-radius:4px 14px 14px 14px;
+  background:rgba(30,12,58,0.80);
+  border:1px solid rgba(124,58,237,0.24);
+  color:rgba(230,215,255,0.92);
+  border-bottom-left-radius:4px;
+  backdrop-filter:blur(8px);
 }}
+/* User bubble — right, brighter purple */
 .msg-text.user{{
-  background:rgba(124,58,237,0.22);
-  border:1px solid rgba(168,85,247,0.35);
-  color:#EDE0FF;
-  border-radius:14px 4px 14px 14px;
+  background:linear-gradient(135deg,rgba(124,58,237,0.35),rgba(168,85,247,0.28));
+  border:1px solid rgba(168,85,247,0.40);
+  color:#F0E8FF;
+  border-bottom-right-radius:4px;
+  box-shadow:0 4px 20px rgba(124,58,237,0.20);
 }}
 .msg-text pre{{
-  background:rgba(0,0,0,0.35);border-radius:8px;padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;font-size:0.78rem;
+  background:rgba(0,0,0,0.40);border-radius:8px;padding:10px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:0.76rem;
   overflow-x:auto;margin:8px 0;
   border:1px solid rgba(124,58,237,0.20);
 }}
@@ -810,7 +836,7 @@ html,body{{
 .overlay.show{{display:none;}}
 
 /* Scrollbar placeholder for chat messages container */
-.msgs-wrap{{flex:1;overflow-y:auto;}}
+.msgs-wrap{{flex:1;overflow-y:auto;padding:8px 0;}}
 .msgs-wrap::-webkit-scrollbar{{width:4px;}}
 .msgs-wrap::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.25);border-radius:4px;}}
 
@@ -856,7 +882,7 @@ html,body{{
 
     <div class="sb-section">
       <div class="sb-section-label">Navigation</div>
-      <div class="sb-item" onclick="sendAction('erp')">
+      <div class="sb-item" onclick="window.open('https://mniterp.org/mniterp/','_blank')">
         <span class="sb-icon">🔐</span> ERP Login
       </div>
       <div class="sb-item {'active' if st.session_state.show_history_panel else ''}" onclick="sendAction('history')">
@@ -1247,9 +1273,13 @@ function stopRecording() {{
     if _msg_raw:
         try: del st.query_params["_msg"]
         except: pass
-        _msg_text = _msg_raw  # already decoded by Streamlit
-        if _msg_text:
-            dispatch_message(_msg_text)
+        import urllib.parse
+        try:
+            _msg_text = urllib.parse.unquote(_msg_raw)
+        except:
+            _msg_text = _msg_raw
+        if _msg_text.strip():
+            dispatch_message(_msg_text.strip())
             st.rerun()
 
     # Handle mic done

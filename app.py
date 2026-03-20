@@ -325,122 +325,53 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .chat-topbar-spacer{height:60px;width:100%;}
 .chat-topbar-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.28),rgba(34,211,238,0.12),transparent);margin-bottom:6px;}
 
-/* ── COLLAPSIBLE LEFT SIDEBAR ── */
-.chat-sidebar {
-  position: fixed !important;
-  top: 52px !important; left: 0 !important;
-  width: 180px !important;
-  height: calc(100vh - 52px) !important;
-  z-index: 9998 !important;
-  background: rgba(8,5,24,0.97) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border-right: 1px solid rgba(120,60,200,0.22) !important;
-  box-shadow: 4px 0 32px rgba(60,10,120,0.28) !important;
-  transform: translateX(-100%) !important;
-  transition: transform 0.28s cubic-bezier(0.22,0.61,0.36,1) !important;
-  padding: 54px 10px 18px 10px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-  overflow: hidden !important;
+/* Navbar real Streamlit buttons — vertical stack, upper LEFT corner */
+.nb-real{
+  position:fixed!important;
+  top:60px!important;   /* below the topbar */
+  left:12px!important;
+  z-index:10000!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:5px!important;
+  background:transparent!important;
+  pointer-events:auto!important;
 }
-.chat-sidebar.sb-open {
-  transform: translateX(0) !important;
+.nb-real .stButton>button{
+  border-radius:10px!important;
+  padding:5px 14px!important;
+  font-size:0.74rem!important;font-weight:500!important;
+  height:30px!important;min-height:30px!important;line-height:1!important;
+  border:1px solid rgba(255,255,255,0.10)!important;
+  background:rgba(10,12,28,0.82)!important;
+  color:rgba(200,212,240,0.78)!important;
+  box-shadow:none!important;
+  transition:all 0.14s!important;
+  white-space:nowrap!important;
+  width:auto!important;
+  min-width:110px!important;
+  backdrop-filter:blur(8px)!important;
 }
-/* Sidebar section label */
-.sb-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.56rem;
-  color: rgba(180,140,255,0.40);
-  text-transform: uppercase;
-  letter-spacing: 1.4px;
-  padding: 4px 6px 8px;
-  border-bottom: 1px solid rgba(120,60,200,0.14);
-  margin-bottom: 4px;
+.nb-real .stButton>button:hover{
+  background:rgba(59,130,246,0.16)!important;
+  border-color:rgba(59,130,246,0.38)!important;
+  color:#BAE6FD!important;transform:none!important;
 }
-/* Toggle hamburger button in topbar */
-.sb-toggle-btn {
-  position: fixed !important;
-  top: 58px !important; left: 10px !important;
-  z-index: 10001 !important;
-  width: 34px !important; height: 34px !important;
-  border-radius: 9px !important;
-  background: rgba(80,30,160,0.30) !important;
-  border: 1px solid rgba(140,80,220,0.38) !important;
-  cursor: pointer !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  transition: all 0.18s ease !important;
-  box-shadow: 0 2px 12px rgba(80,20,160,0.25) !important;
+.nb-new .stButton>button{
+  background:rgba(59,130,246,0.14)!important;
+  border-color:rgba(59,130,246,0.32)!important;
+  color:#93C5FD!important;
 }
-.sb-toggle-btn:hover {
-  background: rgba(100,40,200,0.35) !important;
-  border-color: rgba(180,100,255,0.50) !important;
+.nb-on .stButton>button{
+  background:rgba(59,130,246,0.22)!important;
+  border-color:rgba(59,130,246,0.50)!important;
+  color:#BAE6FD!important;
 }
-.sb-toggle-btn span {
-  display: block !important;
-  width: 14px !important; height: 1.5px !important;
-  background: rgba(210,180,255,0.80) !important;
-  border-radius: 2px !important;
-  transition: all 0.22s ease !important;
-}
-/* Overlay when sidebar open */
-.sb-overlay {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 9997 !important;
-  background: rgba(0,0,0,0) !important;
-  pointer-events: none !important;
-  transition: background 0.28s ease !important;
-}
-.sb-overlay.sb-open {
-  background: rgba(0,0,0,0.35) !important;
-  pointer-events: auto !important;
-}
-
-/* Streamlit buttons inside sidebar */
-.chat-sidebar .stButton > button {
-  border-radius: 10px !important;
-  padding: 8px 14px !important;
-  font-size: 0.78rem !important; font-weight: 500 !important;
-  height: 36px !important; min-height: 36px !important;
-  line-height: 1 !important;
-  border: 1px solid rgba(140,80,220,0.18) !important;
-  background: rgba(60,20,120,0.18) !important;
-  color: rgba(210,185,255,0.82) !important;
-  box-shadow: none !important;
-  transition: all 0.14s !important;
-  white-space: nowrap !important;
-  width: 158px !important;
-  text-align: left !important;
-  justify-content: flex-start !important;
-}
-.chat-sidebar .stButton > button:hover {
-  background: rgba(120,50,220,0.28) !important;
-  border-color: rgba(180,100,255,0.38) !important;
-  color: #E0CCFF !important;
-  transform: none !important;
-}
-.nb-new .stButton > button {
-  background: rgba(59,130,246,0.14) !important;
-  border-color: rgba(59,130,246,0.32) !important;
-  color: #93C5FD !important;
-}
-.nb-new .stButton > button:hover {
-  background: rgba(59,130,246,0.24) !important;
-  border-color: rgba(59,130,246,0.50) !important;
-}
-.nb-on .stButton > button {
-  background: rgba(120,50,220,0.30) !important;
-  border-color: rgba(180,100,255,0.45) !important;
-  color: #D4AAFF !important;
-}
-.chat-sidebar [data-testid="column"] { padding: 0 !important; }
-.chat-sidebar [data-testid="stHorizontalBlock"] { gap: 0 !important; }
+/* Each column in the vertical stack = auto-width, no stretch */
+.nb-real [data-testid="stVerticalBlock"]{gap:5px!important;}
+.nb-real [data-testid="column"]{padding:0!important;width:auto!important;flex:0 0 auto!important;min-width:unset!important;}
+.nb-real [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:5px!important;align-items:flex-start!important;}
 
 /* ── Chat messages ── */
 [data-testid="stChatMessage"]{background:rgba(255,255,255,0.025)!important;border:1px solid rgba(255,255,255,0.06)!important;border-radius:14px!important;font-family:'Outfit',sans-serif!important;}
@@ -553,7 +484,7 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .gemini-send [data-testid="stFormSubmitButton"]>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;border:none!important;border-radius:50%!important;color:#fff!important;font-size:1.25rem!important;font-weight:700!important;width:38px!important;height:38px!important;min-width:38px!important;padding:0!important;line-height:1!important;box-shadow:0 3px 14px rgba(37,99,235,0.38)!important;transition:opacity 0.16s,transform 0.14s!important;}
 .gemini-send [data-testid="stFormSubmitButton"]>button:hover{opacity:0.88!important;transform:scale(1.07)!important;}
 .file-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.35);border-radius:20px;padding:3px 10px 3px 8px;font-size:0.72rem;color:#BAE6FD;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:4px;flex-shrink:0;}
-.gemini-bar-anchored{position:fixed;bottom:0;left:0;right:0;z-index:900;background:rgba(20,8,50,0.97);backdrop-filter:blur(24px) saturate(160%);border-top:1px solid rgba(140,60,220,0.22);padding:10px max(24px,calc((100% - 900px)/2)) 12px;padding-left:max(160px,calc((100% - 900px)/2 + 150px));}
+.gemini-bar-anchored{position:fixed;bottom:0;left:0;right:0;z-index:900;background:rgba(20,8,50,0.97);backdrop-filter:blur(24px) saturate(160%);border-top:1px solid rgba(140,60,220,0.22);padding:10px max(16px,calc((100% - 680px)/2)) 12px;}
 .listening-banner{display:flex;align-items:center;gap:8px;margin:10px auto 0;padding:8px 18px;background:rgba(239,68,68,0.09);border:1px solid rgba(239,68,68,0.22);border-radius:10px;font-size:0.80rem;color:#FCA5A5;max-width:800px;}
 .listening-dot{width:7px;height:7px;border-radius:50%;background:#EF4444;animation:blinkDot 1.1s ease infinite;flex-shrink:0;}
 @keyframes blinkDot{0%,100%{opacity:1;}50%{opacity:0.25;}}
@@ -705,7 +636,7 @@ def render_gemini_bar(bar_key: str, hero_mode: bool = True):
         chip_html = (f'<div class="file-chip" title="{fname}"><span>📎</span>{short}'
                      f'<button onclick="clearChip_{bar_key}()" style="background:none;border:none;color:rgba(148,163,184,0.5);cursor:pointer;font-size:0.75rem;margin-left:4px;padding:0 4px;">✕</button></div>')
 
-    st.markdown(f'<div class="gemini-bar" style="max-width:100%;width:100%;margin:0 auto;{anim_style}">', unsafe_allow_html=True)
+    st.markdown(f'<div class="gemini-bar" style="max-width:580px;width:100%;margin:0 auto;{anim_style}">', unsafe_allow_html=True)
     if chip_html:
         st.markdown(f'<div style="display:flex;align-items:center;padding:0 16px 6px;">{chip_html}</div>', unsafe_allow_html=True)
 
@@ -803,10 +734,10 @@ if view == "chat":
             except: pass
             st.rerun()
 
-    # ── FIXED TOPBAR + HAMBURGER (real st.button) ────────────────────────
+    # ── FIXED NAVBAR: logo HTML + real Streamlit buttons (position:fixed) ─
     st.markdown("""
     <div class="chat-topbar">
-      <div class="chat-topbar-logo" style="margin-left:52px;">
+      <div class="chat-topbar-logo">
         <div class="chat-topbar-logo-icon">A</div>
         <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:#E2E8F0;font-weight:500;">AskMNIT</span>
         <span style="font-size:0.50rem;color:#10B981;font-weight:700;margin-left:3px;">&#9679; AI</span>
@@ -816,164 +747,38 @@ if view == "chat":
     <div class="chat-topbar-divider"></div>
     """, unsafe_allow_html=True)
 
-    # Sidebar open/close state
-    if "sb_open" not in st.session_state:
-        st.session_state.sb_open = False
+    # Vertical left-side nav — 4 buttons stacked, each in own row
+    st.markdown('<div class="nb-real">', unsafe_allow_html=True)
 
-    # ── Hamburger button — real st.button, always works ──────────────────
-    _sb_icon = "✕" if st.session_state.sb_open else "☰"
-    st.markdown("""
-    <style>
-    /* Position the hamburger button fixed at top-left */
-    div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stHorizontalBlock"] > div[data-testid="column"] > div > div > button[kind="secondary"]#hamburger-anchor) {
-      position: fixed !important; top: 58px !important; left: 10px !important;
-      z-index: 10001 !important; width: 36px !important;
-    }
-    /* Hamburger button style */
-    .hbtn-wrap .stButton > button {
-      position: fixed !important;
-      top: 58px !important; left: 10px !important;
-      z-index: 10001 !important;
-      width: 36px !important; height: 36px !important;
-      min-width: 36px !important; min-height: 36px !important;
-      border-radius: 9px !important;
-      background: rgba(80,30,160,0.30) !important;
-      border: 1px solid rgba(160,90,240,0.40) !important;
-      color: rgba(220,190,255,0.90) !important;
-      font-size: 1.1rem !important; font-weight: 400 !important;
-      padding: 0 !important; line-height: 1 !important;
-      box-shadow: 0 2px 14px rgba(80,20,160,0.28) !important;
-      transition: all 0.16s ease !important;
-    }
-    .hbtn-wrap .stButton > button:hover {
-      background: rgba(110,45,210,0.45) !important;
-      border-color: rgba(200,130,255,0.55) !important;
-      box-shadow: 0 4px 22px rgba(100,30,200,0.42) !important;
-      transform: none !important;
-    }
-    /* Sidebar panel */
-    .chat-sidebar-panel {
-      position: fixed !important;
-      top: 52px !important; left: 0 !important;
-      width: 185px !important;
-      height: calc(100vh - 52px) !important;
-      z-index: 9998 !important;
-      background: rgba(8,4,22,0.97) !important;
-      backdrop-filter: blur(20px) saturate(180%) !important;
-      -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-      border-right: 1px solid rgba(130,65,210,0.24) !important;
-      box-shadow: 5px 0 36px rgba(60,10,130,0.32) !important;
-      padding: 16px 10px 20px !important;
-      display: flex !important; flex-direction: column !important; gap: 4px !important;
-      transform: translateX(-100%) !important;
-      transition: transform 0.28s cubic-bezier(0.22,0.61,0.36,1) !important;
-    }
-    .chat-sidebar-panel.sb-is-open {
-      transform: translateX(0) !important;
-    }
-    /* Overlay */
-    .sb-overlay-div {
-      position: fixed !important; inset: 0 !important;
-      z-index: 9997 !important;
-      background: rgba(0,0,0,0) !important;
-      pointer-events: none !important;
-      transition: background 0.28s ease !important;
-      display: none !important;
-    }
-    .sb-overlay-div.sb-is-open {
-      display: block !important;
-      background: rgba(0,0,0,0.38) !important;
-      pointer-events: auto !important;
-    }
-    /* Nav label inside sidebar */
-    .sb-nav-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.52rem; color: rgba(180,140,255,0.38);
-      text-transform: uppercase; letter-spacing: 1.6px;
-      padding: 2px 8px 10px;
-      border-bottom: 1px solid rgba(130,65,210,0.16);
-      margin-bottom: 6px;
-    }
-    /* Nav item buttons inside sidebar */
-    .chat-sidebar-panel .stButton > button {
-      border-radius: 9px !important;
-      padding: 8px 12px !important;
-      font-size: 0.78rem !important; font-weight: 500 !important;
-      height: 36px !important; min-height: 36px !important;
-      border: 1px solid rgba(140,80,220,0.16) !important;
-      background: rgba(60,20,120,0.16) !important;
-      color: rgba(200,175,255,0.78) !important;
-      box-shadow: none !important;
-      transition: all 0.14s !important;
-      width: 100% !important; text-align: left !important;
-      justify-content: flex-start !important;
-    }
-    .chat-sidebar-panel .stButton > button:hover {
-      background: rgba(110,45,210,0.26) !important;
-      border-color: rgba(180,100,255,0.35) !important;
-      color: #E0CCFF !important; transform: none !important;
-    }
-    .chat-sidebar-panel .sb-new .stButton > button {
-      background: rgba(37,99,235,0.14) !important;
-      border-color: rgba(59,130,246,0.28) !important;
-      color: #93C5FD !important;
-    }
-    .chat-sidebar-panel .sb-active .stButton > button {
-      background: rgba(120,50,220,0.26) !important;
-      border-color: rgba(180,100,255,0.40) !important;
-      color: #D4AAFF !important;
-    }
-    .chat-sidebar-panel [data-testid="column"] { padding: 0 !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Render hamburger button
-    st.markdown('<div class="hbtn-wrap">', unsafe_allow_html=True)
-    if st.button(_sb_icon, key="_hbtn"):
-        st.session_state.sb_open = not st.session_state.sb_open
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Overlay (click to close)
-    _sb_cls = "sb-is-open" if st.session_state.sb_open else ""
-    st.markdown(f'<div class="sb-overlay-div {_sb_cls}" onclick="document.querySelector(\'.hbtn-wrap button\').click()"></div>', unsafe_allow_html=True)
-
-    # ── SIDEBAR PANEL ─────────────────────────────────────────────────────
-    st.markdown(f'<div class="chat-sidebar-panel {_sb_cls}">', unsafe_allow_html=True)
-    st.markdown('<div class="sb-nav-label">Navigation</div>', unsafe_allow_html=True)
-
-    _hcls = "sb-active" if st.session_state.get("show_history_panel") else ""
+    _hcls = "nb-on" if st.session_state.get("show_history_panel") else ""
     st.markdown(f'<div class="{_hcls}">', unsafe_allow_html=True)
-    if st.button("🕐  History", key="_btn_history"):
+    if st.button("🕐 History", key="_btn_history"):
         st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False)
-        st.session_state.show_settings_panel = False
-        st.session_state.sb_open = False; st.rerun()
+        st.session_state.show_settings_panel = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="sb-new">', unsafe_allow_html=True)
-    if st.button("✦  New Chat", key="_btn_new_chat"):
+    st.markdown('<div class="nb-new">', unsafe_allow_html=True)
+    if st.button("+ New Chat", key="_btn_new_chat"):
         if st.session_state.chat_messages:
             fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
             st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
         st.session_state.chat_messages = []
         st.session_state.show_uploader = False
         st.session_state.attached_file_name = ""
-        st.session_state.sb_open = False; st.rerun()
+        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    _scls = "sb-active" if st.session_state.get("show_settings_panel") else ""
+    _scls = "nb-on" if st.session_state.get("show_settings_panel") else ""
     st.markdown(f'<div class="{_scls}">', unsafe_allow_html=True)
-    if st.button("⚙  Settings", key="_btn_settings"):
+    if st.button("⚙ Settings", key="_btn_settings"):
         st.session_state.show_settings_panel = not st.session_state.get("show_settings_panel", False)
-        st.session_state.show_history_panel = False
-        st.session_state.sb_open = False; st.rerun()
+        st.session_state.show_history_panel = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("⊞  Dashboard", key="_btn_dashboard"):
-        st.session_state.view = "dashboard"
-        st.session_state.sb_open = False; st.rerun()
+    if st.button("Dashboard", key="_btn_dashboard"):
+        st.session_state.view = "dashboard"; st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close sidebar panel
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Rotating animated placeholder injection ───────────────────────────
     st.markdown("""
@@ -1128,88 +933,54 @@ if view == "chat":
     # HERO STATE (no messages yet)
     # ─────────────────────────────────────────────────────────────────────
     if not has_messages:
-        # Push everything right of the left navbar (navbar is ~134px wide + 12px left + gap)
-        # Use CSS margin-left on a wrapper div so content starts after navbar
+        st.markdown("<div style='height:4vh'></div>", unsafe_allow_html=True)
+
+        _, hero_col, _ = st.columns([1, 3, 1])
+        with hero_col:
+            st.markdown(
+                '<div style="text-align:center;animation:fadeUp 0.45s ease both;">'
+                '<div style="width:80px;height:80px;margin:0 auto 22px;border-radius:22px;'
+                'background:linear-gradient(135deg,#1E3A8A,#4338CA 50%,#059669);'
+                'display:flex;align-items:center;justify-content:center;font-size:2.3rem;'
+                'box-shadow:0 0 0 1px rgba(59,130,246,0.22),0 16px 52px rgba(37,99,235,0.30);">&#129302;</div>'
+                '<div style="font-family:\'Fraunces\',serif;font-size:3rem;font-weight:900;'
+                'color:#E2E8F0;letter-spacing:-2px;line-height:1.05;margin-bottom:10px;">'
+                'AskMNIT <span style="font-weight:300;color:#60A5FA;">AI</span></div>'
+                '<div style="font-size:0.86rem;color:rgba(148,163,184,0.50);line-height:1.70;margin-bottom:32px;">'
+                'Attendance analysis &nbsp;&#183;&nbsp; PYQ search &nbsp;&#183;&nbsp; Schedule queries &nbsp;&#183;&nbsp; Exam prep'
+                '</div></div>',
+                unsafe_allow_html=True,
+            )
+
         br = st.session_state.branch
         PILLS_ROW1 = ["Analyse my attendance", "What's next on my schedule?", f"PYQs for {br}", "Check my fee status"]
         PILLS_ROW2 = [f"Subjects for {br}", "Exam schedule tips"]
 
-        st.markdown("""
-        <style>
-        /* Hero wrapper — pushed right of the fixed left navbar */
-        .hero-wrapper {
-          margin-left: 150px;
-          padding-top: 2vh;
-          padding-right: 24px;
-          animation: fadeUp 0.40s ease both;
-        }
-        .hero-logo-row {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 8px;
-        }
-        .hero-logo-icon {
-          width: 52px; height: 52px;
-          border-radius: 14px;
-          background: linear-gradient(135deg,#1E3A8A,#4338CA 50%,#059669);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1.6rem;
-          box-shadow: 0 0 0 1px rgba(59,130,246,0.22), 0 8px 28px rgba(37,99,235,0.30);
-          flex-shrink: 0;
-        }
-        .hero-title {
-          font-family: 'Fraunces', serif;
-          font-size: 2.1rem; font-weight: 900;
-          color: #E2E8F0; letter-spacing: -1.5px; line-height: 1.05;
-        }
-        .hero-title span { font-weight: 300; color: #60A5FA; }
-        .hero-subtitle {
-          font-size: 0.78rem;
-          color: rgba(148,163,184,0.50);
-          margin-bottom: 18px;
-          margin-left: 66px; /* align with title, past the icon */
-        }
-        </style>
-        """, unsafe_allow_html=True)
+        # Pills — centered with equal margins, no sidebar offset
+        _, pc, _ = st.columns([0.8, 8.4, 0.8])
+        with pc:
+            r1 = st.columns(4)
+            for i, pill in enumerate(PILLS_ROW1):
+                with r1[i]:
+                    st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
+                    if st.button(pill, key=f"pill_r1_{i}", use_container_width=True):
+                        dispatch_message(pill); st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            _, r2c1, r2c2, _ = st.columns([1.5, 2, 2, 1.5])
+            for i, (pill, col) in enumerate(zip(PILLS_ROW2, [r2c1, r2c2])):
+                with col:
+                    st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
+                    if st.button(pill, key=f"pill_r2_{i}", use_container_width=True):
+                        dispatch_message(pill); st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="hero-wrapper">', unsafe_allow_html=True)
+        st.markdown("<div style='height:3vh'></div>", unsafe_allow_html=True)
 
-        # Logo + Title in one row (compact)
-        st.markdown(
-            '<div class="hero-logo-row">'
-            '<div class="hero-logo-icon">&#129302;</div>'
-            '<div class="hero-title">AskMNIT <span>AI</span></div>'
-            '</div>'
-            '<div class="hero-subtitle">Attendance analysis &nbsp;&#183;&nbsp; PYQ search &nbsp;&#183;&nbsp; Schedule queries &nbsp;&#183;&nbsp; Exam prep</div>',
-            unsafe_allow_html=True,
-        )
-
-        # Pills — full width of remaining space (right of navbar)
-        r1 = st.columns(4)
-        for i, pill in enumerate(PILLS_ROW1):
-            with r1[i]:
-                st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
-                if st.button(pill, key=f"pill_r1_{i}", use_container_width=True):
-                    dispatch_message(pill); st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown("<div style='height:7px'></div>", unsafe_allow_html=True)
-
-        _, r2c1, r2c2, _ = st.columns([0.5, 2, 2, 0.5])
-        for i, (pill, col) in enumerate(zip(PILLS_ROW2, [r2c1, r2c2])):
-            with col:
-                st.markdown('<div class="sug-pill">', unsafe_allow_html=True)
-                if st.button(pill, key=f"pill_r2_{i}", use_container_width=True):
-                    dispatch_message(pill); st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-
-        # Input bar — same margin-left, stays right of navbar
-        hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)  # close hero-wrapper
+        # Input bar — narrower, premium centered
+        _, bc, _ = st.columns([1.5, 7, 1.5])
+        with bc:
+            hero_action = render_gemini_bar(bar_key="hero", hero_mode=True)
 
         render_voice_recorder("hero")
         render_native_file_picker("hero")

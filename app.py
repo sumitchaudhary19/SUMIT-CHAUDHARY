@@ -419,7 +419,7 @@ html,body{{
 }}
 
 /* ══ LEFT SIDEBAR ══════════════════════════════════════════════════════ */
-.sidebar{
+.sidebar{{
   width:240px;
   min-width:240px;
   flex-shrink:0;
@@ -434,14 +434,14 @@ html,body{{
   overflow:hidden;
   position:relative;
   box-shadow:4px 0 32px rgba(60,10,120,0.20);
-}
-.sidebar.collapsed{
+}}
+.sidebar.collapsed{{
   width:0;
   min-width:0;
   opacity:0;
   pointer-events:none;
   border-right:none;
-}
+}}
 .sb-header{{
   padding:20px 16px 14px;
   border-bottom:1px solid rgba(124,58,237,0.14);
@@ -530,7 +530,7 @@ html,body{{
 }}
 
 /* ══ TOP BAR ══════════════════════════════════════════════════════════ */
-.topbar{
+.topbar{{
   height:52px;
   background:rgba(13,6,24,0.90);
   border-bottom:1px solid rgba(124,58,237,0.16);
@@ -540,7 +540,7 @@ html,body{{
   flex-shrink:0;
   z-index:40;
   position:sticky;top:0;
-}
+}}
 .topbar-toggle{{
   width:34px;height:34px;border-radius:9px;
   background:rgba(124,58,237,0.15);
@@ -806,12 +806,8 @@ html,body{{
 }}
 
 /* ══ MISC ═════════════════════════════════════════════════════════════ */
-.overlay{
-  display:none;
-}
-.overlay.show{
-  display:none;
-}
+.overlay{{display:none;}}
+.overlay.show{{display:none;}}
 
 /* Scrollbar placeholder for chat messages container */
 .msgs-wrap{{flex:1;overflow-y:auto;}}

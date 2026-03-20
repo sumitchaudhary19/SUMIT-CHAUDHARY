@@ -132,7 +132,7 @@ _DEFAULTS = {
     "_voice_submit":     False,
     "show_history_panel":  False,
     "show_settings_panel": False,
-    "sb_open":             False,
+    "sb_open":             True,
     "erp_panel":           False,
 }
 for k, v in _DEFAULTS.items():
@@ -331,7 +331,7 @@ if view == "chat":
 
     # ── Sidebar open/close ───────────────────────────────────────────────
     if "sb_open" not in st.session_state:
-        st.session_state.sb_open = False
+        st.session_state.sb_open = True
     if "erp_panel" not in st.session_state:
         st.session_state.erp_panel = False
 
@@ -364,6 +364,7 @@ html,body{{
   background:#0D0618;
   color:#E8DCFF;
   height:100vh;
+  width:100%;
   overflow:hidden;
 }}
 
@@ -418,22 +419,29 @@ html,body{{
 }}
 
 /* ══ LEFT SIDEBAR ══════════════════════════════════════════════════════ */
-.sidebar{{
+.sidebar{
   width:240px;
+  min-width:240px;
   flex-shrink:0;
-  background:rgba(15,7,36,0.88);
-  backdrop-filter:blur(24px);
-  border-right:1px solid rgba(124,58,237,0.20);
+  background:rgba(15,7,36,0.92);
+  border-right:1px solid rgba(124,58,237,0.22);
   display:flex;
   flex-direction:column;
-  transform:translateX(0);
-  transition:transform 0.30s cubic-bezier(0.22,0.61,0.36,1);
+  transition:width 0.28s cubic-bezier(0.22,0.61,0.36,1),
+             min-width 0.28s cubic-bezier(0.22,0.61,0.36,1),
+             opacity 0.22s ease;
   z-index:50;
   overflow:hidden;
-}}
-.sidebar.collapsed{{
-  transform:translateX(-240px);
-}}
+  position:relative;
+  box-shadow:4px 0 32px rgba(60,10,120,0.20);
+}
+.sidebar.collapsed{
+  width:0;
+  min-width:0;
+  opacity:0;
+  pointer-events:none;
+  border-right:none;
+}
 .sb-header{{
   padding:20px 16px 14px;
   border-bottom:1px solid rgba(124,58,237,0.14);
@@ -522,17 +530,17 @@ html,body{{
 }}
 
 /* ══ TOP BAR ══════════════════════════════════════════════════════════ */
-.topbar{{
+.topbar{
   height:52px;
-  background:rgba(13,6,24,0.80);
-  backdrop-filter:blur(20px);
+  background:rgba(13,6,24,0.90);
   border-bottom:1px solid rgba(124,58,237,0.16);
   display:flex;align-items:center;
   padding:0 16px;
   gap:10px;
   flex-shrink:0;
   z-index:40;
-}}
+  position:sticky;top:0;
+}
 .topbar-toggle{{
   width:34px;height:34px;border-radius:9px;
   background:rgba(124,58,237,0.15);
@@ -798,12 +806,12 @@ html,body{{
 }}
 
 /* ══ MISC ═════════════════════════════════════════════════════════════ */
-.overlay{{
-  position:fixed;inset:0;z-index:45;
-  background:rgba(0,0,0,0);pointer-events:none;
-  transition:background 0.28s ease;
-}}
-.overlay.show{{background:rgba(0,0,0,0.45);pointer-events:auto;}}
+.overlay{
+  display:none;
+}
+.overlay.show{
+  display:none;
+}
 
 /* Scrollbar placeholder for chat messages container */
 .msgs-wrap{{flex:1;overflow-y:auto;}}
@@ -1020,10 +1028,21 @@ function closeSidebar() {{
 }}
 function updateSidebarState(open) {{
   var sb = document.getElementById('sidebar');
-  var ov = document.getElementById('overlay');
   var t1=document.getElementById('tb1'), t2=document.getElementById('tb2'), t3=document.getElementById('tb3');
   if(sb) {{ if(open) sb.classList.remove('collapsed'); else sb.classList.add('collapsed'); }}
-  if(ov) {{ if(open) ov.classList.add('show'); else ov.classList.remove('show'); }}
+  if(t1&&t2&&t3) {{
+    if(open) {{
+      t1.style.transform='rotate(45deg) translate(4.5px,4.5px)';
+      t2.style.opacity='0'; t2.style.transform='scaleX(0)';
+      t3.style.transform='rotate(-45deg) translate(4.5px,-4.5px)';
+    }} else {{
+      t1.style.transform=''; t2.style.opacity='1'; t2.style.transform=''; t3.style.transform='';
+    }}
+  }}
+}}
+  var sb = document.getElementById('sidebar');
+  var t1=document.getElementById('tb1'), t2=document.getElementById('tb2'), t3=document.getElementById('tb3');
+  if(sb) {{ if(open) sb.classList.remove('collapsed'); else sb.classList.add('collapsed'); }}
   if(t1&&t2&&t3) {{
     if(open) {{
       t1.style.transform='rotate(45deg) translate(4.5px,4.5px)';
@@ -1196,15 +1215,11 @@ function stopRecording() {{
   if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
 }}
 
-// ══ INIT SIDEBAR STATE ════════════════════════════════════════════════════
-if(!sbOpen) {{
-  var sb=document.getElementById('sidebar');
-  if(sb) sb.classList.add('collapsed');
-}}
+// Sidebar starts open by default - already handled in updateSidebarState call above
 </script>
 </body>
 </html>
-""", height=700, scrolling=False)
+""", height=750, scrolling=False)
 
     # ── Handle actions from the chatbot component ────────────────────────
     _act = st.query_params.get("_act","")

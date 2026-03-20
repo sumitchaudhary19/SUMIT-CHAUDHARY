@@ -335,6 +335,9 @@ if view == "chat":
     if "erp_panel" not in st.session_state:
         st.session_state.erp_panel = False
 
+    # ══ CRITICAL: st.chat_input MUST be called before components.html ════
+    _prompt = st.chat_input("Ask AskMNIT anything...")
+
     # ════════════════════════════════════════════════════════════════════
     # INJECT THE ENTIRE PREMIUM CHATBOT UI via components.html
     # ════════════════════════════════════════════════════════════════════
@@ -1243,7 +1246,7 @@ function stopRecording() {{
 </html>
 """, height=750, scrolling=False)
 
-    # ── Handle actions from the chatbot component ────────────────────────
+    # ── HANDLE ACTIONS FIRST ─────────────────────────────────────────────
     _act = st.query_params.get("_act","")
     if _act:
         try: del st.query_params["_act"]
@@ -1253,101 +1256,163 @@ function stopRecording() {{
                 fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"),"Session")
                 st.session_state.chat_sessions.append({"label":fu+"...","messages":list(st.session_state.chat_messages)})
             st.session_state.chat_messages=[]
-            st.session_state.attached_file_name=""
-            st.session_state.sb_open=False
             st.rerun()
         elif _act == "dashboard":
             st.session_state.view="dashboard"; st.rerun()
         elif _act == "history":
-            st.session_state.show_history_panel = not st.session_state.show_history_panel
-            st.rerun()
+            st.session_state.show_history_panel = not st.session_state.show_history_panel; st.rerun()
         elif _act == "settings":
-            st.session_state.show_settings_panel = not st.session_state.show_settings_panel
-            st.rerun()
-        elif _act == "erp":
-            st.session_state.erp_panel = not st.session_state.erp_panel
-            st.rerun()
+            st.session_state.show_settings_panel = not st.session_state.show_settings_panel; st.rerun()
 
-    # Handle message from chatbot
-    _msg_raw = st.query_params.get("_msg","")
-    if _msg_raw:
-        try: del st.query_params["_msg"]
-        except: pass
-        import urllib.parse
+    # ── NATIVE CHAT — 100% reliable ───────────────────────────────────────
+    st.markdown("""
+    <style>
+    /* Premium chat message styling */
+    [data-testid="stChatMessage"] {
+      background: transparent !important;
+      border: none !important;
+      padding: 3px 0 !important;
+    }
+    /* AI bubble — left side */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+      align-items: flex-end !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stMarkdownContainer"] > div {
+      background: rgba(30,12,58,0.85) !important;
+      border: 1px solid rgba(124,58,237,0.26) !important;
+      border-radius: 18px 18px 18px 4px !important;
+      color: rgba(230,215,255,0.92) !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 0.87rem !important;
+      padding: 12px 16px !important;
+      line-height: 1.65 !important;
+    }
+    /* User bubble — right side */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+      flex-direction: row-reverse !important;
+    }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"] > div {
+      background: linear-gradient(135deg, rgba(124,58,237,0.40), rgba(168,85,247,0.32)) !important;
+      border: 1px solid rgba(168,85,247,0.45) !important;
+      border-radius: 18px 18px 4px 18px !important;
+      color: #F0E8FF !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 0.87rem !important;
+      padding: 12px 16px !important;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.22) !important;
+      line-height: 1.65 !important;
+    }
+    /* Avatars */
+    [data-testid="chatAvatarIcon-assistant"] {
+      background: linear-gradient(135deg,#7C3AED,#A855F7) !important;
+      border-radius: 50% !important;
+      box-shadow: 0 2px 12px rgba(124,58,237,0.45) !important;
+    }
+    [data-testid="chatAvatarIcon-user"] {
+      background: rgba(255,255,255,0.08) !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+      border-radius: 50% !important;
+    }
+    /* Chat input box */
+    [data-testid="stChatInput"] {
+      background: rgba(22,10,50,0.94) !important;
+      border: 1.5px solid rgba(124,58,237,0.40) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 8px 40px rgba(124,58,237,0.28), 0 2px 0 rgba(168,85,247,0.16) inset !important;
+      max-width: 680px !important;
+      margin: 0 auto !important;
+    }
+    [data-testid="stChatInput"] textarea {
+      background: transparent !important;
+      color: #EDE0FF !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 0.94rem !important;
+      caret-color: #C084FC !important;
+    }
+    [data-testid="stChatInput"] textarea::placeholder {
+      color: rgba(168,140,200,0.45) !important;
+    }
+    [data-testid="stChatInput"] button {
+      background: linear-gradient(135deg,#7C3AED,#A855F7) !important;
+      border-radius: 12px !important;
+      border: none !important;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.45) !important;
+    }
+    /* Center messages */
+    .chat-msgs-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 10px 20px 4px;
+    }
+    /* Bottom bar */
+    .stBottom > div {
+      background: rgba(13,6,24,0.88) !important;
+      backdrop-filter: blur(20px) !important;
+      border-top: 1px solid rgba(124,58,237,0.14) !important;
+      padding: 10px max(16px, calc((100% - 680px)/2)) 14px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Display all messages
+    st.markdown('<div class="chat-msgs-wrap">', unsafe_allow_html=True)
+    for _m in st.session_state.chat_messages:
+        with st.chat_message(_m["role"], avatar="🎓" if _m["role"]=="assistant" else "👤"):
+            st.markdown(_m["content"])
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── PROCESS PROMPT ────────────────────────────────────────────────────
+    if _prompt:
+        st.session_state.chat_messages.append({"role":"user","content":_prompt})
         try:
-            _msg_text = urllib.parse.unquote(_msg_raw)
-        except:
-            _msg_text = _msg_raw
-        if _msg_text.strip():
-            dispatch_message(_msg_text.strip())
-            st.rerun()
-
-    # Handle mic done
-    _mic_done = st.query_params.get("_mic_done","")
-    if _mic_done:
-        try: del st.query_params["_mic_done"]
-        except: pass
-        dispatch_message("🎤 [Voice message — please transcribe]")
+            _reply = generate_ai_response(_prompt)
+        except Exception as _e:
+            _reply = f"Error aaya yaar: {str(_e)[:200]}"
+        st.session_state.chat_messages.append({"role":"assistant","content":_reply})
         st.rerun()
 
-    # ── Panels below the chatbot (if open) ───────────────────────────────
+    # Optional panels
     if st.session_state.show_history_panel:
-        all_sessions = st.session_state.chat_sessions
         with st.expander("🕐 Chat History", expanded=True):
-            if not all_sessions:
-                st.markdown('<p style="color:rgba(148,163,184,0.40);font-size:0.82rem;text-align:center;padding:20px 0;">No saved chats yet.</p>', unsafe_allow_html=True)
+            _all = st.session_state.chat_sessions
+            if not _all:
+                st.markdown('<p style="color:rgba(148,163,184,0.38);font-size:0.82rem;text-align:center;padding:16px 0;">No saved chats yet.</p>', unsafe_allow_html=True)
             else:
-                _pinned   = [(i,s) for i,s in enumerate(all_sessions) if s.get("pinned")]
-                _unpinned = [(i,s) for i,s in enumerate(all_sessions) if not s.get("pinned")]
-                for _grp_label, _grp in [("📌 Pinned", _pinned), ("Recent", _unpinned)]:
-                    if not _grp: continue
-                    st.markdown(f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.40);text-transform:uppercase;letter-spacing:1px;padding:4px 0 6px;">{_grp_label}</div>', unsafe_allow_html=True)
-                    for _i, _sess in reversed(_grp):
-                        _c1,_c2,_c3,_c4 = st.columns([5,0.9,0.9,0.9])
-                        with _c1:
-                            st.markdown(f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:9px 14px;font-size:0.82rem;color:rgba(226,232,240,0.80);">{"📌 " if _sess.get("pinned") else ""}{_sess.get("label","Chat")[:50]}</div>', unsafe_allow_html=True)
-                        with _c2:
-                            if st.button("↩",key=f"_load_{_i}"):
-                                st.session_state.chat_messages=list(_sess["messages"])
-                                st.session_state.show_history_panel=False; st.rerun()
-                        with _c3:
-                            if st.button("📌" if not _sess.get("pinned") else "📍",key=f"_pin_{_i}"):
-                                st.session_state.chat_sessions[_i]["pinned"]=not _sess.get("pinned"); st.rerun()
-                        with _c4:
-                            if st.button("🗑",key=f"_del_{_i}"):
-                                st.session_state.chat_sessions.pop(_i); st.rerun()
-                if st.button("🗑 Clear All",key="_clear_hist"):
-                    st.session_state.chat_sessions=[]
-                    st.toast("History cleared!"); st.rerun()
+                for _i, _s in enumerate(reversed(_all)):
+                    _ri = len(_all)-1-_i
+                    _hc1,_hc2,_hc3,_hc4 = st.columns([5,0.9,0.9,0.9])
+                    with _hc1:
+                        st.markdown(f'<div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.16);border-radius:10px;padding:9px 14px;font-size:0.82rem;color:rgba(226,232,240,0.80);">{"📌 " if _s.get("pinned") else ""}{_s.get("label","Chat")[:50]}</div>', unsafe_allow_html=True)
+                    with _hc2:
+                        if st.button("↩",key=f"_hl_{_ri}"):
+                            st.session_state.chat_messages=list(_s["messages"])
+                            st.session_state.show_history_panel=False; st.rerun()
+                    with _hc3:
+                        if st.button("📌" if not _s.get("pinned") else "📍",key=f"_hp_{_ri}"):
+                            st.session_state.chat_sessions[_ri]["pinned"]=not _s.get("pinned"); st.rerun()
+                    with _hc4:
+                        if st.button("🗑",key=f"_hd_{_ri}"):
+                            st.session_state.chat_sessions.pop(_ri); st.rerun()
+            if _all and st.button("🗑 Clear All",key="_hca"):
+                st.session_state.chat_sessions=[]; st.toast("Cleared!"); st.rerun()
 
     if st.session_state.show_settings_panel:
         with st.expander("⚙ Settings", expanded=True):
-            _t1,_t2=st.columns(2)
-            with _t1:
-                if st.button("🌙 Dark Theme",key="_tdark",use_container_width=True):
+            _st1,_st2=st.columns(2)
+            with _st1:
+                if st.button("🌙 Dark",key="_std",use_container_width=True):
                     st.session_state.chat_theme="dark"; st.rerun()
-            with _t2:
-                if st.button("☀️ Light Theme",key="_tlight",use_container_width=True):
+            with _st2:
+                if st.button("☀️ Light",key="_stl",use_container_width=True):
                     st.session_state.chat_theme="light"; st.rerun()
-            _ns=st.selectbox("Response Style",["Concise","Detailed","Bullet Points"],
-                index=["Concise","Detailed","Bullet Points"].index(st.session_state.response_style),key="_rstyle")
-            if _ns!=st.session_state.response_style:
-                st.session_state.response_style=_ns; st.rerun()
-            st.session_state.voice_output=st.toggle("🔊 Voice Output",value=st.session_state.voice_output,key="_voice_t")
-            st.session_state.strict_mode=st.toggle("🎓 Strict Mode",value=st.session_state.strict_mode,key="_strict_t")
-            if st.button("✕ Close",key="_cls_sets",use_container_width=True):
+            _sns=st.selectbox("Response Style",["Concise","Detailed","Bullet Points"],
+                index=["Concise","Detailed","Bullet Points"].index(st.session_state.response_style),key="_srst")
+            if _sns!=st.session_state.response_style:
+                st.session_state.response_style=_sns; st.rerun()
+            st.session_state.voice_output=st.toggle("🔊 Voice",value=st.session_state.voice_output,key="_svt")
+            st.session_state.strict_mode=st.toggle("🎓 Strict",value=st.session_state.strict_mode,key="_sst")
+            if st.button("✕ Close",key="_scs",use_container_width=True):
                 st.session_state.show_settings_panel=False; st.rerun()
-
-    if st.session_state.erp_panel:
-        with st.expander("🔐 ERP Portal", expanded=True):
-            st.markdown('<div style="font-size:0.82rem;color:rgba(168,140,255,0.70);margin-bottom:10px;">MNIT Jaipur ERP Login</div>', unsafe_allow_html=True)
-            erp_id=st.text_input("ERP ID / Enrollment No.",key="_erp_id")
-            erp_pw=st.text_input("Password",type="password",key="_erp_pw")
-            if st.button("Login to ERP",key="_erp_login",use_container_width=True):
-                st.toast("ERP integration coming soon! Visit erp.mnit.ac.in",icon="🔗")
-            st.markdown('<div style="font-size:0.70rem;color:rgba(148,163,184,0.40);margin-top:6px;">Or visit: <a href="https://erp.mnit.ac.in" target="_blank" style="color:rgba(168,85,247,0.70);">erp.mnit.ac.in</a></div>', unsafe_allow_html=True)
-            if st.button("Close",key="_erp_close"):
-                st.session_state.erp_panel=False; st.rerun()
 
     st.stop()
 

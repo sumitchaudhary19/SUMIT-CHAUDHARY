@@ -334,19 +334,295 @@ view = st.session_state.view
 ###############################################################################
 if view == "chat":
 
-    # ── Kill Streamlit sidebar & default layout completely ─────────────────
+    import json as _json
+
+    # ── Kill Streamlit sidebar & inject premium chat CSS ──────────────────
     st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Nunito:wght@400;500;600;700&display=swap');
+
     [data-testid="stSidebar"]{display:none!important;}
     [data-testid="stSidebarCollapseButton"]{display:none!important;}
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
-    [data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important;}
     html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{
-        background:#08080F!important;overflow:hidden!important;height:100vh!important;
+        background:#08080F!important;
+        font-family:'Nunito',sans-serif!important;
     }
-    /* Hide all streamlit default spacing */
-    .block-container{padding:0!important;max-width:100%!important;}
+    .block-container{padding:0 0 0 0!important;max-width:100%!important;}
+
+    /* ── Animated BG ── */
+    [data-testid="stAppViewContainer"]::before{
+        content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+        background:
+            radial-gradient(ellipse 80% 60% at 70% -10%, rgba(124,58,237,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 40% at 100% 80%, rgba(34,211,238,0.09) 0%, transparent 55%),
+            radial-gradient(ellipse 40% 50% at -10% 50%, rgba(236,72,153,0.07) 0%, transparent 60%);
+    }
+    [data-testid="stAppViewContainer"]::after{
+        content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+        background-image:
+            linear-gradient(rgba(120,80,255,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(120,80,255,0.04) 1px, transparent 1px);
+        background-size:48px 48px;
+        mask-image:radial-gradient(ellipse 90% 90% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    /* ── Custom sidebar panel (left fixed) ── */
+    .chat-sidebar{
+        position:fixed;top:0;left:0;bottom:0;width:258px;
+        background:#0A0A16;
+        border-right:1px solid rgba(120,80,255,0.18);
+        z-index:999;display:flex;flex-direction:column;
+        overflow:hidden;
+    }
+    .chat-sidebar::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:1px;
+        background:linear-gradient(90deg,transparent,#7C3AED,transparent);
+    }
+    .sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .sb-logo-row{display:flex;align-items:center;gap:10px;}
+    .sb-logo-icon{
+        width:34px;height:34px;border-radius:10px;
+        background:linear-gradient(135deg,#7C3AED,#4F46E5);
+        display:flex;align-items:center;justify-content:center;
+        font-family:'JetBrains Mono',monospace;font-size:0.88rem;font-weight:700;color:#fff;
+        box-shadow:0 0 20px rgba(124,58,237,0.35),0 4px 12px rgba(0,0,0,0.4);
+        flex-shrink:0;
+    }
+    .sb-logo-text{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:#F1F0FF;letter-spacing:-0.3px;}
+    .sb-logo-sub{font-size:0.52rem;color:rgba(150,140,200,0.42);font-family:'JetBrains Mono',monospace;letter-spacing:0.8px;margin-top:1px;}
+    .sb-section{
+        font-family:'JetBrains Mono',monospace;font-size:0.50rem;font-weight:500;
+        color:rgba(150,140,200,0.40);text-transform:uppercase;letter-spacing:1.6px;
+        padding:12px 16px 6px;
+    }
+    .sb-nav-item{
+        display:flex;align-items:center;gap:10px;
+        padding:9px 14px;margin:2px 8px;border-radius:9px;cursor:pointer;
+        font-size:0.82rem;font-weight:500;color:rgba(200,195,240,0.65);
+        transition:all 0.15s;
+    }
+    .sb-nav-item:hover{background:rgba(124,58,237,0.12);color:#A78BFA;}
+    .sb-nav-active{background:rgba(124,58,237,0.18)!important;color:#A78BFA!important;border-left:2px solid #7C3AED;}
+    .sb-nav-icon{font-size:0.90rem;width:18px;text-align:center;}
+    .sb-history-scroll{flex:1;overflow-y:auto;padding-bottom:8px;}
+    .sb-history-scroll::-webkit-scrollbar{width:3px;}
+    .sb-history-scroll::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.20);border-radius:3px;}
+    .hist-item{
+        display:flex;align-items:center;gap:8px;padding:8px 16px;
+        font-size:0.76rem;color:rgba(150,140,200,0.42);
+        border-bottom:1px solid rgba(255,255,255,0.025);
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .hist-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,58,237,0.50);flex-shrink:0;}
+    .hist-empty{padding:16px;font-size:0.72rem;color:rgba(150,140,200,0.35);text-align:center;font-style:italic;}
+    .erp-box{
+        margin:10px 10px 0;padding:12px;
+        background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.18);border-radius:12px;
+    }
+    .erp-title{font-family:'JetBrains Mono',monospace;font-size:0.58rem;color:rgba(236,72,153,0.80);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;}
+    .erp-inp{
+        width:100%;margin-bottom:6px;padding:7px 9px;
+        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+        border-radius:7px;color:#F1F0FF;font-size:0.74rem;outline:none;
+        font-family:'Nunito',sans-serif;box-sizing:border-box;
+    }
+    .erp-inp::placeholder{color:rgba(150,140,200,0.30);}
+    .erp-btn{
+        width:100%;padding:7px;border:1px solid rgba(236,72,153,0.35);border-radius:7px;
+        background:rgba(236,72,153,0.18);color:rgba(236,72,153,0.90);
+        font-size:0.74rem;font-weight:700;cursor:pointer;box-sizing:border-box;
+        font-family:'Nunito',sans-serif;
+    }
+    .erp-note{font-size:0.56rem;color:rgba(150,140,200,0.35);text-align:center;margin-top:5px;}
+    .sb-back{
+        margin:10px;padding:9px 12px;border-radius:9px;cursor:pointer;
+        display:flex;align-items:center;gap:8px;
+        font-size:0.80rem;font-weight:600;color:rgba(34,211,238,0.75);
+        background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.18);
+        transition:all 0.16s;
+    }
+    .sb-back:hover{background:rgba(34,211,238,0.13);border-color:rgba(34,211,238,0.35);}
+
+    /* ── Main chat area (offset for sidebar) ── */
+    .chat-main-wrap{
+        margin-left:258px;
+        display:flex;flex-direction:column;
+        min-height:100vh;
+        position:relative;z-index:1;
+    }
+
+    /* ── Top navbar ── */
+    .chat-navbar{
+        position:fixed;top:0;left:258px;right:0;height:52px;z-index:998;
+        background:rgba(8,8,15,0.94);backdrop-filter:blur(20px);
+        border-bottom:1px solid rgba(255,255,255,0.06);
+        display:flex;align-items:center;justify-content:space-between;
+        padding:0 24px;
+    }
+    .nb-model{
+        display:flex;align-items:center;gap:7px;
+        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+        border-radius:20px;padding:5px 13px;
+        font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:rgba(200,195,240,0.65);
+    }
+    .nb-model-dot{width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981;}
+    .nb-actions{display:flex;gap:8px;align-items:center;}
+    .nb-btn{
+        padding:5px 13px;border-radius:20px;cursor:pointer;
+        font-size:0.71rem;font-weight:600;font-family:'Nunito',sans-serif;
+        background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+        color:rgba(200,195,240,0.65);transition:all 0.15s;
+    }
+    .nb-btn:hover{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.35);color:#A78BFA;}
+
+    /* ── Hero state ── */
+    .hero-section{
+        display:flex;flex-direction:column;align-items:center;
+        justify-content:center;padding:40px 24px 20px;
+        min-height:calc(100vh - 200px);
+        animation:heroIn 0.50s cubic-bezier(0.22,0.61,0.36,1) both;
+    }
+    @keyframes heroIn{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+    .hero-orb{
+        width:82px;height:82px;border-radius:22px;
+        background:linear-gradient(135deg,#1E1B4B 0%,#4C1D95 40%,#7C3AED 70%,#22D3EE 100%);
+        display:flex;align-items:center;justify-content:center;font-size:2rem;
+        margin-bottom:22px;
+        box-shadow:0 0 0 1px rgba(124,58,237,0.30),0 0 40px rgba(124,58,237,0.30),0 16px 50px rgba(0,0,0,0.50);
+        animation:orbPulse 3s ease-in-out infinite;
+    }
+    @keyframes orbPulse{
+        0%,100%{box-shadow:0 0 0 1px rgba(124,58,237,0.30),0 0 40px rgba(124,58,237,0.30),0 16px 50px rgba(0,0,0,0.50);}
+        50%{box-shadow:0 0 0 1px rgba(124,58,237,0.50),0 0 60px rgba(124,58,237,0.50),0 16px 50px rgba(0,0,0,0.50);}
+    }
+    .hero-title{
+        font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;
+        letter-spacing:-1.5px;line-height:1.1;text-align:center;margin-bottom:10px;
+        background:linear-gradient(135deg,#F1F0FF 0%,#A78BFA 50%,#22D3EE 100%);
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    }
+    .hero-sub{
+        font-size:0.85rem;color:rgba(150,140,200,0.50);text-align:center;
+        line-height:1.75;margin-bottom:30px;max-width:440px;
+    }
+
+    /* ── Pills ── */
+    .pills-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:640px;margin-bottom:0;}
+    .pill-st-btn > button{
+        background:rgba(255,255,255,0.04)!important;
+        border:1px solid rgba(255,255,255,0.10)!important;
+        border-radius:999px!important;
+        color:rgba(200,195,240,0.72)!important;
+        font-size:0.78rem!important;font-weight:600!important;
+        padding:8px 18px!important;box-shadow:none!important;
+        font-family:'Nunito',sans-serif!important;
+    }
+    .pill-st-btn > button:hover{
+        background:rgba(124,58,237,0.18)!important;
+        border-color:rgba(124,58,237,0.40)!important;
+        color:#A78BFA!important;transform:translateY(-2px)!important;
+        box-shadow:0 6px 20px rgba(124,58,237,0.20)!important;
+    }
+
+    /* ── Chat messages ── */
+    .stChatMessage{margin-top:0!important;margin-bottom:0!important;padding:4px 0!important;}
+    [data-testid="stChatMessage"]{
+        background:transparent!important;
+        border:none!important;border-radius:0!important;
+        padding:4px 0!important;
+        max-width:820px;margin:0 auto;width:100%;
+    }
+    /* User bubble */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"]{
+        background:linear-gradient(135deg,rgba(124,58,237,0.28),rgba(79,70,229,0.20))!important;
+        border:1px solid rgba(124,58,237,0.32)!important;
+        border-radius:16px 16px 4px 16px!important;
+        padding:12px 16px!important;
+        box-shadow:0 4px 20px rgba(124,58,237,0.15)!important;
+        color:#F1F0FF!important;
+        font-family:'Nunito',sans-serif!important;
+        font-size:0.90rem!important;
+    }
+    /* AI bubble */
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) [data-testid="stMarkdownContainer"]{
+        background:rgba(255,255,255,0.030)!important;
+        border:1px solid rgba(255,255,255,0.07)!important;
+        border-radius:16px 16px 16px 4px!important;
+        padding:12px 16px!important;
+        color:rgba(220,215,255,0.88)!important;
+        font-family:'Nunito',sans-serif!important;
+        font-size:0.90rem!important;
+    }
+    [data-testid="chatAvatarIcon-assistant"]{
+        background:linear-gradient(135deg,#0F172A,#1E1B4B)!important;
+        border:1px solid rgba(124,58,237,0.30)!important;
+        color:#A78BFA!important;
+        font-family:'JetBrains Mono',monospace!important;
+        font-size:0.75rem!important;font-weight:700!important;
+    }
+    [data-testid="chatAvatarIcon-user"]{
+        background:linear-gradient(135deg,#7C3AED,#4F46E5)!important;
+        box-shadow:0 3px 10px rgba(124,58,237,0.35)!important;
+    }
+
+    /* ── st.chat_input custom styling ── */
+    [data-testid="stChatInput"]{
+        background:#0D0D1A!important;
+        border:1.5px solid rgba(124,58,237,0.30)!important;
+        border-radius:16px!important;
+        padding:4px 8px!important;
+        box-shadow:0 4px 32px rgba(0,0,0,0.40)!important;
+        font-family:'Nunito',sans-serif!important;
+    }
+    [data-testid="stChatInput"]:focus-within{
+        border-color:rgba(124,58,237,0.65)!important;
+        box-shadow:0 0 0 3px rgba(124,58,237,0.14),0 6px 40px rgba(124,58,237,0.18)!important;
+    }
+    [data-testid="stChatInput"] textarea{
+        color:#F1F0FF!important;background:transparent!important;
+        font-family:'Nunito',sans-serif!important;font-size:0.94rem!important;
+        caret-color:#A78BFA!important;
+    }
+    [data-testid="stChatInput"] textarea::placeholder{color:rgba(150,140,200,0.38)!important;}
+    [data-testid="stChatInputSubmitButton"]{
+        background:linear-gradient(135deg,#7C3AED,#4F46E5)!important;
+        border-radius:50%!important;color:#fff!important;
+        box-shadow:0 3px 14px rgba(124,58,237,0.40)!important;
+    }
+
+    /* ── Bottom bar wrapper ── */
+    .chat-bottom-bar{
+        position:fixed;bottom:0;left:258px;right:0;z-index:990;
+        background:rgba(8,8,15,0.95);backdrop-filter:blur(24px);
+        border-top:1px solid rgba(255,255,255,0.06);
+        padding:10px 24px 14px;
+    }
+    .bottom-bar-inner{max-width:800px;margin:0 auto;}
+    .bottom-hint{
+        text-align:center;font-size:0.57rem;
+        color:rgba(100,90,160,0.35);
+        font-family:'JetBrains Mono',monospace;letter-spacing:0.4px;margin-top:6px;
+    }
+
+    /* Override Streamlit's own bottom chat input positioning */
+    [data-testid="stBottom"]{
+        left:258px!important;
+        background:rgba(8,8,15,0.95)!important;
+        border-top:1px solid rgba(255,255,255,0.06)!important;
+        backdrop-filter:blur(24px)!important;
+        padding:10px 24px 14px!important;
+    }
+    [data-testid="stBottom"] > div{max-width:800px;margin:0 auto!important;}
+
+    /* Spacers */
+    .chat-top-spacer{height:64px;}
+    .chat-bot-spacer{height:100px;}
+    .chat-messages-wrap{
+        max-width:820px;margin:0 auto;
+        padding:0 16px;width:100%;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -361,951 +637,133 @@ if view == "chat":
         st.rerun()
 
     # ──────────────────────────────────────────────────────────────────────
-    # FULL CUSTOM HTML CHAT UI
+    # STREAMLIT-NATIVE CHAT (reliable messaging) + PREMIUM HTML CHROME
     # ──────────────────────────────────────────────────────────────────────
-    nm   = st.session_state.student_name
-    br   = st.session_state.branch
-    msgs = st.session_state.chat_messages
+    nm       = st.session_state.student_name
+    br       = st.session_state.branch
     sessions = st.session_state.chat_sessions
 
-    # Build chat messages HTML
-    chat_html = ""
-    for msg in msgs:
-        role = msg["role"]
-        content = msg["content"].replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
-        if role == "user":
-            chat_html += f'''
-            <div class="msg-row user-row">
-                <div class="msg-bubble user-bubble">{content}</div>
-                <div class="msg-avatar user-avatar">{initials(nm)}</div>
-            </div>'''
-        else:
-            chat_html += f'''
-            <div class="msg-row ai-row">
-                <div class="msg-avatar ai-avatar">A</div>
-                <div class="msg-bubble ai-bubble">{content}</div>
-            </div>'''
-
-    # Build history sidebar items
-    history_html = ""
+    # ── Build history HTML for sidebar ─────────────────────────────────
+    history_items_html = ""
     if sessions:
         for i, sess in enumerate(reversed(sessions)):
-            label = sess.get("label","Chat")[:32]
-            history_html += f'<div class="hist-item" onclick="loadSession({len(sessions)-1-i})"><span class="hist-dot"></span>{label}...</div>'
+            lbl = sess.get("label","Chat")[:34]
+            history_items_html += f'<div class="hist-item"><span class="hist-dot"></span>{lbl}...</div>'
     else:
-        history_html = '<div class="hist-empty">No saved chats yet</div>'
+        history_items_html = '<div class="hist-empty">No saved chats yet</div>'
 
-    # Suggestion pills
-    branch = st.session_state.branch
-    PILLS = [
-        f"📊 Analyse my attendance",
-        f"📅 Next class today?",
-        f"📚 PYQs for {branch}",
-        f"💸 Fee status check",
-        f"📖 Subjects this sem",
-        f"🎯 Exam tips for me",
-    ]
-    pills_html = "".join(f'<button class="pill-btn" onclick="sendPill(this)">{p}</button>' for p in PILLS)
-
-    # ERP login form
-    erp_section = '''
-    <div class="erp-section">
-      <div class="erp-title">🔐 ERP Login</div>
-      <input class="erp-input" id="erpUser" placeholder="College ID / Username" />
-      <input class="erp-input" type="password" id="erpPass" placeholder="Password" />
-      <button class="erp-btn" onclick="erpLogin()">Login to ERP Portal →</button>
-      <div class="erp-note">Opens official MNIT ERP in new tab</div>
-    </div>'''
-
-    # Pre-build JS variable strings (avoids f-string / repr brace conflicts)
-    import json
-    _attached_js   = json.dumps(st.session_state.attached_file_name)
-    _sessions_list = [{"label": s["label"], "count": len(s["messages"])} for s in sessions[:20]]
-    _sessions_js   = json.dumps(_sessions_list)
-    _initials_js   = json.dumps(initials(nm))
-    _branch_js     = json.dumps(branch)
-    _has_msgs_js   = "true" if has_messages else "false"
-
-    # Assemble the full HTML
-    CHAT_HTML = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Nunito:wght@400;500;600;700&display=swap');
-
-:root {{
-  --bg:       #08080F;
-  --bg2:      #0D0D1A;
-  --bg3:      #12121F;
-  --sidebar:  #0A0A16;
-  --border:   rgba(120,80,255,0.18);
-  --border2:  rgba(255,255,255,0.07);
-  --purple:   #7C3AED;
-  --purple2:  #A78BFA;
-  --cyan:     #22D3EE;
-  --pink:     #EC4899;
-  --text:     #F1F0FF;
-  --text2:    rgba(200,195,240,0.65);
-  --text3:    rgba(150,140,200,0.42);
-  --glow:     rgba(124,58,237,0.35);
-  --sidebar-w: 256px;
-}}
-
-*{{box-sizing:border-box;margin:0;padding:0;}}
-html,body{{
-  height:100vh;overflow:hidden;
-  font-family:'Nunito',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}}
-
-/* ─── ANIMATED BACKGROUND ─── */
-.bg-canvas{{
-  position:fixed;inset:0;z-index:0;pointer-events:none;
-  background: radial-gradient(ellipse 80% 60% at 60% -10%, rgba(124,58,237,0.18) 0%, transparent 60%),
-              radial-gradient(ellipse 50% 40% at 100% 80%, rgba(34,211,238,0.09) 0%, transparent 55%),
-              radial-gradient(ellipse 40% 50% at -10% 50%, rgba(236,72,153,0.07) 0%, transparent 60%),
-              var(--bg);
-}}
-.bg-orb{{
-  position:absolute;border-radius:50%;filter:blur(80px);animation:orbFloat 12s ease-in-out infinite;
-}}
-.bg-orb1{{width:400px;height:400px;top:-100px;right:10%;background:rgba(124,58,237,0.12);animation-delay:0s;}}
-.bg-orb2{{width:300px;height:300px;bottom:10%;left:5%;background:rgba(34,211,238,0.08);animation-delay:4s;}}
-.bg-orb3{{width:250px;height:250px;top:40%;right:-5%;background:rgba(236,72,153,0.07);animation-delay:8s;}}
-@keyframes orbFloat{{
-  0%,100%{{transform:translate(0,0) scale(1);}}
-  33%{{transform:translate(20px,-30px) scale(1.05);}}
-  66%{{transform:translate(-15px,20px) scale(0.96);}}
-}}
-
-/* ─── GRID TEXTURE ─── */
-.bg-grid{{
-  position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image: linear-gradient(rgba(120,80,255,0.04) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(120,80,255,0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 30%, transparent 100%);
-}}
-
-/* ─── LAYOUT ─── */
-.chat-root{{
-  position:fixed;inset:0;z-index:10;
-  display:flex;
-}}
-
-/* ─── SIDEBAR ─── */
-.sidebar{{
-  width:var(--sidebar-w);
-  min-width:var(--sidebar-w);
-  height:100vh;
-  background:var(--sidebar);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;
-  overflow:hidden;
-  position:relative;
-  z-index:20;
-  backdrop-filter:blur(20px);
-}}
-.sidebar::before{{
-  content:'';
-  position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--purple),transparent);
-}}
-.sb-logo{{
-  padding:20px 18px 16px;
-  border-bottom:1px solid var(--border2);
-}}
-.sb-logo-mark{{
-  display:flex;align-items:center;gap:10px;
-}}
-.sb-logo-icon{{
-  width:34px;height:34px;border-radius:10px;
-  background:linear-gradient(135deg,var(--purple),#4F46E5);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'JetBrains Mono',monospace;font-size:0.88rem;font-weight:700;color:#fff;
-  box-shadow:0 0 20px var(--glow),0 4px 12px rgba(0,0,0,0.4);
-}}
-.sb-logo-text{{
-  font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;color:var(--text);letter-spacing:-0.3px;
-}}
-.sb-logo-sub{{font-size:0.55rem;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:0.8px;margin-top:1px;}}
-.sb-new-chat{{
-  margin:14px 14px 8px;
-  background:linear-gradient(135deg,rgba(124,58,237,0.25),rgba(79,70,229,0.18));
-  border:1px solid rgba(124,58,237,0.40);
-  border-radius:10px;padding:10px 14px;
-  display:flex;align-items:center;gap:9px;
-  cursor:pointer;
-  font-size:0.84rem;font-weight:600;color:var(--purple2);
-  transition:all 0.18s;
-}}
-.sb-new-chat:hover{{background:rgba(124,58,237,0.32);border-color:rgba(124,58,237,0.60);transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,58,237,0.20);}}
-.sb-new-icon{{font-size:1rem;}}
-.sb-section{{
-  font-family:'JetBrains Mono',monospace;
-  font-size:0.52rem;font-weight:500;color:var(--text3);
-  text-transform:uppercase;letter-spacing:1.6px;
-  padding:14px 16px 7px;
-}}
-.sb-nav-item{{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 16px;margin:2px 8px;
-  border-radius:9px;cursor:pointer;
-  font-size:0.83rem;font-weight:500;color:var(--text2);
-  transition:all 0.15s;
-  position:relative;
-}}
-.sb-nav-item:hover{{background:rgba(124,58,237,0.12);color:var(--purple2);}}
-.sb-nav-item.active{{background:rgba(124,58,237,0.18);color:var(--purple2);border-left:2px solid var(--purple);}}
-.sb-nav-icon{{font-size:0.92rem;width:18px;text-align:center;}}
-.sb-history{{flex:1;overflow-y:auto;padding:0 0 10px;}}
-.sb-history::-webkit-scrollbar{{width:3px;}}
-.sb-history::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.20);border-radius:3px;}}
-.hist-item{{
-  display:flex;align-items:center;gap:9px;
-  padding:8px 16px;cursor:pointer;
-  font-size:0.78rem;color:var(--text3);
-  border-bottom:1px solid rgba(255,255,255,0.025);
-  transition:all 0.14s;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}}
-.hist-item:hover{{background:rgba(124,58,237,0.08);color:var(--purple2);}}
-.hist-dot{{width:5px;height:5px;border-radius:50%;background:rgba(124,58,237,0.50);flex-shrink:0;}}
-.hist-empty{{padding:18px 16px;font-size:0.74rem;color:var(--text3);text-align:center;font-style:italic;}}
-.sb-bottom{{
-  border-top:1px solid var(--border2);padding:14px;
-}}
-.sb-back-btn{{
-  display:flex;align-items:center;gap:8px;
-  padding:9px 12px;border-radius:9px;cursor:pointer;
-  font-size:0.81rem;font-weight:600;color:rgba(34,211,238,0.75);
-  background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.18);
-  transition:all 0.16s;
-}}
-.sb-back-btn:hover{{background:rgba(34,211,238,0.13);color:var(--cyan);border-color:rgba(34,211,238,0.35);}}
-
-/* ERP Section */
-.erp-section{{padding:12px;margin:8px 10px;background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.18);border-radius:12px;}}
-.erp-title{{font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:500;color:rgba(236,72,153,0.80);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}}
-.erp-input{{
-  width:100%;margin-bottom:7px;padding:8px 10px;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);
-  border-radius:8px;color:var(--text);font-size:0.76rem;font-family:'Nunito',sans-serif;
-  outline:none;transition:border-color 0.18s;
-}}
-.erp-input:focus{{border-color:rgba(236,72,153,0.45);}}
-.erp-input::placeholder{{color:rgba(150,140,200,0.35);}}
-.erp-btn{{
-  width:100%;padding:8px;
-  background:linear-gradient(135deg,rgba(236,72,153,0.28),rgba(190,24,93,0.20));
-  border:1px solid rgba(236,72,153,0.35);border-radius:8px;
-  color:rgba(236,72,153,0.90);font-size:0.76rem;font-weight:700;
-  cursor:pointer;transition:all 0.16s;
-}}
-.erp-btn:hover{{background:rgba(236,72,153,0.35);box-shadow:0 3px 12px rgba(236,72,153,0.20);}}
-.erp-note{{font-size:0.58rem;color:var(--text3);text-align:center;margin-top:6px;}}
-
-/* ─── MAIN AREA ─── */
-.main-area{{
-  flex:1;display:flex;flex-direction:column;
-  height:100vh;overflow:hidden;position:relative;
-}}
-
-/* ─── TOPBAR ─── */
-.topbar{{
-  height:52px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px;
-  background:rgba(8,8,15,0.90);
-  border-bottom:1px solid var(--border2);
-  backdrop-filter:blur(20px);
-  z-index:30;
-}}
-.topbar-model{{
-  display:flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,0.04);border:1px solid var(--border2);
-  border-radius:20px;padding:5px 14px;
-  font-family:'JetBrains Mono',monospace;font-size:0.70rem;color:var(--text2);
-  cursor:pointer;transition:all 0.15s;
-}}
-.topbar-model:hover{{border-color:rgba(124,58,237,0.35);color:var(--purple2);}}
-.model-dot{{width:6px;height:6px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981;}}
-.topbar-actions{{display:flex;align-items:center;gap:8px;}}
-.topbar-btn{{
-  padding:6px 14px;border-radius:20px;cursor:pointer;
-  font-size:0.72rem;font-weight:600;
-  background:rgba(255,255,255,0.04);border:1px solid var(--border2);
-  color:var(--text2);transition:all 0.15s;
-  font-family:'Nunito',sans-serif;
-}}
-.topbar-btn:hover{{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.35);color:var(--purple2);}}
-.topbar-btn.active{{background:rgba(124,58,237,0.20);border-color:rgba(124,58,237,0.45);color:var(--purple2);}}
-
-/* ─── CHAT AREA ─── */
-.chat-area{{
-  flex:1;overflow-y:auto;
-  padding:20px 0 20px;
-  scroll-behavior:smooth;
-}}
-.chat-area::-webkit-scrollbar{{width:4px;}}
-.chat-area::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.20);border-radius:4px;}}
-
-/* ─── HERO (empty state) ─── */
-.hero-wrap{{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:calc(100vh - 220px);padding:20px;
-  animation:heroIn 0.55s cubic-bezier(0.22,0.61,0.36,1) both;
-}}
-@keyframes heroIn{{
-  from{{opacity:0;transform:translateY(28px);}}
-  to{{opacity:1;transform:translateY(0);}}
-}}
-.hero-orb{{
-  width:88px;height:88px;border-radius:24px;
-  background:linear-gradient(135deg,#1E1B4B 0%,#4C1D95 40%,#7C3AED 70%,#22D3EE 100%);
-  display:flex;align-items:center;justify-content:center;
-  font-size:2.2rem;margin-bottom:26px;
-  box-shadow:
-    0 0 0 1px rgba(124,58,237,0.30),
-    0 0 40px rgba(124,58,237,0.35),
-    0 20px 60px rgba(0,0,0,0.50),
-    inset 0 1px 0 rgba(255,255,255,0.10);
-  animation:orbPulse 3s ease-in-out infinite;
-  position:relative;
-}}
-@keyframes orbPulse{{
-  0%,100%{{box-shadow:0 0 0 1px rgba(124,58,237,0.30),0 0 40px rgba(124,58,237,0.35),0 20px 60px rgba(0,0,0,0.50),inset 0 1px 0 rgba(255,255,255,0.10);}}
-  50%{{box-shadow:0 0 0 1px rgba(124,58,237,0.50),0 0 60px rgba(124,58,237,0.55),0 20px 60px rgba(0,0,0,0.50),inset 0 1px 0 rgba(255,255,255,0.10);}}
-}}
-.hero-title{{
-  font-family:'Syne',sans-serif;
-  font-size:2.6rem;font-weight:800;
-  letter-spacing:-2px;line-height:1.05;
-  text-align:center;margin-bottom:12px;
-  background:linear-gradient(135deg,#F1F0FF 0%,var(--purple2) 50%,var(--cyan) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}}
-.hero-sub{{
-  font-size:0.88rem;color:var(--text3);text-align:center;
-  line-height:1.75;margin-bottom:36px;
-  max-width:460px;
-}}
-
-/* ─── SUGGESTION PILLS ─── */
-.pills-wrap{{
-  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
-  max-width:660px;margin:0 auto;
-  animation:heroIn 0.65s 0.12s cubic-bezier(0.22,0.61,0.36,1) both;
-}}
-.pill-btn{{
-  padding:9px 18px;border-radius:999px;cursor:pointer;
-  font-size:0.79rem;font-weight:600;font-family:'Nunito',sans-serif;
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.10);
-  color:rgba(200,195,240,0.72);
-  transition:all 0.18s;
-  white-space:nowrap;
-}}
-.pill-btn:hover{{
-  background:rgba(124,58,237,0.18);
-  border-color:rgba(124,58,237,0.40);
-  color:var(--purple2);
-  transform:translateY(-2px);
-  box-shadow:0 6px 20px rgba(124,58,237,0.20);
-}}
-
-/* ─── MESSAGE BUBBLES ─── */
-.msg-row{{
-  display:flex;align-items:flex-end;gap:10px;
-  padding:6px 28px;max-width:860px;margin:0 auto;width:100%;
-  animation:msgIn 0.28s cubic-bezier(0.22,0.61,0.36,1) both;
-}}
-@keyframes msgIn{{from{{opacity:0;transform:translateY(10px);}}to{{opacity:1;transform:translateY(0);}}}}
-.user-row{{flex-direction:row-reverse;}}
-.msg-avatar{{
-  width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.72rem;font-weight:800;
-  font-family:'JetBrains Mono',monospace;
-}}
-.user-avatar{{
-  background:linear-gradient(135deg,var(--purple),#4F46E5);
-  color:#fff;box-shadow:0 3px 12px rgba(124,58,237,0.35);
-}}
-.ai-avatar{{
-  background:linear-gradient(135deg,#0F172A,#1E1B4B);
-  color:var(--purple2);border:1px solid rgba(124,58,237,0.30);
-  font-size:0.78rem;font-weight:700;
-}}
-.msg-bubble{{
-  max-width:72%;padding:13px 17px;border-radius:16px;
-  font-size:0.88rem;line-height:1.65;
-}}
-.user-bubble{{
-  background:linear-gradient(135deg,rgba(124,58,237,0.30),rgba(79,70,229,0.22));
-  border:1px solid rgba(124,58,237,0.35);
-  border-bottom-right-radius:4px;
-  color:var(--text);
-  box-shadow:0 4px 20px rgba(124,58,237,0.18);
-}}
-.ai-bubble{{
-  background:rgba(255,255,255,0.032);
-  border:1px solid rgba(255,255,255,0.07);
-  border-bottom-left-radius:4px;
-  color:rgba(220,215,255,0.88);
-}}
-
-/* ─── INPUT ZONE ─── */
-.input-zone{{
-  flex-shrink:0;
-  padding:14px 24px 18px;
-  background:rgba(8,8,15,0.92);
-  border-top:1px solid var(--border2);
-  backdrop-filter:blur(24px);
-}}
-.input-zone.hero-mode{{
-  background:transparent;
-  border-top:none;
-  padding:0 24px 20px;
-  max-width:680px;
-  margin:0 auto;
-  width:100%;
-}}
-
-/* The bar itself */
-.search-bar{{
-  display:flex;align-items:flex-end;gap:0;
-  background:rgba(13,13,26,0.92);
-  border:1.5px solid rgba(124,58,237,0.28);
-  border-radius:18px;padding:10px 10px 10px 16px;
-  min-height:60px;
-  box-shadow:0 4px 32px rgba(0,0,0,0.40), 0 0 0 0px rgba(124,58,237,0);
-  transition:border-color 0.22s, box-shadow 0.22s;
-  animation:barGlow 4s ease-in-out infinite;
-  position:relative;
-}}
-@keyframes barGlow{{
-  0%,100%{{box-shadow:0 4px 32px rgba(0,0,0,0.40),0 0 0 0 rgba(124,58,237,0.0);}}
-  50%{{box-shadow:0 4px 32px rgba(0,0,0,0.40),0 0 28px rgba(124,58,237,0.12);}}
-}}
-.search-bar:focus-within{{
-  border-color:rgba(124,58,237,0.65)!important;
-  box-shadow:0 0 0 3px rgba(124,58,237,0.14), 0 6px 40px rgba(124,58,237,0.20)!important;
-  animation:none;
-}}
-.bar-spark{{
-  color:rgba(167,139,250,0.50);font-size:1rem;
-  margin-right:8px;flex-shrink:0;align-self:center;
-  animation:sparkPulse 2.5s ease-in-out infinite;
-}}
-@keyframes sparkPulse{{
-  0%,100%{{opacity:0.50;transform:scale(1);}}
-  50%{{opacity:0.80;transform:scale(1.12);}}
-}}
-.bar-input{{
-  flex:1;background:transparent;border:none;outline:none;
-  color:var(--text);font-family:'Nunito',sans-serif;font-size:0.95rem;
-  caret-color:var(--purple2);
-  resize:none;overflow:hidden;min-height:36px;max-height:160px;
-  line-height:1.5;padding:4px 0;
-  align-self:center;
-}}
-.bar-input::placeholder{{color:rgba(150,140,200,0.35);}}
-.bar-actions{{
-  display:flex;align-items:center;gap:6px;flex-shrink:0;align-self:flex-end;
-  padding-bottom:2px;
-}}
-.bar-icon-btn{{
-  width:36px;height:36px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:0.95rem;
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.09);
-  color:rgba(150,140,200,0.55);
-  transition:all 0.16s;
-  flex-shrink:0;
-}}
-.bar-icon-btn:hover{{background:rgba(124,58,237,0.18);border-color:rgba(124,58,237,0.40);color:var(--purple2);}}
-.bar-icon-btn.active{{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.45);color:#FCA5A5;animation:micPulse 1.1s ease-in-out infinite;}}
-@keyframes micPulse{{0%,100%{{box-shadow:0 0 0 0 rgba(239,68,68,0.40);}}50%{{box-shadow:0 0 0 7px rgba(239,68,68,0.0);}}}}
-.send-btn{{
-  width:38px;height:38px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;font-size:1.05rem;
-  background:linear-gradient(135deg,var(--purple),#4F46E5);
-  border:none;color:#fff;
-  box-shadow:0 3px 14px rgba(124,58,237,0.40);
-  transition:all 0.15s;
-  flex-shrink:0;
-}}
-.send-btn:hover{{transform:scale(1.08);box-shadow:0 5px 20px rgba(124,58,237,0.55);}}
-
-/* Attach chip */
-.attach-chip{{
-  display:inline-flex;align-items:center;gap:5px;
-  background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.35);
-  border-radius:20px;padding:3px 10px 3px 8px;
-  font-size:0.72rem;color:var(--purple2);font-weight:600;
-  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  margin-bottom:8px;
-}}
-.chip-x{{cursor:pointer;color:rgba(150,140,200,0.45);margin-left:4px;padding:0 2px;}}
-.chip-x:hover{{color:var(--purple2);}}
-
-/* File input hidden */
-#realFileInput{{display:none;}}
-
-/* Input bar hint */
-.bar-hint{{
-  text-align:center;font-size:0.58rem;
-  color:rgba(100,90,160,0.38);
-  font-family:'JetBrains Mono',monospace;
-  letter-spacing:0.5px;margin-top:8px;
-}}
-
-/* Recording banner */
-.recording-banner{{
-  display:flex;align-items:center;gap:7px;
-  max-width:600px;margin:8px auto 0;
-  padding:7px 16px;
-  background:rgba(239,68,68,0.09);border:1px solid rgba(239,68,68,0.22);border-radius:9px;
-  font-size:0.78rem;color:#FCA5A5;
-}}
-.rec-dot{{width:7px;height:7px;border-radius:50%;background:#EF4444;animation:blinkDot 1s ease infinite;flex-shrink:0;}}
-@keyframes blinkDot{{0%,100%{{opacity:1;}}50%{{opacity:0.2;}}}}
-
-/* Typing indicator */
-.typing-row{{display:flex;align-items:flex-end;gap:10px;padding:6px 28px;max-width:860px;margin:0 auto;width:100%;}}
-.typing-bubble{{padding:12px 16px;border-radius:16px;border-bottom-left-radius:4px;background:rgba(255,255,255,0.032);border:1px solid rgba(255,255,255,0.07);}}
-.typing-dots{{display:flex;align-items:center;gap:4px;}}
-.typing-dot{{width:6px;height:6px;border-radius:50%;background:rgba(124,58,237,0.60);animation:typeDot 1.2s ease-in-out infinite;}}
-.typing-dot:nth-child(2){{animation-delay:0.20s;}}
-.typing-dot:nth-child(3){{animation-delay:0.40s;}}
-@keyframes typeDot{{0%,60%,100%{{transform:translateY(0);opacity:0.5;}}30%{{transform:translateY(-6px);opacity:1;}}}}
-
-/* Scrollbar */
-::-webkit-scrollbar{{width:4px;}}
-::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.20);border-radius:4px;}}
-</style>
-</head>
-<body>
-
-<!-- Background -->
-<div class="bg-canvas">
-  <div class="bg-orb bg-orb1"></div>
-  <div class="bg-orb bg-orb2"></div>
-  <div class="bg-orb bg-orb3"></div>
-</div>
-<div class="bg-grid"></div>
-
-<!-- Hidden file input -->
-<input type="file" id="realFileInput" accept=".pdf,.txt,.png,.jpg,.jpeg,.docx,.csv" onchange="handleFileSelect(this)">
-
-<div class="chat-root">
-
-  <!-- ═══ SIDEBAR ═══ -->
-  <aside class="sidebar">
-    <div class="sb-logo">
-      <div class="sb-logo-mark">
-        <div class="sb-logo-icon">A</div>
-        <div>
-          <div class="sb-logo-text">AskMNIT</div>
-          <div class="sb-logo-sub">AI ASSISTANT · MNIT JAIPUR</div>
+    # ── SIDEBAR (fixed left panel via HTML) ───────────────────────────────
+    st.markdown(f'''
+    <div class="chat-sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-row">
+          <div class="sb-logo-icon">A</div>
+          <div>
+            <div class="sb-logo-text">AskMNIT</div>
+            <div class="sb-logo-sub">AI ASSISTANT · MNIT JAIPUR</div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- New Chat -->
-    <div class="sb-new-chat" onclick="newChat()">
-      <span class="sb-new-icon">✦</span>
-      <span>New Chat</span>
-    </div>
-
-    <!-- Nav Items -->
-    <div class="sb-section">Navigation</div>
-    <div class="sb-nav-item active" onclick="setNav(this)"><span class="sb-nav-icon">💬</span> Chat</div>
-    <div class="sb-nav-item" onclick="openHistoryPanel()"><span class="sb-nav-icon">🕐</span> Chat History</div>
-
-    <!-- History section -->
-    <div class="sb-section">Recent</div>
-    <div class="sb-history" id="historyList">
-      {history_html}
-    </div>
-
-    <!-- ERP Login -->
-    {erp_section}
-
-    <!-- Back button -->
-    <div class="sb-bottom">
-      <div class="sb-back-btn" onclick="backToDashboard()">
-        <span>←</span><span>Back to Dashboard</span>
+      <div class="sb-section">Navigation</div>
+      <div class="sb-nav-item sb-nav-active"><span class="sb-nav-icon">💬</span> Chat</div>
+      <div class="sb-section">Recent Chats</div>
+      <div class="sb-history-scroll">{history_items_html}</div>
+      <div class="erp-box">
+        <div class="erp-title">🔐 ERP Login</div>
+        <input class="erp-inp" id="erpUser" placeholder="College ID" />
+        <input class="erp-inp" type="password" id="erpPass" placeholder="Password" />
+        <button class="erp-btn" onclick="window.open('https://erp.mnit.ac.in/','_blank')">Login to ERP Portal →</button>
+        <div class="erp-note">Opens official MNIT ERP in new tab</div>
       </div>
+      <div class="sb-back" id="backDashBtn">← Back to Dashboard</div>
     </div>
-  </aside>
-
-  <!-- ═══ MAIN ═══ -->
-  <div class="main-area">
-
-    <!-- Topbar -->
-    <div class="topbar">
-      <div class="topbar-model">
-        <span class="model-dot"></span>
-        <span>AskMNIT AI &nbsp;·&nbsp; LLaMA 3.3 70B</span>
-        <span style="opacity:0.5">▾</span>
-      </div>
-      <div class="topbar-actions">
-        <div class="topbar-btn" onclick="toggleSettings(this)">⚙ Settings</div>
-        <div class="topbar-btn" id="themeToggle" onclick="toggleTheme(this)">☀ Light</div>
-      </div>
-    </div>
-
-    <!-- Chat scroll area -->
-    <div class="chat-area" id="chatArea">
-      {'<div id="heroSection">' if not has_messages else ''}
-      {'<div class="hero-wrap"><div class="hero-orb">🎓</div><div class="hero-title">Hey ' + nm.split()[0] + ', ready?</div><div class="hero-sub">Your AI senior at MNIT Jaipur — attendance, schedule, PYQs, exam strategy, everything.</div><div class="pills-wrap" id="pillsWrap">' + pills_html + '</div></div>' if not has_messages else ''}
-      {'</div>' if not has_messages else ''}
-
-      <div id="msgContainer">
-        {chat_html}
-      </div>
-    </div>
-
-    <!-- Input zone -->
-    <div class="input-zone {'hero-mode' if not has_messages else ''}" id="inputZone">
-      <div id="attachChipArea"></div>
-
-      <div class="search-bar" id="searchBar">
-        <span class="bar-spark">✦</span>
-        <textarea
-          class="bar-input"
-          id="barInput"
-          rows="1"
-          placeholder="Ask AskMNIT anything..."
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
-        <div class="bar-actions">
-          <div class="bar-icon-btn" id="attachBtn" title="Attach file" onclick="triggerFileInput()">📎</div>
-          <div class="bar-icon-btn" id="micBtn" title="Voice input" onclick="toggleMic()">🎤</div>
-          <div class="send-btn" onclick="sendMessage()" title="Send">↑</div>
-        </div>
-      </div>
-
-      <div id="recordingBanner" style="display:none;" class="recording-banner">
-        <div class="rec-dot"></div>
-        <span>Listening... click mic again to stop</span>
-      </div>
-
-      <div class="bar-hint">AskMNIT can make mistakes · Verify with official ERP or faculty</div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-// ─── State ───
-var isRecording = false;
-var mediaRecorder = null;
-var audioChunks = [];
-var attachedFileName = {_attached_js};
-var chatSessions = {_sessions_js};
-
-// ─── Init ───
-function init() {{
-  updateAttachChip();
-  scrollBottom();
-  rotatePlaceholders();
-  if ({str(has_messages).lower()}) {{
-    var iz = document.getElementById('inputZone');
-    if(iz) iz.classList.remove('hero-mode');
-  }}
-}}
-
-// ─── Scroll ───
-function scrollBottom() {{
-  var ca = document.getElementById('chatArea');
-  if(ca) setTimeout(function(){{ ca.scrollTop = ca.scrollHeight; }}, 60);
-}}
-
-// ─── Auto resize textarea ───
-function autoResize(el) {{
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-}}
-
-// ─── Send message ───
-function sendMessage() {{
-  var inp = document.getElementById('barInput');
-  var text = (inp.value || '').trim();
-  if (!text && !attachedFileName) return;
-
-  var full = text;
-  if (attachedFileName && !text) full = '[File attached: ' + attachedFileName + ']';
-  else if (attachedFileName && text) full = text + ' [File: ' + attachedFileName + ']';
-
-  // Append user bubble immediately
-  appendMsg('user', full);
-  inp.value = ''; inp.style.height = 'auto';
-  attachedFileName = '';
-  updateAttachChip();
-
-  // Hide hero
-  var hero = document.getElementById('heroSection');
-  if(hero) {{ hero.style.display = 'none'; }}
-  var iz = document.getElementById('inputZone');
-  if(iz) iz.classList.remove('hero-mode');
-
-  // Show typing indicator
-  showTyping();
-  scrollBottom();
-
-  // Submit to Streamlit via query params
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_chat_msg', encodeURIComponent(full));
-  url.searchParams.set('_chat_ts', Date.now());
-  window.parent.history.replaceState(null,'',url.toString());
-  setTimeout(function(){{ window.parent.location.href = url.toString(); }}, 80);
-}}
-
-function handleKey(e) {{
-  if (e.key === 'Enter' && !e.shiftKey) {{
-    e.preventDefault();
-    sendMessage();
-  }}
-}}
-
-// ─── Append message ───
-function appendMsg(role, text) {{
-  var mc = document.getElementById('msgContainer');
-  var row = document.createElement('div');
-  row.className = 'msg-row ' + (role==='user' ? 'user-row' : 'ai-row');
-  var avTxt = role==='user' ? {_initials_js} : 'A';
-  var avClass = role==='user' ? 'user-avatar' : 'ai-avatar';
-  var bubClass = role==='user' ? 'user-bubble' : 'ai-bubble';
-  var safeText = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
-  if(role==='user') {{
-    row.innerHTML = '<div class="msg-bubble '+bubClass+'">'+safeText+'</div><div class="msg-avatar '+avClass+'">'+avTxt+'</div>';
-  }} else {{
-    row.innerHTML = '<div class="msg-avatar '+avClass+'">'+avTxt+'</div><div class="msg-bubble '+bubClass+'">'+safeText+'</div>';
-  }}
-  mc.appendChild(row);
-  scrollBottom();
-}}
-
-// ─── Typing indicator ───
-function showTyping() {{
-  var mc = document.getElementById('msgContainer');
-  var row = document.createElement('div');
-  row.id = 'typingRow';
-  row.className = 'typing-row';
-  row.innerHTML = '<div class="msg-avatar ai-avatar">A</div><div class="typing-bubble"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
-  mc.appendChild(row);
-  scrollBottom();
-}}
-function hideTyping() {{
-  var t = document.getElementById('typingRow');
-  if(t) t.remove();
-}}
-
-// ─── Pill click ───
-function sendPill(btn) {{
-  var text = btn.innerText;
-  document.getElementById('barInput').value = text;
-  sendMessage();
-}}
-
-// ─── Mic toggle ───
-function toggleMic() {{
-  if (!isRecording) {{
-    startRecording();
-  }} else {{
-    stopRecording();
-  }}
-}}
-
-function startRecording() {{
-  navigator.mediaDevices.getUserMedia({{audio:true}}).then(function(stream) {{
-    audioChunks = [];
-    try {{ mediaRecorder = new MediaRecorder(stream, {{mimeType:'audio/webm'}}); }}
-    catch(e) {{ mediaRecorder = new MediaRecorder(stream); }}
-    mediaRecorder.ondataavailable = function(e) {{ if(e.data && e.data.size>0) audioChunks.push(e.data); }};
-    mediaRecorder.onstop = function() {{
-      stream.getTracks().forEach(function(t){{t.stop();}});
-      // Simulate voice transcript
-      var inp = document.getElementById('barInput');
-      inp.value = '[Voice message recorded]';
-      autoResize(inp);
+    <script>
+    document.getElementById('backDashBtn').onclick = function() {{
+      var url = new URL(window.parent.location.href);
+      url.searchParams.set('_back_dash', '1');
+      window.parent.location.href = url.toString();
     }};
-    mediaRecorder.start(200);
-    isRecording = true;
-    var btn = document.getElementById('micBtn');
-    btn.classList.add('active');
-    btn.innerText = '⏹';
-    document.getElementById('recordingBanner').style.display = 'flex';
-  }}).catch(function(err) {{
-    alert('Microphone access denied: ' + err.message);
-  }});
-}}
+    </script>
+    ''', unsafe_allow_html=True)
 
-function stopRecording() {{
-  if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  isRecording = false;
-  var btn = document.getElementById('micBtn');
-  btn.classList.remove('active');
-  btn.innerText = '🎤';
-  document.getElementById('recordingBanner').style.display = 'none';
-}}
+    # ── TOPBAR ────────────────────────────────────────────────────────────
+    st.markdown(f'''
+    <div class="chat-navbar">
+      <div class="nb-model">
+        <span class="nb-model-dot"></span>
+        AskMNIT AI &nbsp;·&nbsp; LLaMA 3.3 70B
+      </div>
+      <div class="nb-actions">
+        <div class="nb-btn" onclick="
+          var url=new URL(window.parent.location.href);
+          url.searchParams.set('_new_chat', Date.now());
+          window.parent.location.href=url.toString();">
+          + New Chat
+        </div>
+      </div>
+    </div>
+    <div class="chat-top-spacer"></div>
+    ''', unsafe_allow_html=True)
 
-// ─── File attach ───
-function triggerFileInput() {{
-  document.getElementById('realFileInput').click();
-}}
-function handleFileSelect(input) {{
-  if(!input.files || !input.files[0]) return;
-  attachedFileName = input.files[0].name;
-  updateAttachChip();
-  // Also persist to Streamlit via query param
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_attach_file', encodeURIComponent(attachedFileName));
-  window.parent.history.replaceState(null,'',url.toString());
-}}
-function updateAttachChip() {{
-  var area = document.getElementById('attachChipArea');
-  if(!area) return;
-  if(attachedFileName) {{
-    var short = attachedFileName.length > 22 ? attachedFileName.substring(0,19)+'...' : attachedFileName;
-    area.innerHTML = '<div class="attach-chip">📎 '+short+'<span class="chip-x" onclick="clearAttach()">✕</span></div>';
-  }} else {{
-    area.innerHTML = '';
-  }}
-}}
-function clearAttach() {{
-  attachedFileName = '';
-  updateAttachChip();
-  document.getElementById('realFileInput').value = '';
-}}
+    # ── HERO (empty state) ─────────────────────────────────────────────────
+    if not has_messages:
+        st.markdown(f'''
+        <div class="hero-section">
+          <div class="hero-orb">🎓</div>
+          <div class="hero-title">Hey {nm.split()[0]}, ready?</div>
+          <div class="hero-sub">Your AI senior at MNIT Jaipur — attendance, schedule, PYQs, exam strategy, everything.</div>
+        </div>
+        ''', unsafe_allow_html=True)
 
-// ─── New chat ───
-function newChat() {{
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_new_chat', Date.now());
-  window.parent.location.href = url.toString();
-}}
+        # Suggestion pills — 2 rows via Streamlit columns
+        branch = st.session_state.branch
+        PILLS = [
+            f"📊 Analyse my attendance",
+            f"📅 Next class today?",
+            f"📚 PYQs for {branch}",
+            f"💸 Fee status check",
+            f"📖 Subjects this sem",
+            f"🎯 Exam tips for me",
+        ]
+        st.markdown('<div class="chat-messages-wrap"><div class="pills-row">', unsafe_allow_html=True)
+        cols = st.columns(len(PILLS))
+        for i, (pill, col) in enumerate(zip(PILLS, cols)):
+            with col:
+                st.markdown('<div class="pill-st-btn">', unsafe_allow_html=True)
+                if st.button(pill, key=f"pill_{i}", use_container_width=True):
+                    dispatch_message(pill)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height:24px"></div>', unsafe_allow_html=True)
 
-// ─── Load session ───
-function loadSession(idx) {{
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_load_session', idx);
-  window.parent.location.href = url.toString();
-}}
+    # ── CHAT MESSAGES (Streamlit native — always works) ────────────────────
+    else:
+        st.markdown('<div class="chat-messages-wrap">', unsafe_allow_html=True)
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+        st.markdown('</div>', unsafe_allow_html=True)
 
-// ─── Back to dashboard ───
-function backToDashboard() {{
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_back_dash', '1');
-  window.parent.location.href = url.toString();
-}}
+    st.markdown('<div class="chat-bot-spacer"></div>', unsafe_allow_html=True)
 
-// ─── Open history panel (scrolls to history) ───
-function openHistoryPanel() {{
-  var hl = document.getElementById('historyList');
-  if(hl) hl.scrollIntoView({{behavior:'smooth'}});
-}}
+    # ── CHAT INPUT — Streamlit native (100% reliable) ─────────────────────
+    user_input = st.chat_input(
+        "Ask AskMNIT anything...",
+        key="main_chat_input"
+    )
+    if user_input:
+        dispatch_message(user_input.strip())
+        st.rerun()
 
-// ─── ERP login ───
-function erpLogin() {{
-  window.open('https://erp.mnit.ac.in/', '_blank');
-}}
-
-// ─── Nav active ───
-function setNav(el) {{
-  document.querySelectorAll('.sb-nav-item').forEach(function(i){{i.classList.remove('active');}});
-  el.classList.add('active');
-}}
-
-// ─── Toggle theme ───
-function toggleTheme(btn) {{
-  var root = document.documentElement;
-  if(btn.innerText.includes('Light')) {{
-    root.style.setProperty('--bg','#F0F4FF');
-    root.style.setProperty('--bg2','#E8EDFF');
-    root.style.setProperty('--bg3','#DDE4FF');
-    root.style.setProperty('--sidebar','#EBF0FF');
-    root.style.setProperty('--text','#1E2A3A');
-    root.style.setProperty('--text2','rgba(40,50,100,0.65)');
-    root.style.setProperty('--text3','rgba(80,90,160,0.45)');
-    document.querySelector('.bg-canvas').style.background = 'var(--bg)';
-    btn.innerText = '🌙 Dark';
-  }} else {{
-    root.style.setProperty('--bg','#08080F');
-    root.style.setProperty('--bg2','#0D0D1A');
-    root.style.setProperty('--bg3','#12121F');
-    root.style.setProperty('--sidebar','#0A0A16');
-    root.style.setProperty('--text','#F1F0FF');
-    root.style.setProperty('--text2','rgba(200,195,240,0.65)');
-    root.style.setProperty('--text3','rgba(150,140,200,0.42)');
-    btn.innerText = '☀ Light';
-  }}
-}}
-
-// ─── Toggle settings ───
-function toggleSettings(btn) {{
-  btn.classList.toggle('active');
-}}
-
-// ─── Rotating placeholder ───
-var placeholders = [
-  "Ask AskMNIT anything...",
-  "Check my attendance %...",
-  "What's my next class?",
-  "Give me PYQs for " + {_branch_js} + "...",
-  "Exam strategy for this sem?",
-  "Is my attendance safe?",
-  "Explain " + {_branch_js} + " topics...",
-];
-var pidx = 0;
-function rotatePlaceholders() {{
-  var inp = document.getElementById('barInput');
-  if(!inp || document.activeElement === inp) {{
-    setTimeout(rotatePlaceholders, 2800);
-    return;
-  }}
-  pidx = (pidx+1) % placeholders.length;
-  inp.style.transition = 'opacity 0.30s';
-  inp.style.opacity = '0';
-  setTimeout(function() {{
-    inp.setAttribute('placeholder', placeholders[pidx]);
-    inp.style.opacity = '1';
-  }}, 300);
-  setTimeout(rotatePlaceholders, 2800);
-}}
-
-init();
-scrollBottom();
-</script>
-</body>
-</html>
-"""
-
-    # Render the HTML chatbot
-    components.html(CHAT_HTML, height=700, scrolling=False)
-
-    # ── Handle query param actions from the HTML ────────────────────────
-    qp = st.query_params
-
-    # Back to dashboard
-    if qp.get("_back_dash"):
+    # ── Handle back-to-dashboard via query param ───────────────────────────
+    if st.query_params.get("_back_dash"):
         try: del st.query_params["_back_dash"]
         except: pass
         st.session_state.view = "dashboard"
         st.rerun()
 
-    # New chat
-    if qp.get("_new_chat"):
+    if st.query_params.get("_new_chat"):
         try: del st.query_params["_new_chat"]
         except: pass
         if st.session_state.chat_messages:
@@ -1313,34 +771,6 @@ scrollBottom();
             st.session_state.chat_sessions.append({"label": fu, "messages": list(st.session_state.chat_messages)})
         st.session_state.chat_messages = []
         st.session_state.attached_file_name = ""
-        st.rerun()
-
-    # Load session
-    if qp.get("_load_session"):
-        try:
-            idx = int(qp.get("_load_session"))
-            del st.query_params["_load_session"]
-            st.session_state.chat_messages = list(st.session_state.chat_sessions[idx]["messages"])
-            st.rerun()
-        except: pass
-
-    # File attach
-    if qp.get("_attach_file"):
-        fname = qp.get("_attach_file","")
-        try: del st.query_params["_attach_file"]
-        except: pass
-        if fname:
-            st.session_state.attached_file_name = fname
-            st.rerun()
-
-    # Chat message
-    chat_msg = qp.get("_chat_msg","")
-    if chat_msg:
-        try: del st.query_params["_chat_msg"]
-        except: pass
-        try: del st.query_params["_chat_ts"]
-        except: pass
-        dispatch_message(chat_msg)
         st.rerun()
 
     st.stop()

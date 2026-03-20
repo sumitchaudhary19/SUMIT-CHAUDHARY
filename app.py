@@ -417,6 +417,15 @@ if view == "chat":
       <div class="erp-note">Opens official MNIT ERP in new tab</div>
     </div>'''
 
+    # Pre-build JS variable strings (avoids f-string / repr brace conflicts)
+    import json
+    _attached_js   = json.dumps(st.session_state.attached_file_name)
+    _sessions_list = [{"label": s["label"], "count": len(s["messages"])} for s in sessions[:20]]
+    _sessions_js   = json.dumps(_sessions_list)
+    _initials_js   = json.dumps(initials(nm))
+    _branch_js     = json.dumps(branch)
+    _has_msgs_js   = "true" if has_messages else "false"
+
     # Assemble the full HTML
     CHAT_HTML = f"""
 <!DOCTYPE html>
@@ -1002,8 +1011,8 @@ html,body{{
 var isRecording = false;
 var mediaRecorder = null;
 var audioChunks = [];
-var attachedFileName = {repr(st.session_state.attached_file_name)};
-var chatSessions = {repr([{{"label": s["label"], "count": len(s["messages"])} for s in sessions][:20])};
+var attachedFileName = {_attached_js};
+var chatSessions = {_sessions_js};
 
 // ─── Init ───
 function init() {{
@@ -1074,7 +1083,7 @@ function appendMsg(role, text) {{
   var mc = document.getElementById('msgContainer');
   var row = document.createElement('div');
   row.className = 'msg-row ' + (role==='user' ? 'user-row' : 'ai-row');
-  var avTxt = role==='user' ? {repr(initials(nm))} : 'A';
+  var avTxt = role==='user' ? {_initials_js} : 'A';
   var avClass = role==='user' ? 'user-avatar' : 'ai-avatar';
   var bubClass = role==='user' ? 'user-bubble' : 'ai-bubble';
   var safeText = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\\n/g,'<br>');
@@ -1253,10 +1262,10 @@ var placeholders = [
   "Ask AskMNIT anything...",
   "Check my attendance %...",
   "What's my next class?",
-  "Give me PYQs for {branch}...",
+  "Give me PYQs for " + {_branch_js} + "...",
   "Exam strategy for this sem?",
   "Is my attendance safe?",
-  "Explain {branch} topics...",
+  "Explain " + {_branch_js} + " topics...",
 ];
 var pidx = 0;
 function rotatePlaceholders() {{

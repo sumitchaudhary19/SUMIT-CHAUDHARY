@@ -192,27 +192,25 @@ if st.session_state.get("view") == "chat":
     }
     .cs-panel.open{transform:translateX(0);}
 
-    /* Toggle tab — always sticking out from right edge of sidebar */
-    .cs-tab{
-      position:absolute;top:12px;right:-30px;
-      width:30px;height:34px;
-      background:#1a1a2e;border:1px solid #555;border-left:none;
-      border-radius:0 6px 6px 0;
-      display:flex;align-items:center;justify-content:center;
-      cursor:pointer;font-size:0.9rem;color:#ccc;
-      user-select:none;z-index:10001;
-    }
-    .cs-tab:hover{background:#2a2a3e;color:#fff;}
-
-    /* Overlay */
-    .cs-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
-    .cs-overlay.open{display:block;}
-
-    /* Hamburger st.button — hidden, triggered by JS click on cs-tab */
+    /* Toggle button — always visible, moves with sidebar */
     .cs-hbtn .stButton>button{
-      position:fixed!important;top:-200px!important;left:-200px!important;
-      opacity:0!important;pointer-events:none!important;
-      width:1px!important;height:1px!important;
+      position:fixed!important;
+      top:12px!important;
+      left:0px!important;
+      z-index:10001!important;
+      width:32px!important;height:32px!important;
+      min-width:32px!important;min-height:32px!important;
+      background:#1a1a2e!important;border:1px solid #555!important;
+      color:#ccc!important;font-size:0.85rem!important;font-weight:400!important;
+      padding:0!important;line-height:1!important;
+      border-radius:0 6px 6px 0!important;box-shadow:none!important;
+      transition:left 0.25s ease!important;
+    }
+    .cs-hbtn-open .stButton>button{
+      left:200px!important;
+    }
+    .cs-hbtn .stButton>button:hover,.cs-hbtn-open .stButton>button:hover{
+      background:#2a2a3e!important;color:#fff!important;transform:none!important;
     }
 
     /* Chat area */
@@ -225,34 +223,22 @@ if st.session_state.get("view") == "chat":
       padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
     </style>""", unsafe_allow_html=True)
 
-    # ── Hidden st.button (triggered by JS) ───────────────────────────────
-    st.markdown('<div class="cs-hbtn">', unsafe_allow_html=True)
-    if st.button("toggle", key="_cs_hbtn"):
+    # ── Toggle button (always visible on sidebar right edge) ─────────────
+    _sb_cls = "cs-hbtn-open" if st.session_state.chat_sb_open else "cs-hbtn"
+    _sb_icon = "✕" if st.session_state.chat_sb_open else "☰"
+    st.markdown(f'<div class="{_sb_cls}">', unsafe_allow_html=True)
+    if st.button(_sb_icon, key="_cs_hbtn"):
         st.session_state.chat_sb_open = not st.session_state.chat_sb_open
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Overlay ───────────────────────────────────────────────────────────
     _oc = "open" if st.session_state.chat_sb_open else ""
-    st.markdown(f'<div class="cs-overlay {_oc}" onclick="triggerToggle()"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="cs-overlay {_oc}"></div>', unsafe_allow_html=True)
 
-    # ── Sidebar with visible tab on its right edge ────────────────────────
-    _icon = "✕" if st.session_state.chat_sb_open else "☰"
-    st.markdown(f"""
-    <div class="cs-panel {_oc}" id="cs-panel">
-      <div class="cs-tab" onclick="triggerToggle()">{_icon}</div>
-    </div>
-    <script>
-    function triggerToggle() {{
-      var btns = window.parent.document.querySelectorAll('button');
-      for (var i = 0; i < btns.length; i++) {{
-        if (btns[i].innerText.trim() === 'toggle') {{
-          btns[i].click(); break;
-        }}
-      }}
-    }}
-    </script>
-    """, unsafe_allow_html=True)
+    # ── Sidebar panel ─────────────────────────────────────────────────────
+    st.markdown(f'<div class="cs-panel {_oc}">', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Messages ──────────────────────────────────────────────────────────
     st.markdown('<div class="chat-area">', unsafe_allow_html=True)

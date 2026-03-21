@@ -196,16 +196,16 @@ if st.session_state.get("view") == "chat":
     .cs-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
     .cs-overlay.open{display:block;}
 
-    /* Hamburger button */
+    /* Hamburger button — pinned to right edge of sidebar, always visible */
     .cs-hbtn .stButton>button{
-      position:fixed!important;top:8px!important;left:8px!important;
+      position:fixed!important;top:12px!important;left:208px!important;
       z-index:10001!important;
-      width:34px!important;height:34px!important;
-      min-width:34px!important;min-height:34px!important;
+      width:28px!important;height:28px!important;
+      min-width:28px!important;min-height:28px!important;
       background:#1a1a2e!important;border:1px solid #555!important;
-      color:#ccc!important;font-size:1.1rem!important;font-weight:400!important;
+      color:#ccc!important;font-size:0.85rem!important;font-weight:400!important;
       padding:0!important;line-height:1!important;
-      border-radius:6px!important;box-shadow:none!important;
+      border-radius:0 6px 6px 0!important;box-shadow:none!important;
     }
     .cs-hbtn .stButton>button:hover{background:#2a2a3e!important;transform:none!important;}
 

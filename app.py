@@ -971,14 +971,33 @@ function toggleHistory(){{
 }}
 document.addEventListener('keydown',function(e){{ if(e.key==='Escape') closeSb(); }});
 
-// ── Streamlit component value sender (ONLY working method in iframe) ──
+// ── Bridge: write to hidden Streamlit text input → triggers rerun ─
 function sendToStreamlit(payload) {{
-  // Streamlit's official component communication API
-  window.parent.postMessage({{
-    isStreamlitMessage: true,
-    type: "streamlit:setComponentValue",
-    value: payload
-  }}, "*");
+  // Find the hidden text input in parent document and set its value
+  // then dispatch input+change events so Streamlit detects the change
+  try {{
+    var doc = window.parent.document;
+    var inputs = doc.querySelectorAll('input[type="text"]');
+    var bridge = null;
+    for(var i=0; i<inputs.length; i++) {{
+      if(inputs[i].id === '_askmnitbridge' ||
+         inputs[i].getAttribute('aria-label') === '_bridge' ||
+         (inputs[i].value === '' && inputs[i].placeholder === '')) {{
+        bridge = inputs[i];
+        break;
+      }}
+    }}
+    // Fallback: try last text input
+    if(!bridge && inputs.length > 0) bridge = inputs[inputs.length-1];
+    if(bridge) {{
+      var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
+      nativeInputValueSetter.call(bridge, payload);
+      bridge.dispatchEvent(new Event('input', {{ bubbles: true }}));
+      bridge.dispatchEvent(new Event('change', {{ bubbles: true }}));
+    }}
+  }} catch(err) {{
+    console.warn('Bridge write failed:', err);
+  }}
 }}
 
 // ── Actions (sidebar) ────────────────────────────────────────────
@@ -1085,14 +1104,26 @@ window.parent.postMessage({{isStreamlitMessage:true, type:"streamlit:componentRe
 </script>
 </body>
 </html>
-""", height=700 if has_messages else 680, scrolling=False, key="chat_component")
+""", height=700 if has_messages else 680, scrolling=False)
 
-    # ── Handle component value from iframe ───────────────────────────────
+    # ── Hidden bridge input — JS writes here, Python reads it ────────────
+    # Invisible text input that JS fills via DOM, Streamlit picks up on rerun
+    st.markdown("""
+    <style>
+    div[data-testid="stTextInput"]:has(input#_askmnitbridge){
+      position:fixed!important;bottom:-200px!important;
+      opacity:0!important;pointer-events:none!important;
+      width:1px!important;height:1px!important;overflow:hidden!important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    _bridge_val = st.text_input("_bridge", key="_askmnitbridge_input", label_visibility="collapsed")
+
+    # ── Handle value from bridge ──────────────────────────────────────────
     import json as _json
-    _cv = st.session_state.get("chat_component")
-    if _cv and isinstance(_cv, str):
-        # Clear it immediately so it doesn't re-trigger
-        st.session_state["chat_component"] = None
+    _cv = _bridge_val or st.session_state.get("_pending_msg", "")
+    if _cv and isinstance(_cv, str) and _cv.strip():
+        st.session_state["_pending_msg"] = ""
         try:
             _data = _json.loads(_cv)
             _type = _data.get("type","")

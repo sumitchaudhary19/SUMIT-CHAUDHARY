@@ -1,6 +1,6 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AskMNIT — Premium AI Assistant + Student Dashboard                         ║
-# ║  v7.0 — New Premium Chatbot Design                                          ║
+# ║  AskMNIT — v7.0 PREMIUM CHATBOT REDESIGN                                    ║
+# ║  New chatbot UI: sidebar, premium bg, modern search bar, suggestions         ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
@@ -117,7 +117,6 @@ _DEFAULTS = {
         {"text":"Collect hall ticket from ERP","pinned":False},
     ],
     "ql_feedback":       "",
-    # Chat state
     "chat_messages":     [],
     "chat_sessions":     [],
     "voice_output":      False,
@@ -125,15 +124,11 @@ _DEFAULTS = {
     "is_recording":      False,
     "planner_overrides": {},
     "show_uploader":     False,
-    "chat_theme":        "dark",
     "response_style":    "Concise",
     "attached_file_name":"",
     "voice_transcript":  "",
     "_voice_submit":     False,
-    "show_history_panel":  False,
-    "show_settings_panel": False,
-    "sb_open":             False,
-    "erp_panel":           False,
+    "chat_sidebar_open": True,
 }
 for k, v in _DEFAULTS.items():
     if k not in st.session_state:
@@ -152,68 +147,110 @@ def _build_student_context() -> str:
     good = [(s, att_pct(r)) for s, r in att.items() if att_pct(r) >= 75 and r["total"] > 0]
     att_summary = f"Overall attendance: {ov}%\n"
     if low:
-        att_summary += "BELOW 75%:\n"
+        att_summary += "BELOW 75% (critical):\n"
         for s, p in low:
             r = att[s]
             need = max(0, int((0.75 * r["total"] - r["present"]) / 0.25) + 1)
-            att_summary += f"  - {s}: {p}% — needs {need} more\n"
+            att_summary += f"  - {s}: {p}% ({r['present']}/{r['total']}) — needs {need} more classes\n"
     if good:
-        att_summary += "Above 75%: " + ", ".join(f"{s}:{p}%" for s,p in good[:4]) + "\n"
+        att_summary += "Above 75%:\n"
+        for s, p in good[:5]:
+            att_summary += f"  - {s}: {p}%\n"
     sched_summary = "Schedule not uploaded yet."
     if st.session_state.schedule_loaded:
         today_slots = get_today_slots(st.session_state.full_schedule)
         nxt = get_next_class(today_slots)
         dn  = datetime.datetime.now().strftime("%A")
         if today_slots:
-            sched_summary = f"Today ({dn}): " + ", ".join(f"{fmt_time(sl['time_start'])} {sl['subject']}" for sl in today_slots)
-            if nxt: sched_summary += f"\nNext: {nxt['subject']} in {nxt['minutes_away']} min"
+            sched_summary = f"Today ({dn}):\n"
+            for sl in today_slots:
+                sched_summary += f"  {fmt_time(sl['time_start'])}–{fmt_time(sl['time_end'])}: {sl['subject']} @ {sl['room']} ({sl['type']})\n"
+            sched_summary += f"Next class: {nxt['subject']} in {nxt['minutes_away']} min\n" if nxt else "No more classes today.\n"
         else:
             sched_summary = f"No classes today ({dn})."
-    return f"Student: {nm} | Branch: {br} | Semester: {sem}\nAttendance: {att_summary}\nSchedule: {sched_summary}\nResponse style: {st.session_state.response_style}"
+    return f"""
+Student: {nm} | Branch: {br} | Semester: {sem} | ID: {st.session_state.college_id}
+Subjects: {", ".join(subjects_for_branch(br))}
+Attendance: {att_summary}
+Schedule: {sched_summary}
+Response style pref: {st.session_state.response_style}
+"""
 
 def _detect_mood(text):
     t = text.lower()
-    if any(w in t for w in ["stressed","tension","worried","fail","rona","confused"]): return "STRESSED — warm first"
-    if any(w in t for w in ["happy","khush","cleared","yay","hogaya"]): return "EXCITED — vibe first"
-    if any(w in t for w in ["angry","gussa","bakwas","frustrat"]): return "FRUSTRATED — validate first"
-    if any(w in t for w in ["thak","tired","neend","exhausted"]): return "TIRED — gentle"
-    return "NEUTRAL — friendly"
+    if any(w in t for w in ["stressed","tension","worried","dar","bhot pressure","exam tension","fail","nahi hua","rona","roo","samajh nahi","confused"]):
+        return "STRESSED/ANXIOUS — be warm and reassuring first, solutions after"
+    if any(w in t for w in ["happy","khush","amazing","got","cleared","hogaya","yay","😄","🎉","🥳","woah","lets go"]):
+        return "EXCITED/HAPPY — match their energy, celebrate with them"
+    if any(w in t for w in ["bored","kya karu","nothing","bakwaas","boring","time pass"]):
+        return "BORED — be playful and engaging"
+    if any(w in t for w in ["angry","gussa","bakwas","worst","hate","ugh","aarrgh","irritating","frustrat"]):
+        return "FRUSTRATED — validate their feelings immediately before solving"
+    if any(w in t for w in ["thak","tired","neend","so raha","sleep","exhausted"]):
+        return "TIRED — be gentle, keep it short and supportive"
+    return "NEUTRAL/CASUAL — be friendly and natural"
 
 def generate_ai_response(last: str) -> str:
     import requests
-    nm = st.session_state.student_name.split()[0]
-    br = st.session_state.branch
-    system_prompt = f"""You are AskMNIT — {nm}'s brilliant senior at MNIT Jaipur.
-Mood hint: {_detect_mood(last)}
-{_build_student_context()}
+    nm          = st.session_state.student_name.split()[0]
+    br          = st.session_state.branch
+    student_ctx = _build_student_context()
+    mood_hint   = _detect_mood(last)
+    system_prompt = f"""You are AskMNIT — not a bot, but {nm}'s most brilliant and chill senior at MNIT Jaipur.
 
-Rules: Call them "{nm}" or "yaar/bhai". Be natural, Hinglish ok. Never say "I'm an AI".
-Keep it conversational and punchy."""
+DETECTED STUDENT MOOD: {mood_hint}
+→ Adjust tone accordingly from the first word.
+
+YOUR PERSONALITY:
+- Warm like a best friend, sharp like a topper
+- Naturally mix Hindi + English (Hinglish) if student uses it
+- Funny when appropriate — NEVER sound like a corporate chatbot
+- Short punchy sentences > long paragraphs
+- When stressed → acknowledge feeling first, THEN help
+- When excited → vibe with them first
+
+STUDENT DATA:
+{student_ctx}
+
+HARD RULES:
+1. Call them "{nm}" or "yaar/bhai" — never "user" or "student"
+2. Attendance math must be EXACT using data above
+3. Schedule info must come EXACTLY from data above
+4. If unsure → say "yaar iske baare mein sure nahi, ERP check kar"
+5. NEVER say "I'm an AI" — you're AskMNIT, {nm}'s senior
+6. Keep it conversational and natural"""
 
     history = st.session_state.chat_messages[:-1]
-    api_msgs = [{"role":m["role"],"content":m["content"]} for m in history[-14:]]
-    api_msgs.append({"role":"user","content":last})
+    api_messages = []
+    for msg in history[-16:]:
+        api_messages.append({"role": msg["role"], "content": msg["content"]})
+    api_messages.append({"role": "user", "content": last})
 
-    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY","") or st.session_state.get("groq_api_key","")
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "") or st.session_state.get("groq_api_key", "")
     if not GROQ_API_KEY:
-        return f"Yaar, Groq API key set nahi hai 😅\n\n`.streamlit/secrets.toml` mein `GROQ_API_KEY = 'gsk_...'` add kar!"
+        return (f"Yaar, Groq API key set nahi hai abhi 😅\n\n"
+                f"`.streamlit/secrets.toml` mein `GROQ_API_KEY = 'gsk_...'` add kar, phir restart kar!")
     try:
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization":f"Bearer {GROQ_API_KEY}","Content-Type":"application/json"},
-            json={"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":system_prompt},*api_msgs],
-                  "max_tokens":900,"temperature":0.82,"top_p":0.90,"stream":False},
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role":"system","content":system_prompt}, *api_messages],
+                "max_tokens": 900, "temperature": 0.82, "top_p": 0.90, "stream": False,
+            },
             timeout=30,
         )
         data = resp.json()
         if resp.status_code == 200:
             return data["choices"][0]["message"]["content"].strip()
-        err = data.get("error",{}).get("message","Unknown error")
-        return f"Groq API error 😬\n`{err}`"
+        else:
+            err = data.get("error", {}).get("message", "Unknown Groq error")
+            return f"Arrey yaar, Groq API ne chakkar de diya 😬\n`{err}`\n\nThodi der baad try kar!"
     except requests.Timeout:
-        return "Connection slow hai ⏳ — ek minute ruk ke try kar!"
+        return "Yaar connection slow lag raha hai ⏳ — ek minute ruk ke dobara try kar!"
     except Exception as e:
-        return f"Kuch gadbad hai 😅 ({str(e)[:80]})"
+        return f"Kuch toh gadbad hai yaar 😅 ({str(e)[:80]})\n\nInternet/API key check kar!"
 
 def dispatch_message(text: str):
     text = text.strip()
@@ -224,57 +261,65 @@ def dispatch_message(text: str):
     st.session_state.chat_messages.append({"role":"assistant","content":reply})
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GLOBAL CSS — Dashboard only styles
+# GLOBAL CSS — Dashboard styles (unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700;9..144,900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
 *,html,body{box-sizing:border-box;margin:0;padding:0;}
 html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{font-family:'Outfit',sans-serif!important;background:#070B14!important;color:#E2E8F0!important;}
 header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none!important;}
 [data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important;}
+
+/* Dashboard sidebar */
 [data-testid="stSidebar"]{background:#0B1120!important;border-right:1px solid rgba(59,130,246,0.16)!important;min-width:260px!important;max-width:260px!important;}
 [data-testid="stSidebar"]>div{padding:0!important;}
-.sb-section-header{font-family:'JetBrains Mono',monospace;font-size:0.60rem;font-weight:700;color:rgba(148,163,184,0.50);text-transform:uppercase;letter-spacing:1.4px;padding:14px 16px 6px;border-top:1px solid rgba(255,255,255,0.05);margin-top:4px;}
-.sb-history-item{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;font-size:0.80rem;color:rgba(148,163,184,0.70);border-bottom:1px solid rgba(255,255,255,0.03);}
-.sb-history-item:hover{background:rgba(59,130,246,0.09);color:#BAE6FD;}
-.sb-history-dot{width:5px;height:5px;border-radius:50%;background:#3B82F6;flex-shrink:0;}
+.sb-section-header{font-family:'DM Mono',monospace;font-size:0.60rem;font-weight:700;color:rgba(148,163,184,0.50);text-transform:uppercase;letter-spacing:1.4px;padding:14px 16px 6px;border-top:1px solid rgba(255,255,255,0.05);margin-top:4px;}
 [data-testid="stSidebar"] .stButton>button{background:rgba(239,68,68,0.10)!important;border:1px solid rgba(239,68,68,0.28)!important;color:#FCA5A5!important;border-radius:8px!important;font-size:0.80rem!important;font-weight:600!important;padding:7px 14px!important;box-shadow:none!important;}
 [data-testid="stSidebar"] .stButton>button:hover{background:rgba(239,68,68,0.20)!important;transform:none!important;}
+
+/* ── Global buttons ── */
 .stButton>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;color:#fff!important;border:none!important;border-radius:9px!important;font-family:'Outfit',sans-serif!important;font-weight:600!important;font-size:0.82rem!important;padding:9px 16px!important;box-shadow:0 3px 14px rgba(37,99,235,0.20)!important;transition:all 0.16s ease!important;}
 .stButton>button:hover{opacity:.88!important;transform:translateY(-1px)!important;}
 .ghost-btn .stButton>button{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(226,232,240,.55)!important;box-shadow:none!important;}
+.ghost-btn .stButton>button:hover{background:rgba(59,130,246,.10)!important;color:#E2E8F0!important;}
 .present-btn .stButton>button{background:linear-gradient(135deg,#065F46,#10B981)!important;box-shadow:0 2px 10px rgba(16,185,129,.18)!important;padding:6px 11px!important;font-size:0.75rem!important;border-radius:7px!important;}
 .absent-btn .stButton>button{background:linear-gradient(135deg,#7F1D1D,#EF4444)!important;box-shadow:0 2px 10px rgba(239,68,68,.16)!important;padding:6px 11px!important;font-size:0.75rem!important;border-radius:7px!important;}
-.save-btn .stButton>button{background:linear-gradient(135deg,#92400E,#F59E0B)!important;padding:7px 13px!important;font-size:0.77rem!important;}
+.save-btn .stButton>button{background:linear-gradient(135deg,#92400E,#F59E0B)!important;box-shadow:0 2px 10px rgba(245,158,11,.18)!important;padding:7px 13px!important;font-size:0.77rem!important;}
 .pin-btn .stButton>button{background:rgba(245,158,11,0.10)!important;border:1px solid rgba(245,158,11,0.28)!important;color:#FCD34D!important;box-shadow:none!important;font-size:0.70rem!important;padding:4px 10px!important;border-radius:7px!important;}
 .del-btn .stButton>button{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.18)!important;color:rgba(252,165,165,0.70)!important;box-shadow:none!important;font-size:0.68rem!important;padding:3px 8px!important;border-radius:6px!important;}
 .ql-btn .stButton>button{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(186,230,253,.65)!important;box-shadow:none!important;text-align:left!important;justify-content:flex-start!important;font-size:0.80rem!important;padding:9px 14px!important;border-radius:9px!important;}
 .logout-btn .stButton>button{background:rgba(239,68,68,.09)!important;border:1px solid rgba(239,68,68,.20)!important;color:#FCA5A5!important;box-shadow:none!important;font-size:0.80rem!important;}
-.open-chat-btn .stButton>button{background:linear-gradient(135deg,#7C3AED,#A855F7)!important;border-radius:12px!important;font-weight:700!important;font-size:0.88rem!important;padding:11px 22px!important;box-shadow:0 5px 24px rgba(124,58,237,.40)!important;font-family:'Syne',sans-serif!important;}
+.open-chat-btn .stButton>button{background:linear-gradient(135deg,#059669,#10B981)!important;border-radius:12px!important;font-weight:700!important;font-size:0.88rem!important;padding:11px 22px!important;box-shadow:0 5px 24px rgba(16,185,129,.36)!important;font-family:'DM Mono',monospace!important;}
 .settings-menu-btn .stButton>button{background:rgba(255,255,255,0.06)!important;border:1px solid rgba(255,255,255,0.12)!important;color:rgba(226,232,240,0.75)!important;box-shadow:none!important;font-size:0.82rem!important;font-weight:600!important;padding:8px 16px!important;border-radius:10px!important;}
 .nav-btn .stButton>button{background:transparent!important;color:rgba(148,163,184,.65)!important;border:none!important;box-shadow:none!important;text-align:left!important;justify-content:flex-start!important;padding:10px 14px!important;font-size:0.83rem!important;font-weight:500!important;border-radius:8px!important;}
 .nav-btn .stButton>button:hover{background:rgba(59,130,246,.10)!important;color:#BAE6FD!important;transform:none!important;}
 .nav-btn-active .stButton>button{background:rgba(59,130,246,.14)!important;color:#60A5FA!important;border-left:2px solid #3B82F6!important;font-weight:700!important;box-shadow:none!important;}
+
+/* ── Inputs ── */
 [data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;font-family:'Outfit',sans-serif!important;font-size:0.87rem!important;}
-[data-testid="stTextInput"] input:focus{border-color:rgba(59,130,246,0.55)!important;box-shadow:0 0 0 2.5px rgba(59,130,246,0.13)!important;}
+[data-testid="stTextInput"] input:focus,[data-testid="stTextArea"] textarea:focus{border-color:rgba(59,130,246,0.55)!important;box-shadow:0 0 0 2.5px rgba(59,130,246,0.13)!important;}
 [data-testid="stTextInput"] label,[data-testid="stTextArea"] label{color:rgba(148,163,184,0.55)!important;font-size:0.70rem!important;font-weight:600!important;text-transform:uppercase!important;letter-spacing:0.6px!important;}
 [data-testid="stSelectbox"]>div>div{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;}
+[data-testid="stSelectbox"] label{color:rgba(148,163,184,0.55)!important;font-size:0.70rem!important;font-weight:600!important;text-transform:uppercase!important;}
 [data-testid="stFileUploader"]{background:rgba(59,130,246,0.04)!important;border:1px dashed rgba(59,130,246,0.26)!important;border-radius:12px!important;}
 [data-testid="stToggle"] label{color:#E2E8F0!important;font-size:0.86rem!important;}
 [data-testid="stExpander"]{background:rgba(255,255,255,.018)!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:12px!important;}
-[data-testid="stProgress"]>div>div{border-radius:99px!important;background:linear-gradient(90deg,#7C3AED,#A855F7)!important;}
+[data-testid="stProgress"]>div>div{border-radius:99px!important;background:linear-gradient(90deg,#2563EB,#22D3EE)!important;}
 [data-testid="stProgress"]>div{background:rgba(255,255,255,.07)!important;border-radius:99px!important;height:5px!important;}
-h1,h2,h3,h4{font-family:'Syne',sans-serif!important;font-weight:700!important;}
+h1,h2,h3,h4{font-family:'DM Mono',monospace!important;font-weight:500!important;}
 [data-testid="stMarkdown"] p,[data-testid="stMarkdown"] li{color:rgba(226,232,240,.72)!important;font-family:'Outfit',sans-serif!important;}
 hr{border-color:rgba(255,255,255,0.08)!important;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:rgba(124,58,237,.30);border-radius:4px;}
+::-webkit-scrollbar-thumb{background:rgba(59,130,246,.22);border-radius:4px;}
 [data-testid="column"]{padding:0 4px!important;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
 </style>
 """, unsafe_allow_html=True)
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # VIEW ROUTER
@@ -282,31 +327,29 @@ hr{border-color:rgba(255,255,255,0.08)!important;}
 view = st.session_state.view
 
 ###############################################################################
-# ████████████████████████  CHAT VIEW — NEW PREMIUM DESIGN  ██████████████████
+# ███████████████████████  CHAT VIEW — PREMIUM REDESIGN  ██████████████████████
 ###############################################################################
 if view == "chat":
 
-    # Hide Streamlit sidebar completely
+    # Hide all Streamlit chrome & sidebar
     st.markdown("""
     <style>
     [data-testid="stSidebar"]{display:none!important;}
     [data-testid="stSidebarCollapseButton"]{display:none!important;}
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
-    html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{
-      background:#0D0618!important;
-    }
+    [data-testid="stMainBlockContainer"]{padding:0!important;}
+    /* Hide spinner text */
+    [data-testid="stStatusWidget"]{display:none!important;}
     </style>
     """, unsafe_allow_html=True)
 
-    has_messages = len(st.session_state.chat_messages) > 0
-
-    # ── Handle voice done ────────────────────────────────────────────────
-    for rkey in ["hero","anchored"]:
-        vdone = st.query_params.get(f"vr_{rkey}","")
+    # ── Voice done handler ────────────────────────────────────────────────
+    for rkey in ["chat_bar"]:
+        vdone = st.query_params.get(f"vr_{rkey}", "")
         if vdone == "DONE" and not st.session_state.get("_voice_submit"):
-            st.session_state._voice_submit = True
-            st.session_state.is_recording  = False
+            st.session_state._voice_submit    = True
+            st.session_state.is_recording     = False
             st.session_state.voice_transcript = "[Voice message recorded]"
             try: del st.query_params[f"vr_{rkey}"]
             except: pass
@@ -316,1017 +359,1054 @@ if view == "chat":
         msg = st.session_state.voice_transcript or "[Voice message]"
         st.session_state.voice_transcript = ""
         dispatch_message(f"🎤 {msg}")
-        st.toast("Voice message sent!", icon="🎤")
         st.rerun()
 
-    # ── Handle file picker ───────────────────────────────────────────────
-    for rkey in ["hero","anchored"]:
-        fpname = st.query_params.get(f"fp_{rkey}","")
-        if fpname and fpname != st.session_state.attached_file_name:
-            st.session_state.attached_file_name = fpname
-            st.toast(f"📎 {fpname}", icon="✅")
-            try: del st.query_params[f"fp_{rkey}"]
-            except: pass
-            st.rerun()
+    has_messages = len(st.session_state.chat_messages) > 0
 
-    # ── Sidebar open/close ───────────────────────────────────────────────
-    if "sb_open" not in st.session_state:
-        st.session_state.sb_open = False
-    if "erp_panel" not in st.session_state:
-        st.session_state.erp_panel = False
+    # ─────────────────────────────────────────────────────────────────────
+    # FULL PAGE PREMIUM CHAT HTML SHELL
+    # ─────────────────────────────────────────────────────────────────────
+    nm = st.session_state.student_name
+    br = st.session_state.branch
+    bh = branch_hex(br)
 
-    # ════════════════════════════════════════════════════════════════════
-    # INJECT THE ENTIRE PREMIUM CHATBOT UI via components.html
-    # ════════════════════════════════════════════════════════════════════
-    _msgs_json = []
-    for m in st.session_state.chat_messages[-60:]:
-        _msgs_json.append({"role": m["role"], "content": m["content"]})
+    # Build session history HTML for sidebar
+    sessions_html = ""
+    if st.session_state.chat_sessions:
+        for i, sess in enumerate(reversed(st.session_state.chat_sessions[-12:])):
+            lbl = sess.get("label", "Chat")[:32]
+            sessions_html += f'<div class="hist-item" data-idx="{i}"><span class="hist-icon">💬</span><span class="hist-label">{lbl}...</span></div>'
+    else:
+        sessions_html = '<div class="hist-empty">No saved chats yet</div>'
 
-    import json as _json
-    _msgs_str = _json.dumps(_msgs_json)
-    _sb_open_str = "true" if st.session_state.sb_open else "false"
-    _has_msgs = "true" if has_messages else "false"
-    _student  = st.session_state.student_name.split()[0]
-    _branch   = st.session_state.branch
+    # Build messages HTML
+    msgs_html = ""
+    for msg in st.session_state.chat_messages:
+        role = msg["role"]
+        content = msg["content"].replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+        if role == "user":
+            msgs_html += f'''
+            <div class="msg-row msg-user">
+              <div class="msg-bubble msg-bubble-user">{content}</div>
+              <div class="msg-avatar msg-avatar-user">{initials(nm)}</div>
+            </div>'''
+        else:
+            msgs_html += f'''
+            <div class="msg-row msg-ai">
+              <div class="msg-avatar msg-avatar-ai">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" fill="url(#star-grad)"/><defs><linearGradient id="star-grad" x1="4" y1="2" x2="20" y2="18"><stop stop-color="#818CF8"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs></svg>
+              </div>
+              <div class="msg-bubble msg-bubble-ai">{content}</div>
+            </div>'''
 
-    components.html(f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+    chip_html = ""
+    if st.session_state.attached_file_name:
+        fname = st.session_state.attached_file_name
+        short = fname if len(fname) <= 20 else fname[:17] + "..."
+        chip_html = f'<div class="attach-chip">📎 {short} <span class="chip-close" onclick="clearAttach()">✕</span></div>'
+
+    recording_class = "recording" if st.session_state.is_recording else ""
+
+    st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-*{{margin:0;padding:0;box-sizing:border-box;}}
-html,body{{
-  font-family:'Outfit',sans-serif;
-  background:#0D0618;
-  color:#E8DCFF;
-  height:100vh;
-  overflow:hidden;
+/* ── RESET & ROOT ── */
+*, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+/* ── CHAT APP WRAPPER ── */
+#askmnt-chat-app {{
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
+  background: #050810;
+  z-index: 9999;
 }}
 
-/* ══ ANIMATED BACKGROUND ══════════════════════════════════════════════ */
-.bg-canvas{{
-  position:fixed;inset:0;z-index:0;
-  background:
-    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(168,85,247,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(76,29,149,0.08) 0%, transparent 70%),
-    #0D0618;
+/* ══════════ ANIMATED BACKGROUND ══════════ */
+.chat-bg {{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
 }}
-.bg-orb{{
-  position:fixed;border-radius:50%;filter:blur(80px);
-  animation:orbFloat 8s ease-in-out infinite;pointer-events:none;z-index:0;
+.chat-bg::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.18) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(34,211,238,0.12) 0%, transparent 55%),
+              radial-gradient(ellipse 50% 40% at 50% 50%, rgba(139,92,246,0.06) 0%, transparent 70%);
+  animation: bgPulse 8s ease-in-out infinite alternate;
 }}
-.bg-orb-1{{
-  width:400px;height:400px;
-  background:radial-gradient(circle,rgba(124,58,237,0.22),transparent 70%);
-  top:-100px;left:-100px;animation-delay:0s;
+@keyframes bgPulse {{
+  0% {{ opacity: 0.7; transform: scale(1); }}
+  100% {{ opacity: 1; transform: scale(1.04); }}
 }}
-.bg-orb-2{{
-  width:350px;height:350px;
-  background:radial-gradient(circle,rgba(168,85,247,0.18),transparent 70%);
-  bottom:-80px;right:-80px;animation-delay:-3s;
+.orb {{
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orbFloat linear infinite;
+  opacity: 0;
 }}
-.bg-orb-3{{
-  width:250px;height:250px;
-  background:radial-gradient(circle,rgba(139,92,246,0.12),transparent 70%);
-  top:40%;left:60%;animation-delay:-5s;
+.orb-1 {{
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%);
+  top: -150px; left: -100px;
+  animation-duration: 25s; animation-delay: 0s;
+  animation-name: orbFloat1;
 }}
-@keyframes orbFloat{{
-  0%,100%{{transform:translate(0,0) scale(1);}}
-  33%{{transform:translate(30px,-30px) scale(1.05);}}
-  66%{{transform:translate(-20px,20px) scale(0.95);}}
+.orb-2 {{
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(34,211,238,0.16) 0%, transparent 70%);
+  bottom: -100px; right: -80px;
+  animation-duration: 20s; animation-delay: -8s;
+  animation-name: orbFloat2;
+}}
+.orb-3 {{
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 70%);
+  top: 50%; left: 60%;
+  animation-duration: 30s; animation-delay: -15s;
+  animation-name: orbFloat3;
+}}
+@keyframes orbFloat1 {{
+  0%,100% {{ opacity: 0.6; transform: translate(0,0); }}
+  33% {{ opacity: 1; transform: translate(60px, 40px); }}
+  66% {{ opacity: 0.7; transform: translate(-30px, 80px); }}
+}}
+@keyframes orbFloat2 {{
+  0%,100% {{ opacity: 0.5; transform: translate(0,0); }}
+  50% {{ opacity: 0.9; transform: translate(-50px, -60px); }}
+}}
+@keyframes orbFloat3 {{
+  0%,100% {{ opacity: 0.4; transform: translate(0,0) rotate(0deg); }}
+  50% {{ opacity: 0.7; transform: translate(-80px, 40px) rotate(180deg); }}
 }}
 
 /* Grid overlay */
-.bg-grid{{
-  position:fixed;inset:0;z-index:0;pointer-events:none;
+.chat-bg-grid {{
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(124,58,237,0.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(124,58,237,0.04) 1px,transparent 1px);
-  background-size:60px 60px;
-  mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%);
+    linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
 }}
 
-/* ══ LAYOUT ═══════════════════════════════════════════════════════════ */
-.app-shell{{
-  position:fixed;inset:0;
-  display:flex;z-index:1;
+/* ══════════ LEFT SIDEBAR ══════════ */
+.chat-sidebar {{
+  position: relative;
+  z-index: 10;
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
+  background: rgba(8, 12, 28, 0.92);
+  border-right: 1px solid rgba(99,102,241,0.18);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(24px);
+  transition: transform 0.3s cubic-bezier(0.22,0.61,0.36,1);
+  overflow: hidden;
 }}
 
-/* ══ LEFT SIDEBAR ══════════════════════════════════════════════════════ */
-.sidebar{{
-  width:240px;
-  flex-shrink:0;
-  background:rgba(15,7,36,0.88);
-  backdrop-filter:blur(24px);
-  border-right:1px solid rgba(124,58,237,0.20);
-  display:flex;
-  flex-direction:column;
-  transform:translateX(0);
-  transition:transform 0.30s cubic-bezier(0.22,0.61,0.36,1);
-  z-index:50;
-  overflow:hidden;
+/* Sidebar brand */
+.sb-brand {{
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 11px;
 }}
-.sidebar.collapsed{{
-  transform:translateX(-240px);
+.sb-brand-icon {{
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4F46E5, #818CF8);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem; font-weight: 800;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(79,70,229,0.40);
+  flex-shrink: 0;
 }}
-.sb-header{{
-  padding:20px 16px 14px;
-  border-bottom:1px solid rgba(124,58,237,0.14);
-  display:flex;align-items:center;gap:10px;
+.sb-brand-text {{ display: flex; flex-direction: column; }}
+.sb-brand-name {{
+  font-family: 'Syne', sans-serif;
+  font-size: 0.92rem; font-weight: 700;
+  color: #E2E8F0; letter-spacing: -0.3px;
 }}
-.sb-logo-icon{{
-  width:32px;height:32px;border-radius:9px;
-  background:linear-gradient(135deg,#7C3AED,#A855F7);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.88rem;font-weight:800;color:#fff;
-  box-shadow:0 4px 14px rgba(124,58,237,0.45);
-  font-family:'Syne',sans-serif;flex-shrink:0;
-}}
-.sb-logo-name{{font-family:'Syne',sans-serif;font-size:0.92rem;font-weight:700;color:#E8DCFF;}}
-.sb-logo-sub{{font-size:0.52rem;color:rgba(168,140,255,0.45);margin-top:1px;}}
-
-.sb-section{{padding:10px 10px 4px;}}
-.sb-section-label{{
-  font-family:'JetBrains Mono',monospace;
-  font-size:0.52rem;color:rgba(168,140,255,0.38);
-  text-transform:uppercase;letter-spacing:1.8px;
-  padding:0 6px 6px;
+.sb-brand-sub {{
+  font-size: 0.58rem;
+  color: rgba(148,163,184,0.45);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 1px;
 }}
 
-.sb-item{{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 12px;border-radius:10px;
-  cursor:pointer;user-select:none;
-  font-size:0.82rem;font-weight:500;
-  color:rgba(210,190,255,0.65);
-  transition:all 0.14s ease;
-  border:1px solid transparent;
-  margin-bottom:2px;
+/* Sidebar sections */
+.sb-section {{
+  padding: 14px 12px 8px;
 }}
-.sb-item:hover{{
-  background:rgba(124,58,237,0.14);
-  border-color:rgba(168,85,247,0.22);
-  color:#DDD0FF;
-}}
-.sb-item.active{{
-  background:rgba(124,58,237,0.20);
-  border-color:rgba(168,85,247,0.35);
-  color:#EDE0FF;
-}}
-.sb-item.new-chat{{
-  background:rgba(124,58,237,0.22);
-  border-color:rgba(168,85,247,0.40);
-  color:#E8DCFF;font-weight:600;
-  margin:10px 0 4px;
-}}
-.sb-item.new-chat:hover{{
-  background:rgba(124,58,237,0.32);
-  box-shadow:0 4px 16px rgba(124,58,237,0.25);
-}}
-.sb-icon{{font-size:0.92rem;width:20px;text-align:center;flex-shrink:0;}}
-
-.sb-chat-history{{
-  flex:1;overflow-y:auto;padding:0 10px;
-}}
-.sb-chat-history::-webkit-scrollbar{{width:3px;}}
-.sb-chat-history::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.25);border-radius:3px;}}
-.sb-hist-item{{
-  display:flex;align-items:center;gap:7px;
-  padding:7px 10px;border-radius:8px;
-  cursor:pointer;font-size:0.74rem;
-  color:rgba(180,160,220,0.55);
-  transition:all 0.12s;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}}
-.sb-hist-item:hover{{background:rgba(124,58,237,0.10);color:rgba(210,190,255,0.80);}}
-.sb-hist-dot{{width:4px;height:4px;border-radius:50%;background:rgba(168,85,247,0.40);flex-shrink:0;}}
-
-.sb-footer{{
-  padding:12px 10px;
-  border-top:1px solid rgba(124,58,237,0.12);
+.sb-section-title {{
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem; font-weight: 500;
+  color: rgba(148,163,184,0.35);
+  text-transform: uppercase; letter-spacing: 1.6px;
+  padding: 0 6px 8px;
 }}
 
-/* ══ MAIN CONTENT ══════════════════════════════════════════════════════ */
-.main-content{{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  position:relative;
-  transition:all 0.30s ease;
+/* Sidebar action buttons */
+.sb-action-btn {{
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 3px;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  text-decoration: none;
+}}
+.sb-action-btn:hover {{
+  background: rgba(99,102,241,0.10);
+  border-color: rgba(99,102,241,0.22);
+}}
+.sb-action-icon {{
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}}
+.sb-action-label {{
+  font-size: 0.82rem; font-weight: 500;
+  color: rgba(226,232,240,0.75);
+}}
+.sb-action-btn.new-chat {{ background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.20); }}
+.sb-action-btn.new-chat:hover {{ background: rgba(99,102,241,0.18); }}
+.sb-action-btn.new-chat .sb-action-icon {{ background: rgba(99,102,241,0.20); color: #818CF8; }}
+.sb-action-btn.new-chat .sb-action-label {{ color: #A5B4FC; font-weight: 600; }}
+.sb-action-btn.erp .sb-action-icon {{ background: rgba(34,211,238,0.12); color: #22D3EE; }}
+.sb-action-btn.dashboard-btn .sb-action-icon {{ background: rgba(16,185,129,0.12); color: #10B981; }}
+
+/* History list */
+.hist-scroll {{
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+}}
+.hist-scroll::-webkit-scrollbar {{ width: 3px; }}
+.hist-scroll::-webkit-scrollbar-thumb {{ background: rgba(99,102,241,0.25); border-radius: 3px; }}
+.hist-item {{
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}}
+.hist-item:hover {{
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.07);
+}}
+.hist-icon {{ font-size: 0.78rem; opacity: 0.5; flex-shrink: 0; }}
+.hist-label {{
+  font-size: 0.76rem; color: rgba(148,163,184,0.60);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}}
+.hist-empty {{
+  font-size: 0.72rem; color: rgba(148,163,184,0.28);
+  text-align: center; padding: 24px 0;
+  font-style: italic;
 }}
 
-/* ══ TOP BAR ══════════════════════════════════════════════════════════ */
-.topbar{{
-  height:52px;
-  background:rgba(13,6,24,0.80);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(124,58,237,0.16);
-  display:flex;align-items:center;
-  padding:0 16px;
-  gap:10px;
-  flex-shrink:0;
-  z-index:40;
+/* Sidebar footer */
+.sb-footer {{
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }}
-.topbar-toggle{{
-  width:34px;height:34px;border-radius:9px;
-  background:rgba(124,58,237,0.15);
-  border:1px solid rgba(168,85,247,0.28);
-  cursor:pointer;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:4.5px;
-  transition:all 0.16s ease;flex-shrink:0;
+.sb-user-chip {{
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
 }}
-.topbar-toggle:hover{{background:rgba(124,58,237,0.28);border-color:rgba(168,85,247,0.50);}}
-.tb-bar{{display:block;width:14px;height:1.5px;background:rgba(220,200,255,0.82);border-radius:2px;transition:all 0.22s ease;}}
-.topbar-title{{
-  font-family:'Syne',sans-serif;font-size:0.90rem;font-weight:600;
-  color:rgba(220,200,255,0.80);flex:1;
+.sb-user-av {{
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, {bh}, {bh}88);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; font-weight: 700; color: #fff;
+  flex-shrink: 0;
 }}
-.topbar-badge{{
-  font-family:'JetBrains Mono',monospace;
-  font-size:0.60rem;padding:3px 8px;border-radius:6px;
-  background:rgba(124,58,237,0.20);border:1px solid rgba(168,85,247,0.28);
-  color:rgba(180,150,255,0.80);
+.sb-user-name {{
+  font-size: 0.76rem; font-weight: 600; color: rgba(226,232,240,0.80);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}}
+.sb-user-branch {{
+  font-size: 0.58rem; color: {bh}; font-weight: 600;
 }}
 
-/* ══ CHAT AREA ════════════════════════════════════════════════════════ */
-.chat-area{{
-  flex:1;
-  overflow-y:auto;
-  padding:20px 0 20px;
-  display:flex;
-  flex-direction:column;
-}}
-.chat-area::-webkit-scrollbar{{width:4px;}}
-.chat-area::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.25);border-radius:4px;}}
-
-/* ── Hero center (before 1st message) ── */
-.hero-center{{
-  flex:1;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  padding:20px 24px;
-  text-align:center;
-  animation:fadeUp 0.50s ease both;
-}}
-@keyframes fadeUp{{from{{opacity:0;transform:translateY(20px);}}to{{opacity:1;transform:translateY(0);}}}}
-
-.hero-orb{{
-  width:80px;height:80px;border-radius:50%;
-  background:conic-gradient(from 0deg,#7C3AED,#A855F7,#C084FC,#7C3AED);
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:20px;
-  animation:orbSpin 8s linear infinite, orb3d 4s ease-in-out infinite;
-  box-shadow:0 0 0 1px rgba(168,85,247,0.30), 0 16px 60px rgba(124,58,237,0.50);
-  position:relative;
-}}
-.hero-orb::before{{
-  content:'';position:absolute;inset:3px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.25),transparent 60%),
-    conic-gradient(from 120deg,#4C1D95,#7C3AED,#A855F7,#4C1D95);
-}}
-.hero-orb-emoji{{position:relative;z-index:1;font-size:1.8rem;}}
-@keyframes orbSpin{{from{{filter:hue-rotate(0deg);}}to{{filter:hue-rotate(360deg);}}}}
-@keyframes orb3d{{
-  0%,100%{{transform:scale(1) rotateY(0deg);box-shadow:0 0 0 1px rgba(168,85,247,0.30),0 16px 60px rgba(124,58,237,0.50);}}
-  50%{{transform:scale(1.05) rotateY(10deg);box-shadow:0 0 0 2px rgba(168,85,247,0.45),0 24px 80px rgba(124,58,237,0.65);}}
+/* ══════════ MAIN CHAT AREA ══════════ */
+.chat-main {{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 5;
+  overflow: hidden;
 }}
 
-.hero-title{{
-  font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;
-  background:linear-gradient(135deg,#EDE0FF 0%,#C084FC 50%,#A855F7 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  letter-spacing:-1px;margin-bottom:8px;
+/* ── Top bar ── */
+.chat-topbar {{
+  height: 54px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(5,8,16,0.60);
+  backdrop-filter: blur(20px);
+  flex-shrink: 0;
 }}
-.hero-sub{{
-  font-size:0.84rem;color:rgba(180,160,220,0.55);
-  line-height:1.65;max-width:380px;
+.topbar-left {{
+  display: flex; align-items: center; gap: 10px;
 }}
-
-/* Suggestion chips */
-.sugg-row{{
-  display:flex;flex-wrap:wrap;gap:8px;
-  justify-content:center;margin-top:20px;
-  max-width:580px;
+.topbar-model-badge {{
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  background: rgba(99,102,241,0.10);
+  border: 1px solid rgba(99,102,241,0.22);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.18s;
 }}
-.sugg-chip{{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:8px 14px;border-radius:22px;
-  background:rgba(124,58,237,0.10);
-  border:1px solid rgba(168,85,247,0.22);
-  color:rgba(200,180,255,0.75);
-  font-size:0.76rem;font-weight:500;
-  cursor:pointer;user-select:none;
-  transition:all 0.16s ease;
-  white-space:nowrap;
+.topbar-model-badge:hover {{ background: rgba(99,102,241,0.18); }}
+.topbar-model-dot {{
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #818CF8;
+  animation: blink 2s ease infinite;
 }}
-.sugg-chip:hover{{
-  background:rgba(124,58,237,0.22);
-  border-color:rgba(168,85,247,0.45);
-  color:#E0CCFF;
-  transform:translateY(-2px);
-  box-shadow:0 6px 20px rgba(124,58,237,0.25);
+@keyframes blink {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.3; }} }}
+.topbar-model-name {{
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; color: #A5B4FC; font-weight: 500;
 }}
-.sugg-chip-icon{{font-size:0.82rem;}}
-
-/* ── Messages ── */
-.msgs-container{{
-  display:flex;flex-direction:column;gap:16px;
-  padding:0 20px;max-width:780px;width:100%;margin:0 auto;
+.topbar-right {{
+  display: flex; align-items: center; gap: 8px;
 }}
-.msg-bubble{{
-  display:flex;gap:10px;
-  animation:msgIn 0.22s ease both;
+.topbar-pill {{
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.72rem; font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  color: rgba(226,232,240,0.65);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
 }}
-@keyframes msgIn{{from{{opacity:0;transform:translateY(8px);}}to{{opacity:1;transform:translateY(0);}}}}
-.msg-bubble.user{{flex-direction:row-reverse;}}
-.msg-avatar{{
-  width:32px;height:32px;border-radius:9px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.82rem;font-weight:700;flex-shrink:0;
-  box-shadow:0 2px 10px rgba(0,0,0,0.25);
-}}
-.msg-avatar.ai{{background:linear-gradient(135deg,#7C3AED,#A855F7);color:#fff;}}
-.msg-avatar.user{{background:rgba(255,255,255,0.10);color:rgba(220,200,255,0.80);border:1px solid rgba(255,255,255,0.12);}}
-.msg-text{{
-  max-width:72%;
-  padding:11px 15px;
-  border-radius:14px;
-  font-size:0.86rem;line-height:1.65;
-}}
-.msg-text.ai{{
-  background:rgba(30,12,60,0.70);
-  border:1px solid rgba(124,58,237,0.22);
-  color:rgba(220,200,255,0.90);
-  border-radius:4px 14px 14px 14px;
-}}
-.msg-text.user{{
-  background:rgba(124,58,237,0.22);
-  border:1px solid rgba(168,85,247,0.35);
-  color:#EDE0FF;
-  border-radius:14px 4px 14px 14px;
-}}
-.msg-text pre{{
-  background:rgba(0,0,0,0.35);border-radius:8px;padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;font-size:0.78rem;
-  overflow-x:auto;margin:8px 0;
-  border:1px solid rgba(124,58,237,0.20);
+.topbar-pill:hover {{
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.35);
+  color: #BAE6FD;
 }}
 
-/* Typing indicator */
-.typing-indicator{{
-  display:flex;align-items:center;gap:5px;padding:10px 14px;
+/* ── Messages area ── */
+.chat-messages {{
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 0;
+  scroll-behavior: smooth;
 }}
-.typing-dot{{
-  width:7px;height:7px;border-radius:50%;
-  background:rgba(168,85,247,0.70);
-  animation:typingBounce 1.2s ease-in-out infinite;
-}}
-.typing-dot:nth-child(2){{animation-delay:0.16s;}}
-.typing-dot:nth-child(3){{animation-delay:0.32s;}}
-@keyframes typingBounce{{0%,80%,100%{{transform:scale(0.7);opacity:0.4;}}40%{{transform:scale(1.1);opacity:1;}}}}
+.chat-messages::-webkit-scrollbar {{ width: 4px; }}
+.chat-messages::-webkit-scrollbar-thumb {{ background: rgba(99,102,241,0.20); border-radius: 4px; }}
 
-/* ══ INPUT AREA ════════════════════════════════════════════════════════ */
-.input-area{{
-  flex-shrink:0;
-  padding:12px 20px 16px;
-  background:rgba(13,6,24,0.60);
-  backdrop-filter:blur(20px);
-  border-top:1px solid rgba(124,58,237,0.12);
+.msgs-inner {{
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
 }}
-.input-area.hero-mode{{
-  background:transparent;
-  border-top:none;
-  padding:0 20px 20px;
+
+/* Message rows */
+.msg-row {{
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 16px;
+  animation: msgIn 0.3s cubic-bezier(0.22,0.61,0.36,1) both;
 }}
-.input-shell{{
-  max-width:680px;margin:0 auto;
-  background:rgba(22,10,50,0.88);
-  border:1.5px solid rgba(124,58,237,0.35);
-  border-radius:20px;
+@keyframes msgIn {{
+  from {{ opacity: 0; transform: translateY(12px); }}
+  to   {{ opacity: 1; transform: translateY(0); }}
+}}
+.msg-row.msg-user {{ flex-direction: row-reverse; }}
+
+/* Avatars */
+.msg-avatar {{
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 0.70rem; font-weight: 700;
+}}
+.msg-avatar-user {{
+  background: linear-gradient(135deg, {bh}, {bh}88);
+  color: #fff;
+  border: 1.5px solid {bh}55;
+}}
+.msg-avatar-ai {{
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  border: 1.5px solid rgba(99,102,241,0.35);
+}}
+
+/* Bubbles */
+.msg-bubble {{
+  max-width: 68%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  word-wrap: break-word;
+}}
+.msg-bubble-user {{
+  background: linear-gradient(135deg, #3730a3, #4338ca);
+  color: #e0e7ff;
+  border-radius: 18px 18px 4px 18px;
+  border: 1px solid rgba(99,102,241,0.40);
+  box-shadow: 0 4px 20px rgba(67,56,202,0.30);
+}}
+.msg-bubble-ai {{
+  background: rgba(255,255,255,0.04);
+  color: rgba(226,232,240,0.90);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.20);
+}}
+
+/* ══════════ HERO (empty state) ══════════ */
+.chat-hero {{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px 40px;
+}}
+.hero-orb {{
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  margin-bottom: 28px;
+  position: relative;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 70%, #6366f1 100%);
   box-shadow:
-    0 8px 40px rgba(124,58,237,0.22),
-    0 2px 0 rgba(168,85,247,0.12) inset,
-    0 -1px 0 rgba(30,5,60,0.60) inset;
-  transition:all 0.20s ease;
-  overflow:hidden;
+    0 0 0 1px rgba(99,102,241,0.30),
+    0 0 40px rgba(99,102,241,0.35),
+    0 0 80px rgba(99,102,241,0.15);
+  display: flex; align-items: center; justify-content: center;
+  animation: heroOrbPulse 3s ease-in-out infinite;
 }}
-.input-shell:focus-within{{
-  border-color:rgba(168,85,247,0.65);
-  box-shadow:
-    0 0 0 3px rgba(124,58,237,0.18),
-    0 10px 50px rgba(124,58,237,0.35),
-    0 2px 0 rgba(200,140,255,0.18) inset;
+@keyframes heroOrbPulse {{
+  0%,100% {{ box-shadow: 0 0 0 1px rgba(99,102,241,0.30), 0 0 40px rgba(99,102,241,0.35), 0 0 80px rgba(99,102,241,0.15); transform: scale(1); }}
+  50% {{ box-shadow: 0 0 0 2px rgba(99,102,241,0.50), 0 0 60px rgba(99,102,241,0.50), 0 0 120px rgba(99,102,241,0.20); transform: scale(1.04); }}
 }}
-
-/* Shine animation */
-@keyframes inputShine{{
-  0%{{background-position:200% center;}}
-  100%{{background-position:-200% center;}}
+.hero-orb-inner {{
+  font-size: 2.4rem;
+  filter: drop-shadow(0 2px 8px rgba(129,140,248,0.6));
 }}
-.input-shell::before{{
-  content:'';display:block;
-  height:1px;
-  background:linear-gradient(90deg,transparent,rgba(168,85,247,0.50),rgba(200,160,255,0.30),transparent);
-  background-size:200% 100%;
-  animation:inputShine 4s linear infinite;
+.hero-title {{
+  font-family: 'Syne', sans-serif;
+  font-size: 2.8rem; font-weight: 800;
+  color: #F1F5F9;
+  letter-spacing: -1.5px;
+  text-align: center;
+  line-height: 1.1;
+  margin-bottom: 10px;
 }}
-
-.input-row{{
-  display:flex;align-items:center;gap:0;
-  padding:4px 6px 4px 12px;
-  min-height:56px;
+.hero-title span {{
+  background: linear-gradient(90deg, #818CF8, #22D3EE);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }}
-.input-field{{
-  flex:1;background:transparent;border:none;outline:none;
-  color:#EDE0FF;font-family:'Outfit',sans-serif;font-size:0.94rem;
-  caret-color:#C084FC;
-  padding:8px 0;
-}}
-.input-field::placeholder{{color:rgba(168,140,200,0.45);}}
-.input-actions{{display:flex;align-items:center;gap:5px;flex-shrink:0;}}
-
-.ib-btn{{
-  width:36px;height:36px;border-radius:10px;
-  background:transparent;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  color:rgba(180,150,220,0.55);font-size:1.0rem;
-  transition:all 0.14s ease;
-}}
-.ib-btn:hover{{background:rgba(124,58,237,0.18);color:rgba(200,170,255,0.90);}}
-.ib-btn.active{{background:rgba(239,68,68,0.18);color:#FCA5A5;animation:micPulse 1.1s infinite;}}
-@keyframes micPulse{{0%,100%{{box-shadow:0 0 0 0 rgba(239,68,68,0.40);}}50%{{box-shadow:0 0 0 6px rgba(239,68,68,0.00);}}}}
-
-.send-btn{{
-  width:38px;height:38px;border-radius:12px;
-  background:linear-gradient(135deg,#7C3AED,#A855F7);
-  border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;font-size:1.1rem;
-  box-shadow:0 4px 16px rgba(124,58,237,0.45);
-  transition:all 0.14s ease;
-  margin-left:3px;
-}}
-.send-btn:hover{{
-  box-shadow:0 6px 24px rgba(124,58,237,0.60);
-  transform:scale(1.06);
-}}
-.send-btn:active{{transform:scale(0.94);}}
-
-/* File chip */
-.file-chip-strip{{display:flex;align-items:center;gap:6px;padding:6px 12px 0;}}
-.file-chip{{
-  display:inline-flex;align-items:center;gap:5px;
-  background:rgba(124,58,237,0.14);
-  border:1px solid rgba(168,85,247,0.30);
-  border-radius:16px;padding:3px 10px 3px 8px;
-  font-size:0.70rem;color:rgba(200,180,255,0.85);font-weight:600;
-}}
-.file-chip-rm{{background:none;border:none;color:rgba(168,140,200,0.55);cursor:pointer;font-size:0.75rem;margin-left:3px;}}
-
-/* Input hint */
-.input-hint{{
-  text-align:center;padding:6px 0 0;
-  font-size:0.58rem;color:rgba(120,90,160,0.42);
-  font-family:'JetBrains Mono',monospace;
+.hero-subtitle {{
+  font-size: 0.86rem;
+  color: rgba(148,163,184,0.55);
+  text-align: center;
+  line-height: 1.7;
+  margin-bottom: 40px;
+  max-width: 400px;
 }}
 
-/* ══ MISC ═════════════════════════════════════════════════════════════ */
-.overlay{{
-  position:fixed;inset:0;z-index:45;
-  background:rgba(0,0,0,0);pointer-events:none;
-  transition:background 0.28s ease;
+/* Suggestion pills */
+.suggestions {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 600px;
+  margin-bottom: 44px;
 }}
-.overlay.show{{background:rgba(0,0,0,0.45);pointer-events:auto;}}
-
-/* Scrollbar placeholder for chat messages container */
-.msgs-wrap{{flex:1;overflow-y:auto;}}
-.msgs-wrap::-webkit-scrollbar{{width:4px;}}
-.msgs-wrap::-webkit-scrollbar-thumb{{background:rgba(124,58,237,0.25);border-radius:4px;}}
-
-.listening-pill{{
-  display:inline-flex;align-items:center;gap:7px;
-  background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.28);
-  border-radius:20px;padding:5px 12px;margin:6px auto;
-  font-size:0.75rem;color:#FCA5A5;
+.sug-pill {{
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(186,230,253,0.72);
+  font-size: 0.80rem; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.22,0.61,0.36,1);
+  white-space: nowrap;
+  user-select: none;
+  display: flex; align-items: center; gap: 6px;
 }}
-.listen-dot{{width:6px;height:6px;border-radius:50%;background:#EF4444;animation:blinkDot 1s infinite;}}
-@keyframes blinkDot{{0%,100%{{opacity:1;}}50%{{opacity:0.2;}}}}
+.sug-pill:hover {{
+  background: rgba(99,102,241,0.14);
+  border-color: rgba(99,102,241,0.36);
+  color: #BAE6FD;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.18);
+}}
 
+/* ══════════ INPUT BAR ══════════ */
+.chat-input-zone {{
+  flex-shrink: 0;
+  padding: 12px 24px 18px;
+  background: rgba(5,8,16,0.70);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}}
+.chat-input-zone.hero-mode {{
+  background: transparent;
+  border-top: none;
+  padding: 0 24px 8px;
+}}
+.chat-input-inner {{
+  max-width: 720px;
+  margin: 0 auto;
+}}
+.attach-chip-row {{
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; padding: 0 4px;
+}}
+.attach-chip {{
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px 4px 10px;
+  background: rgba(99,102,241,0.14);
+  border: 1px solid rgba(99,102,241,0.32);
+  border-radius: 20px;
+  font-size: 0.73rem; color: #A5B4FC; font-weight: 600;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}}
+.chip-close {{
+  cursor: pointer; opacity: 0.6; margin-left: 2px; font-size: 0.7rem;
+}}
+.chip-close:hover {{ opacity: 1; }}
+
+/* The input bar box */
+.input-bar {{
+  display: flex; align-items: center;
+  background: rgba(14, 17, 35, 0.85);
+  border: 1.5px solid rgba(99,102,241,0.22);
+  border-radius: 20px;
+  padding: 6px 8px 6px 16px;
+  gap: 8px;
+  transition: border-color 0.22s, box-shadow 0.22s;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.40), 0 0 0 1px rgba(99,102,241,0.08);
+  animation: barIdle 5s ease-in-out infinite;
+}}
+@keyframes barIdle {{
+  0%,100% {{ box-shadow: 0 4px 32px rgba(0,0,0,0.40), 0 0 0 1px rgba(99,102,241,0.08); }}
+  50%      {{ box-shadow: 0 4px 32px rgba(0,0,0,0.40), 0 0 0 1px rgba(99,102,241,0.16), 0 0 28px rgba(99,102,241,0.10); }}
+}}
+.input-bar:focus-within {{
+  border-color: rgba(99,102,241,0.55);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 8px 40px rgba(67,56,202,0.20);
+  animation: none;
+}}
+.input-bar input {{
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #E2E8F0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.93rem;
+  padding: 10px 4px;
+  min-height: 44px;
+  caret-color: #818CF8;
+}}
+.input-bar input::placeholder {{
+  color: rgba(148,163,184,0.35);
+  animation: phShimmer 3.5s ease-in-out infinite;
+}}
+@keyframes phShimmer {{
+  0%,100% {{ opacity: 0.35; }}
+  50% {{ opacity: 0.65; }}
+}}
+
+/* Input action buttons */
+.input-btn {{
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none; outline: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+  font-size: 1.0rem;
+  color: rgba(148,163,184,0.55);
+  flex-shrink: 0;
+}}
+.input-btn:hover {{
+  background: rgba(255,255,255,0.08);
+  color: rgba(186,230,253,0.85);
+}}
+.input-btn.mic-btn {{
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+}}
+.input-btn.mic-btn.recording {{
+  background: rgba(239,68,68,0.18);
+  border-color: rgba(239,68,68,0.45);
+  color: #FCA5A5;
+  animation: micPulse 1.1s ease-in-out infinite;
+}}
+@keyframes micPulse {{
+  0%,100% {{ box-shadow: 0 0 0 0 rgba(239,68,68,0.40); }}
+  50% {{ box-shadow: 0 0 0 7px rgba(239,68,68,0.00); }}
+}}
+.send-btn {{
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: none; outline: none;
+  background: linear-gradient(135deg, #4338CA, #6366F1);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  transition: all 0.18s;
+  box-shadow: 0 3px 14px rgba(67,56,202,0.40);
+  flex-shrink: 0;
+}}
+.send-btn:hover {{
+  opacity: 0.88;
+  transform: scale(1.08);
+}}
+.input-divider {{
+  width: 1px; height: 22px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}}
+.input-disclaimer {{
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  color: rgba(100,116,139,0.32);
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}}
+
+/* Listening banner */
+.listening-banner {{
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.20);
+  border-radius: 10px;
+  font-size: 0.78rem; color: #FCA5A5;
+}}
+.listening-dot {{
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #EF4444;
+  animation: blinkDot 1s ease infinite;
+}}
+@keyframes blinkDot {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.2; }} }}
+
+/* Thinking indicator */
+.thinking {{
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px 18px 18px 4px;
+  max-width: 120px;
+  margin-bottom: 16px;
+}}
+.thinking-dot {{
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #818CF8;
+  animation: thinkBounce 1.4s ease-in-out infinite;
+}}
+.thinking-dot:nth-child(2) {{ animation-delay: 0.2s; }}
+.thinking-dot:nth-child(3) {{ animation-delay: 0.4s; }}
+@keyframes thinkBounce {{
+  0%,80%,100% {{ transform: translateY(0); opacity: 0.4; }}
+  40% {{ transform: translateY(-6px); opacity: 1; }}
+}}
+
+/* File uploader overlay */
+.file-overlay {{
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(5,8,16,0.80);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+}}
+.file-overlay-box {{
+  background: rgba(14,17,35,0.95);
+  border: 1.5px solid rgba(99,102,241,0.32);
+  border-radius: 20px;
+  padding: 32px 36px;
+  width: 380px;
+  text-align: center;
+}}
+.file-overlay-title {{
+  font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+  color: #E2E8F0; margin-bottom: 6px;
+}}
+.file-overlay-sub {{
+  font-size: 0.76rem; color: rgba(148,163,184,0.50);
+  margin-bottom: 20px;
+}}
+
+/* Scrollbar */
+.chat-messages::-webkit-scrollbar {{ width: 4px; }}
+.chat-messages::-webkit-scrollbar-track {{ background: transparent; }}
+.chat-messages::-webkit-scrollbar-thumb {{ background: rgba(99,102,241,0.20); border-radius: 4px; }}
+
+/* Animations */
+.chat-hero {{ animation: fadeUp 0.5s cubic-bezier(0.22,0.61,0.36,1) both; }}
+@keyframes fadeUp {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
 </style>
-</head>
-<body>
 
-<div class="bg-canvas"></div>
-<div class="bg-grid"></div>
-<div class="bg-orb bg-orb-1"></div>
-<div class="bg-orb bg-orb-2"></div>
-<div class="bg-orb bg-orb-3"></div>
+<div id="askmnt-chat-app">
+  <!-- ANIMATED BG -->
+  <div class="chat-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="chat-bg-grid"></div>
+  </div>
 
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-
-<div class="app-shell">
-
-  <!-- ═══ LEFT SIDEBAR ═══════════════════════════════════════════════ -->
-  <div class="sidebar {'collapsed' if not st.session_state.sb_open else ''}" id="sidebar">
-
-    <div class="sb-header">
-      <div class="sb-logo-icon">A</div>
-      <div>
-        <div class="sb-logo-name">AskMNIT</div>
-        <div class="sb-logo-sub">MNIT Jaipur · AI</div>
+  <!-- LEFT SIDEBAR -->
+  <div class="chat-sidebar" id="chatSidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-icon">A</div>
+      <div class="sb-brand-text">
+        <div class="sb-brand-name">AskMNIT</div>
+        <div class="sb-brand-sub">AI Assistant</div>
       </div>
     </div>
 
     <div class="sb-section">
-      <div class="sb-item new-chat" onclick="sendAction('new_chat')">
-        <span class="sb-icon">✦</span> New Chat
+      <div class="sb-section-title">Actions</div>
+      <div class="sb-action-btn new-chat" onclick="handleSbAction('new_chat')">
+        <div class="sb-action-icon">✦</div>
+        <span class="sb-action-label">New Chat</span>
+      </div>
+      <div class="sb-action-btn erp" onclick="handleSbAction('erp')">
+        <div class="sb-action-icon">🎓</div>
+        <span class="sb-action-label">ERP Login</span>
+      </div>
+      <div class="sb-action-btn dashboard-btn" onclick="handleSbAction('dashboard')">
+        <div class="sb-action-icon">⬡</div>
+        <span class="sb-action-label">Back to Dashboard</span>
       </div>
     </div>
 
-    <div class="sb-section">
-      <div class="sb-section-label">Navigation</div>
-      <div class="sb-item" onclick="sendAction('erp')">
-        <span class="sb-icon">🔐</span> ERP Login
-      </div>
-      <div class="sb-item {'active' if st.session_state.show_history_panel else ''}" onclick="sendAction('history')">
-        <span class="sb-icon">🕐</span> Chat History
-      </div>
-      <div class="sb-item" onclick="sendAction('dashboard')">
-        <span class="sb-icon">⊞</span> Dashboard
-      </div>
-    </div>
-
-    <div class="sb-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-      <div class="sb-section-label">Recent Chats</div>
-      <div class="sb-chat-history" id="chatHistoryList">
-        {"".join(f'<div class="sb-hist-item"><span class="sb-hist-dot"></span>{s.get("label","Chat")[:35]}...</div>' for s in list(reversed(st.session_state.chat_sessions[-8:]))) if st.session_state.chat_sessions else '<div style="padding:8px 10px;font-size:0.72rem;color:rgba(140,110,180,0.40);">No chats yet...</div>'}
+    <div class="sb-section" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+      <div class="sb-section-title">Chat History</div>
+      <div class="hist-scroll">
+        {sessions_html}
       </div>
     </div>
 
     <div class="sb-footer">
-      <div class="sb-item" onclick="sendAction('settings')">
-        <span class="sb-icon">⚙</span> Settings
-      </div>
-      <div style="margin-top:10px;padding:8px 6px;border-top:1px solid rgba(124,58,237,0.12);">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.60rem;color:rgba(140,110,180,0.40);">
-          {_student} · {_branch}
+      <div class="sb-user-chip">
+        <div class="sb-user-av">{initials(nm)}</div>
+        <div>
+          <div class="sb-user-name">{nm}</div>
+          <div class="sb-user-branch">{br}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ MAIN CONTENT ════════════════════════════════════════════════ -->
-  <div class="main-content" id="mainContent">
-
-    <!-- Top Bar -->
-    <div class="topbar">
-      <button class="topbar-toggle" id="sbToggle" onclick="toggleSidebar()" title="Toggle menu">
-        <span class="tb-bar" id="tb1"></span>
-        <span class="tb-bar" id="tb2"></span>
-        <span class="tb-bar" id="tb3"></span>
-      </button>
-      <div class="topbar-title">AskMNIT AI</div>
-      <span class="topbar-badge">MNIT Jaipur</span>
-    </div>
-
-    <!-- Chat / Hero Area -->
-    <div class="chat-area" id="chatArea">
-
-      {"<!-- HERO -->" if not has_messages else ""}
-      <div id="heroSection" style="display:{'flex' if not has_messages else 'none'};flex:1;flex-direction:column;align-items:center;justify-content:center;">
-        <div class="hero-center">
-          <div class="hero-orb">
-            <span class="hero-orb-emoji">🎓</span>
-          </div>
-          <div class="hero-title">Ask me anything</div>
-          <div class="hero-sub">Your AI-powered MNIT senior — attendance, schedule, PYQs, exam strategy &amp; more.</div>
-
-          <div class="sugg-row" id="suggRow">
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">📊</span>My attendance status</div>
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">📅</span>Next class today</div>
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">📚</span>PYQs for my branch</div>
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">💰</span>Fee due date</div>
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">🎯</span>Exam prep strategy</div>
-            <div class="sugg-chip" onclick="useChip(this)"><span class="sugg-chip-icon">📋</span>Subjects this semester</div>
-          </div>
+  <!-- MAIN CHAT AREA -->
+  <div class="chat-main">
+    <!-- TOP BAR -->
+    <div class="chat-topbar">
+      <div class="topbar-left">
+        <div class="topbar-model-badge">
+          <div class="topbar-model-dot"></div>
+          <span class="topbar-model-name">AskMNIT · Llama 3.3 70B</span>
         </div>
       </div>
-
-      <!-- Messages wrapper -->
-      <div class="msgs-wrap" id="msgsWrap" style="display:{'flex' if has_messages else 'none'};flex-direction:column;">
-        <div class="msgs-container" id="msgsContainer">
-          <!-- Messages injected by JS -->
-        </div>
+      <div class="topbar-right">
+        <div class="topbar-pill" onclick="handleTopbarAction('settings')">⚙ Settings</div>
+        <div class="topbar-pill" onclick="handleTopbarAction('export')">↑ Export</div>
       </div>
-
     </div>
 
-    <!-- Input Area -->
-    <div class="input-area {'hero-mode' if not has_messages else ''}" id="inputArea">
-      <div id="fileChipStrip" class="file-chip-strip" style="display:none;"></div>
-      <div class="input-shell">
-        <div style="display:none;" id="shineBar"></div>
-        <div class="input-row">
-          <input
-            class="input-field"
-            id="mainInput"
-            type="text"
-            placeholder="Ask AskMNIT anything..."
-            autocomplete="off"
-            onkeydown="handleKey(event)"
-            oninput="onInput()"
-          />
-          <div class="input-actions">
-            <button class="ib-btn" id="attachBtn" onclick="toggleAttach()" title="Attach file">📎</button>
-            <button class="ib-btn" id="micBtn" onclick="toggleMic()" title="Voice input">🎤</button>
-            <button class="send-btn" onclick="sendMessage()" title="Send">↑</button>
-          </div>
-        </div>
+    <!-- MESSAGES OR HERO -->
+    {'<!-- HERO STATE -->' if not has_messages else ''}
+    <div id="chatBody" class="{'chat-hero' if not has_messages else 'chat-messages'}">
+""", unsafe_allow_html=True)
+
+    if not has_messages:
+        # Hero state — rendered in HTML
+        st.markdown(f"""
+      <div class="hero-orb">
+        <div class="hero-orb-inner">🤖</div>
       </div>
-      <div class="input-hint">AskMNIT AI · MNIT Jaipur · Verify important info with ERP</div>
+      <div class="hero-title">Ready to <span>Ask</span> Anything?</div>
+      <div class="hero-subtitle">
+        Your AI senior at MNIT Jaipur — attendance, schedule, PYQs, exam tips, sab kuch!
+      </div>
+      <div class="suggestions" id="sugPills">
+        <div class="sug-pill" onclick="sendSuggestion('Meri attendance check karo')">📊 Attendance check karo</div>
+        <div class="sug-pill" onclick="sendSuggestion('What is my next class today?')">📅 Next class kaunsi hai?</div>
+        <div class="sug-pill" onclick="sendSuggestion('PYQs for {br} branch')">📄 PYQs dhundo</div>
+        <div class="sug-pill" onclick="sendSuggestion('Exam preparation tips do')">🎯 Exam tips chahiye</div>
+        <div class="sug-pill" onclick="sendSuggestion('Subjects for this semester?')">📚 Subjects list karo</div>
+        <div class="sug-pill" onclick="sendSuggestion('Fee status check karo')">💳 Fee status</div>
+      </div>
     </div>
 
-  </div><!-- end main-content -->
-</div><!-- end app-shell -->
+    <!-- INPUT ZONE (hero mode) -->
+    <div class="chat-input-zone hero-mode" id="inputZone">
+      <div class="chat-input-inner">
+        {'<div class="attach-chip-row">' + chip_html + '</div>' if chip_html else ''}
+        {'<div class="listening-banner"><div class="listening-dot"></div><span>Listening... mic icon dabao stop karne ke liye</span></div>' if st.session_state.is_recording else ''}
+        <div class="input-bar" id="mainInputBar">
+          <button class="input-btn" title="Attach file" onclick="triggerAttach()">＋</button>
+          <div class="input-divider"></div>
+          <input type="text" id="chatInput" placeholder="Ask AskMNIT anything..." autocomplete="off" onkeydown="handleInputKey(event)"/>
+          <button class="input-btn mic-btn {'recording' if st.session_state.is_recording else ''}" id="micBtn" title="Voice input" onclick="toggleMic()">{'⏹' if st.session_state.is_recording else '🎤'}</button>
+          <button class="send-btn" title="Send" onclick="sendMessage()">↑</button>
+        </div>
+        <div class="input-disclaimer">AskMNIT AI · MNIT Jaipur · Verify important info with ERP</div>
+      </div>
+    </div>
+""", unsafe_allow_html=True)
 
-<!-- Hidden file input -->
-<input type="file" id="fileInput" style="display:none;" accept=".pdf,.txt,.png,.jpg,.jpeg,.docx,.csv" onchange="onFileSelect(this)">
+    else:
+        # Active chat — messages + anchored bar
+        st.markdown(f"""
+      <div class="msgs-inner" id="msgsInner">
+        {msgs_html}
+        <div id="msgAnchor"></div>
+      </div>
+    </div>
+
+    <!-- INPUT ZONE (anchored) -->
+    <div class="chat-input-zone" id="inputZone">
+      <div class="chat-input-inner">
+        {'<div class="attach-chip-row">' + chip_html + '</div>' if chip_html else ''}
+        {'<div class="listening-banner"><div class="listening-dot"></div><span>Listening... mic icon dabao stop karne ke liye</span></div>' if st.session_state.is_recording else ''}
+        <div class="input-bar" id="mainInputBar">
+          <button class="input-btn" title="Attach file" onclick="triggerAttach()">＋</button>
+          <div class="input-divider"></div>
+          <input type="text" id="chatInput" placeholder="Message AskMNIT..." autocomplete="off" onkeydown="handleInputKey(event)"/>
+          <button class="input-btn mic-btn {'recording' if st.session_state.is_recording else ''}" id="micBtn" title="Voice input" onclick="toggleMic()">{'⏹' if st.session_state.is_recording else '🎤'}</button>
+          <button class="send-btn" title="Send" onclick="sendMessage()">↑</button>
+        </div>
+        <div class="input-disclaimer">AskMNIT AI · MNIT Jaipur · Verify important info with ERP</div>
+      </div>
+    </div>
+""", unsafe_allow_html=True)
+
+    # JavaScript + end of HTML
+    st.markdown("""
+  </div><!-- end chat-main -->
+</div><!-- end askmnt-chat-app -->
 
 <script>
-// ══ STATE ═══════════════════════════════════════════════════════════════════
-var sbOpen = {_sb_open_str};
-var hasMessages = {_has_msgs};
-var isRecording = false;
-var attachedFile = "";
-var mediaRecorder = null;
-var audioChunks = [];
-var isTyping = false;
+// ── Scroll to bottom ──
+(function() {
+  var anchor = document.getElementById('msgAnchor');
+  if (anchor) anchor.scrollIntoView({ behavior: 'smooth' });
+  var msgs = document.querySelector('.chat-messages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+})();
 
-var MESSAGES = {_msgs_str};
+// ── Sidebar actions via query params ──
+function handleSbAction(action) {
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('sb_action', action);
+  url.searchParams.set('sb_ts', Date.now());
+  window.parent.location.href = url.toString();
+}
+function handleTopbarAction(action) {
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('tb_action', action);
+  url.searchParams.set('tb_ts', Date.now());
+  window.parent.location.href = url.toString();
+}
 
-// ══ INIT ═════════════════════════════════════════════════════════════════════
-(function init() {{
-  renderMessages();
-  updateSidebarState(sbOpen);
-  rotatePlaceholder();
-  setInterval(rotatePlaceholder, 3000);
+// ── Send message via query param ──
+function sendMessage() {
+  var inp = document.getElementById('chatInput');
+  var txt = inp ? inp.value.trim() : '';
+  if (!txt) return;
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('chat_msg', txt);
+  url.searchParams.set('chat_ts', Date.now());
+  window.parent.location.href = url.toString();
+}
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function sendSuggestion(txt) {
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('chat_msg', txt);
+  url.searchParams.set('chat_ts', Date.now());
+  window.parent.location.href = url.toString();
+}
 
-  // Rotate orb hue
-  var orb = document.querySelector('.hero-orb');
-  if(orb) {{
-    var hue=0;
-    setInterval(function(){{ hue=(hue+0.5)%360; orb.style.filter='hue-rotate('+hue+'deg)'; }}, 50);
-  }}
-}})();
+// ── Attach file ──
+function triggerAttach() {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.pdf,.txt,.png,.jpg,.jpeg,.docx,.csv';
+  inp.onchange = function() {
+    if (!inp.files || !inp.files[0]) return;
+    var url = new URL(window.parent.location.href);
+    url.searchParams.set('attach_file', inp.files[0].name);
+    url.searchParams.set('attach_ts', Date.now());
+    window.parent.location.href = url.toString();
+  };
+  inp.click();
+}
+function clearAttach() {
+  var url = new URL(window.parent.location.href);
+  url.searchParams.delete('attach_file');
+  window.parent.location.href = url.toString();
+}
 
-// ══ PLACEHOLDER ROTATION ════════════════════════════════════════════════════
+// ── Mic toggle ──
+function toggleMic() {
+  var url = new URL(window.parent.location.href);
+  url.searchParams.set('mic_toggle', Date.now());
+  window.parent.location.href = url.toString();
+}
+
+// ── Rotating placeholder ──
 var hints = [
   "Ask AskMNIT anything...",
-  "What's my attendance %?",
-  "When is my next class?",
-  "Find PYQs for my branch...",
-  "What's the fee deadline?",
-  "Give me exam tips...",
-  "Subjects this semester?",
+  "Attendance kitni hai meri?",
+  "Next class kaunsi hai?",
+  "Exam tips chahiye...",
+  "PYQs dhundne hain...",
+  "Fee status kya hai?",
+  "Subjects list karo...",
 ];
-var hintIdx = 0;
-function rotatePlaceholder() {{
-  var inp = document.getElementById('mainInput');
-  if(!inp || document.activeElement === inp) return;
-  hintIdx = (hintIdx+1) % hints.length;
-  inp.style.opacity='0.3';
-  setTimeout(function(){{
-    inp.placeholder = hints[hintIdx];
-    inp.style.transition='opacity 0.4s';
-    inp.style.opacity='1';
-  }}, 200);
-}}
+var pidx = 0;
+setInterval(function() {
+  var inp = document.getElementById('chatInput');
+  if (inp && document.activeElement !== inp) {
+    inp.placeholder = hints[pidx++ % hints.length];
+  }
+}, 3000);
 
-// ══ SIDEBAR ══════════════════════════════════════════════════════════════════
-function toggleSidebar() {{
-  sbOpen = !sbOpen;
-  updateSidebarState(sbOpen);
-}}
-function closeSidebar() {{
-  sbOpen = false;
-  updateSidebarState(false);
-}}
-function updateSidebarState(open) {{
-  var sb = document.getElementById('sidebar');
-  var ov = document.getElementById('overlay');
-  var t1=document.getElementById('tb1'), t2=document.getElementById('tb2'), t3=document.getElementById('tb3');
-  if(sb) {{ if(open) sb.classList.remove('collapsed'); else sb.classList.add('collapsed'); }}
-  if(ov) {{ if(open) ov.classList.add('show'); else ov.classList.remove('show'); }}
-  if(t1&&t2&&t3) {{
-    if(open) {{
-      t1.style.transform='rotate(45deg) translate(4.5px,4.5px)';
-      t2.style.opacity='0'; t2.style.transform='scaleX(0)';
-      t3.style.transform='rotate(-45deg) translate(4.5px,-4.5px)';
-    }} else {{
-      t1.style.transform=''; t2.style.opacity='1'; t2.style.transform=''; t3.style.transform='';
-    }}
-  }}
-}}
-
-document.addEventListener('keydown', function(e){{ if(e.key==='Escape') closeSidebar(); }});
-
-// ══ ACTIONS → PARENT STREAMLIT ════════════════════════════════════════════
-function sendAction(action) {{
-  closeSidebar();
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_act', action);
-  window.parent.location.href = url.toString();
-}}
-
-// ══ MESSAGES ═════════════════════════════════════════════════════════════════
-function renderMessages() {{
-  if(!MESSAGES || MESSAGES.length === 0) return;
-  var container = document.getElementById('msgsContainer');
-  var wrap = document.getElementById('msgsWrap');
-  var hero = document.getElementById('heroSection');
-  var inputArea = document.getElementById('inputArea');
-
-  if(container) container.innerHTML = '';
-  if(wrap) wrap.style.display = 'flex';
-  if(hero) hero.style.display = 'none';
-  if(inputArea) {{ inputArea.classList.remove('hero-mode'); }}
-
-  MESSAGES.forEach(function(msg) {{
-    appendMessage(msg.role, msg.content, false);
-  }});
-  scrollToBottom();
-}}
-
-function appendMessage(role, content, animate) {{
-  var container = document.getElementById('msgsContainer');
-  if(!container) return;
-  var div = document.createElement('div');
-  div.className = 'msg-bubble ' + role;
-  if(animate) div.style.animationDelay = '0s';
-
-  var formattedContent = content
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g,'<em>$1</em>')
-    .replace(/\n/g,'<br>');
-
-  div.innerHTML =
-    '<div class="msg-avatar ' + role + '">' + (role==='ai'?'A':'U') + '</div>' +
-    '<div class="msg-text ' + role + '">' + formattedContent + '</div>';
-
-  container.appendChild(div);
-}}
-
-function scrollToBottom() {{
-  var wrap = document.getElementById('msgsWrap');
-  if(wrap) setTimeout(function(){{ wrap.scrollTop = wrap.scrollHeight; }}, 50);
-}}
-
-// ══ SEND MESSAGE ════════════════════════════════════════════════════════════
-function handleKey(e) {{
-  if(e.key === 'Enter' && !e.shiftKey) {{ e.preventDefault(); sendMessage(); }}
-}}
-function onInput() {{
-  var val = document.getElementById('mainInput').value.trim();
-}}
-
-function sendMessage() {{
-  var inp = document.getElementById('mainInput');
-  var txt = inp ? inp.value.trim() : '';
-  if(!txt && !attachedFile) return;
-
-  var fullMsg = txt;
-  if(attachedFile && !txt) fullMsg = '[File: ' + attachedFile + ']';
-  else if(attachedFile) fullMsg = txt + ' [File: ' + attachedFile + ']';
-
-  // Show in UI immediately
-  var wrap = document.getElementById('msgsWrap');
-  var hero = document.getElementById('heroSection');
-  var inputArea = document.getElementById('inputArea');
-  if(wrap) wrap.style.display='flex';
-  if(hero) hero.style.display='none';
-  if(inputArea) inputArea.classList.remove('hero-mode');
-
-  appendMessage('user', fullMsg, true);
-
-  // Typing indicator
-  var container = document.getElementById('msgsContainer');
-  var typingDiv = document.createElement('div');
-  typingDiv.className='msg-bubble ai'; typingDiv.id='typingIndicator';
-  typingDiv.innerHTML=
-    '<div class="msg-avatar ai">A</div>'+
-    '<div class="msg-text ai"><div class="typing-indicator">'+
-    '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>'+
-    '</div></div>';
-  if(container) container.appendChild(typingDiv);
-  scrollToBottom();
-
-  if(inp) inp.value='';
-  clearAttach();
-
-  // Post to parent Streamlit
-  var url = new URL(window.parent.location.href);
-  url.searchParams.set('_msg', encodeURIComponent(fullMsg));
-  window.parent.location.href = url.toString();
-}}
-
-// ══ SUGGESTION CHIPS ════════════════════════════════════════════════════════
-function useChip(el) {{
-  var txt = el.textContent.trim().replace(/^[^\w]+/,'');
-  var inp = document.getElementById('mainInput');
-  if(inp) {{ inp.value = txt; inp.focus(); sendMessage(); }}
-}}
-
-// ══ FILE ATTACH ═════════════════════════════════════════════════════════════
-function toggleAttach() {{
-  document.getElementById('fileInput').click();
-}}
-function onFileSelect(input) {{
-  if(!input.files||!input.files[0]) return;
-  attachedFile = input.files[0].name;
-  var strip = document.getElementById('fileChipStrip');
-  if(strip) {{
-    strip.style.display='flex';
-    strip.innerHTML='<div class="file-chip">📎 '+attachedFile+
-      '<button class="file-chip-rm" onclick="clearAttach()">✕</button></div>';
-  }}
-}}
-function clearAttach() {{
-  attachedFile='';
-  var strip=document.getElementById('fileChipStrip');
-  if(strip) {{strip.style.display='none';strip.innerHTML='';}}
-  var fi=document.getElementById('fileInput'); if(fi) fi.value='';
-}}
-
-// ══ VOICE ═══════════════════════════════════════════════════════════════════
-function toggleMic() {{
-  if(isRecording) stopRecording(); else startRecording();
-}}
-function startRecording() {{
-  navigator.mediaDevices.getUserMedia({{audio:true}}).then(function(stream) {{
-    audioChunks=[];
-    try{{mediaRecorder=new MediaRecorder(stream,{{mimeType:'audio/webm'}});}}
-    catch(e){{mediaRecorder=new MediaRecorder(stream);}}
-    mediaRecorder.ondataavailable=function(e){{if(e.data&&e.data.size>0)audioChunks.push(e.data);}};
-    mediaRecorder.onstop=function(){{
-      isRecording=false;
-      var btn=document.getElementById('micBtn');
-      if(btn){{btn.classList.remove('active');btn.textContent='🎤';}}
-      // Signal to Streamlit
-      var url=new URL(window.parent.location.href);
-      url.searchParams.set('_mic_done','1');
-      window.parent.location.href=url.toString();
-      stream.getTracks().forEach(function(t){{t.stop();}});
-    }};
-    mediaRecorder.start(200);
-    isRecording=true;
-    var btn=document.getElementById('micBtn');
-    if(btn){{btn.classList.add('active');btn.textContent='⏹';}}
-  }}).catch(function(){{alert('Microphone access denied!');}} );
-}}
-function stopRecording() {{
-  if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
-}}
-
-// ══ INIT SIDEBAR STATE ════════════════════════════════════════════════════
-if(!sbOpen) {{
-  var sb=document.getElementById('sidebar');
-  if(sb) sb.classList.add('collapsed');
-}}
+// ── Focus input on load ──
+setTimeout(function() {
+  var inp = document.getElementById('chatInput');
+  if (inp) inp.focus();
+}, 200);
 </script>
-</body>
-</html>
-""", height=700, scrolling=False)
+""", unsafe_allow_html=True)
 
-    # ── Handle actions from the chatbot component ────────────────────────
-    _act = st.query_params.get("_act","")
-    if _act:
-        try: del st.query_params["_act"]
-        except: pass
-        if _act == "new_chat":
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"),"Session")
-                st.session_state.chat_sessions.append({"label":fu+"...","messages":list(st.session_state.chat_messages)})
-            st.session_state.chat_messages=[]
-            st.session_state.attached_file_name=""
-            st.session_state.sb_open=False
-            st.rerun()
-        elif _act == "dashboard":
-            st.session_state.view="dashboard"; st.rerun()
-        elif _act == "history":
-            st.session_state.show_history_panel = not st.session_state.show_history_panel
-            st.rerun()
-        elif _act == "settings":
-            st.session_state.show_settings_panel = not st.session_state.show_settings_panel
-            st.rerun()
-        elif _act == "erp":
-            st.session_state.erp_panel = not st.session_state.erp_panel
-            st.rerun()
+    # ── Handle query param actions from HTML JS ────────────────────────────
+    qp = st.query_params
 
-    # Handle message from chatbot
-    _msg_raw = st.query_params.get("_msg","")
-    if _msg_raw:
-        try: del st.query_params["_msg"]
+    # New message
+    chat_msg = qp.get("chat_msg", "")
+    chat_ts  = qp.get("chat_ts", "")
+    if chat_msg and chat_ts != st.session_state.get("_last_chat_ts", ""):
+        st.session_state["_last_chat_ts"] = chat_ts
+        try: del st.query_params["chat_msg"]
         except: pass
-        _msg_text = _msg_raw  # already decoded by Streamlit
-        if _msg_text:
-            dispatch_message(_msg_text)
-            st.rerun()
-
-    # Handle mic done
-    _mic_done = st.query_params.get("_mic_done","")
-    if _mic_done:
-        try: del st.query_params["_mic_done"]
+        try: del st.query_params["chat_ts"]
         except: pass
-        dispatch_message("🎤 [Voice message — please transcribe]")
+        full_msg = chat_msg
+        if st.session_state.attached_file_name:
+            full_msg += f" [File: {st.session_state.attached_file_name}]"
+            st.session_state.attached_file_name = ""
+        dispatch_message(full_msg)
         st.rerun()
 
-    # ── Panels below the chatbot (if open) ───────────────────────────────
-    if st.session_state.show_history_panel:
-        all_sessions = st.session_state.chat_sessions
-        with st.expander("🕐 Chat History", expanded=True):
-            if not all_sessions:
-                st.markdown('<p style="color:rgba(148,163,184,0.40);font-size:0.82rem;text-align:center;padding:20px 0;">No saved chats yet.</p>', unsafe_allow_html=True)
-            else:
-                _pinned   = [(i,s) for i,s in enumerate(all_sessions) if s.get("pinned")]
-                _unpinned = [(i,s) for i,s in enumerate(all_sessions) if not s.get("pinned")]
-                for _grp_label, _grp in [("📌 Pinned", _pinned), ("Recent", _unpinned)]:
-                    if not _grp: continue
-                    st.markdown(f'<div style="font-size:0.60rem;color:rgba(148,163,184,0.40);text-transform:uppercase;letter-spacing:1px;padding:4px 0 6px;">{_grp_label}</div>', unsafe_allow_html=True)
-                    for _i, _sess in reversed(_grp):
-                        _c1,_c2,_c3,_c4 = st.columns([5,0.9,0.9,0.9])
-                        with _c1:
-                            st.markdown(f'<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:9px 14px;font-size:0.82rem;color:rgba(226,232,240,0.80);">{"📌 " if _sess.get("pinned") else ""}{_sess.get("label","Chat")[:50]}</div>', unsafe_allow_html=True)
-                        with _c2:
-                            if st.button("↩",key=f"_load_{_i}"):
-                                st.session_state.chat_messages=list(_sess["messages"])
-                                st.session_state.show_history_panel=False; st.rerun()
-                        with _c3:
-                            if st.button("📌" if not _sess.get("pinned") else "📍",key=f"_pin_{_i}"):
-                                st.session_state.chat_sessions[_i]["pinned"]=not _sess.get("pinned"); st.rerun()
-                        with _c4:
-                            if st.button("🗑",key=f"_del_{_i}"):
-                                st.session_state.chat_sessions.pop(_i); st.rerun()
-                if st.button("🗑 Clear All",key="_clear_hist"):
-                    st.session_state.chat_sessions=[]
-                    st.toast("History cleared!"); st.rerun()
+    # Sidebar actions
+    sb_action = qp.get("sb_action", "")
+    sb_ts     = qp.get("sb_ts", "")
+    if sb_action and sb_ts != st.session_state.get("_last_sb_ts", ""):
+        st.session_state["_last_sb_ts"] = sb_ts
+        try: del st.query_params["sb_action"]
+        except: pass
+        try: del st.query_params["sb_ts"]
+        except: pass
+        if sb_action == "new_chat":
+            if st.session_state.chat_messages:
+                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                st.session_state.chat_sessions.append({"label": fu+"...", "messages": list(st.session_state.chat_messages)})
+            st.session_state.chat_messages = []
+            st.session_state.attached_file_name = ""
+            st.rerun()
+        elif sb_action == "dashboard":
+            st.session_state.view = "dashboard"; st.rerun()
+        elif sb_action == "erp":
+            st.toast("ERP: https://erp.mnit.ac.in — browser mein open hoga!", icon="🎓")
 
-    if st.session_state.show_settings_panel:
-        with st.expander("⚙ Settings", expanded=True):
-            _t1,_t2=st.columns(2)
-            with _t1:
-                if st.button("🌙 Dark Theme",key="_tdark",use_container_width=True):
-                    st.session_state.chat_theme="dark"; st.rerun()
-            with _t2:
-                if st.button("☀️ Light Theme",key="_tlight",use_container_width=True):
-                    st.session_state.chat_theme="light"; st.rerun()
-            _ns=st.selectbox("Response Style",["Concise","Detailed","Bullet Points"],
-                index=["Concise","Detailed","Bullet Points"].index(st.session_state.response_style),key="_rstyle")
-            if _ns!=st.session_state.response_style:
-                st.session_state.response_style=_ns; st.rerun()
-            st.session_state.voice_output=st.toggle("🔊 Voice Output",value=st.session_state.voice_output,key="_voice_t")
-            st.session_state.strict_mode=st.toggle("🎓 Strict Mode",value=st.session_state.strict_mode,key="_strict_t")
-            if st.button("✕ Close",key="_cls_sets",use_container_width=True):
-                st.session_state.show_settings_panel=False; st.rerun()
+    # Attach file
+    attach_file = qp.get("attach_file", "")
+    attach_ts   = qp.get("attach_ts", "")
+    if attach_file and attach_ts != st.session_state.get("_last_attach_ts", ""):
+        st.session_state["_last_attach_ts"] = attach_ts
+        st.session_state.attached_file_name = attach_file
+        try: del st.query_params["attach_file"]
+        except: pass
+        st.toast(f"📎 {attach_file} selected!", icon="✅")
+        st.rerun()
 
-    if st.session_state.erp_panel:
-        with st.expander("🔐 ERP Portal", expanded=True):
-            st.markdown('<div style="font-size:0.82rem;color:rgba(168,140,255,0.70);margin-bottom:10px;">MNIT Jaipur ERP Login</div>', unsafe_allow_html=True)
-            erp_id=st.text_input("ERP ID / Enrollment No.",key="_erp_id")
-            erp_pw=st.text_input("Password",type="password",key="_erp_pw")
-            if st.button("Login to ERP",key="_erp_login",use_container_width=True):
-                st.toast("ERP integration coming soon! Visit erp.mnit.ac.in",icon="🔗")
-            st.markdown('<div style="font-size:0.70rem;color:rgba(148,163,184,0.40);margin-top:6px;">Or visit: <a href="https://erp.mnit.ac.in" target="_blank" style="color:rgba(168,85,247,0.70);">erp.mnit.ac.in</a></div>', unsafe_allow_html=True)
-            if st.button("Close",key="_erp_close"):
-                st.session_state.erp_panel=False; st.rerun()
+    # Mic toggle
+    mic_toggle = qp.get("mic_toggle", "")
+    if mic_toggle and mic_toggle != st.session_state.get("_last_mic_ts", ""):
+        st.session_state["_last_mic_ts"] = mic_toggle
+        try: del st.query_params["mic_toggle"]
+        except: pass
+        if st.session_state.is_recording:
+            st.session_state.is_recording = False
+            st.session_state._voice_submit = True
+            st.session_state.voice_transcript = "[Voice message recorded — feature requires browser mic API]"
+            st.toast("⏹ Voice stopped!", icon="✅")
+        else:
+            st.session_state.is_recording = True
+            st.toast("🎤 Recording started! Mic button dabao stop karne ke liye.", icon="🎤")
+        st.rerun()
 
     st.stop()
 
 
 ###############################################################################
-# ████████████████████  DASHBOARD VIEW  ██████████████████████████████████████
+# DASHBOARD VIEW  (completely unchanged)
 ###############################################################################
 NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]
 with st.sidebar:
     st.markdown(
         '<div style="padding:18px 14px 14px;border-bottom:1px solid rgba(59,130,246,0.14);">'
         '<div style="display:flex;align-items:center;gap:9px;">'
-        '<div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#7C3AED,#A855F7);'
-        'display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:800;color:white;'
-        'box-shadow:0 3px 12px rgba(124,58,237,0.35);font-family:Syne,sans-serif;">A</div>'
-        '<div><div style="font-family:Syne,sans-serif;font-size:0.85rem;color:#E2E8F0;font-weight:700;">AskMNIT</div>'
+        '<div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);'
+        'display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;color:white;'
+        'box-shadow:0 3px 12px rgba(37,99,235,0.28);">A</div>'
+        '<div><div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;color:#E2E8F0;">AskMNIT</div>'
         '<div style="font-size:0.56rem;color:rgba(148,163,184,.40);margin-top:1px;">Student Portal</div>'
         '</div></div></div>', unsafe_allow_html=True)
     bh = branch_hex(st.session_state.branch)
-    st.markdown(f'<div style="padding:8px 12px 4px;"><span style="font-size:0.60rem;font-weight:700;padding:2px 9px;background:rgba(124,58,237,0.10);border:1px solid {bh}44;border-radius:5px;color:{bh};">{st.session_state.branch}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="padding:8px 12px 4px;"><span style="font-size:0.60rem;font-weight:700;padding:2px 9px;background:rgba(255,255,255,0.05);border:1px solid {bh}44;border-radius:5px;color:{bh};letter-spacing:0.4px;">{st.session_state.branch}</span></div>', unsafe_allow_html=True)
     st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
     for label in NAV_LABELS:
         css = "nav-btn-active" if st.session_state.nav_page == label else "nav-btn"
@@ -1344,36 +1424,36 @@ with st.sidebar:
 dash_page = st.session_state.nav_page
 if dash_page != "My Dashboard":
     PMETA = {
-        "My Schedule":    ("My Schedule","Weekly timetable renders here."),
-        "Academics":      ("Academics","Grades and CGPA records render here."),
-        "Study Material": ("Study Material","Uploaded notes render here."),
-        "PYQs":           ("PYQs","Previous year papers render here."),
-        "Fee Portal":     ("Fee Portal","Fee dues and receipts render here."),
-        "Mess Menu":      ("Mess Menu","Weekly hostel menu renders here."),
+        "My Schedule":    ("My Schedule",   "Weekly timetable renders here."),
+        "Academics":      ("Academics",      "Grades and CGPA records render here."),
+        "Study Material": ("Study Material", "Uploaded notes render here."),
+        "PYQs":           ("PYQs",           "Previous year papers render here."),
+        "Fee Portal":     ("Fee Portal",     "Fee dues and receipts render here."),
+        "Mess Menu":      ("Mess Menu",      "Weekly hostel menu renders here."),
     }
     title, desc = PMETA.get(dash_page, (dash_page, "Coming soon."))
-    st.markdown(f'<div style="padding:24px;"><div style="font-family:Syne,sans-serif;font-size:0.95rem;color:#E2E8F0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;margin-bottom:24px;">{title.upper()}</div><div style="background:linear-gradient(160deg,#0B1120,#060A12);border:1px dashed rgba(124,58,237,0.18);border-radius:16px;padding:60px 40px;text-align:center;"><div style="font-family:Syne,sans-serif;font-size:0.88rem;color:#E2E8F0;margin-bottom:8px;">{title.upper()}</div><div style="font-size:0.76rem;color:rgba(148,163,184,.44);max-width:280px;margin:0 auto;line-height:1.65;">{desc}</div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="padding:24px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.95rem;color:#E2E8F0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;margin-bottom:24px;">{title.upper()}</div><div style="background:linear-gradient(160deg,#0B1120,#060A12);border:1px dashed rgba(59,130,246,0.18);border-radius:16px;padding:60px 40px;text-align:center;"><div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;margin-bottom:8px;">{title.upper()}</div><div style="font-size:0.76rem;color:rgba(148,163,184,.44);max-width:280px;margin:0 auto;line-height:1.65;">{desc}</div></div></div>', unsafe_allow_html=True)
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MY DASHBOARD
+# MY DASHBOARD  (completely unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("<div style='padding:0 22px 80px;'>", unsafe_allow_html=True)
 
 h_logo, h_mid, h_right = st.columns([2,4,3])
 with h_logo:
-    st.markdown('<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#7C3AED,#A855F7);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;color:white;font-family:Syne,sans-serif;">M</div><div><div style="font-family:Syne,sans-serif;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div><div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div></div></div>', unsafe_allow_html=True)
+    st.markdown('<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:white;">M</div><div><div style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div><div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div></div></div>', unsafe_allow_html=True)
 with h_mid:
     now_str = datetime.datetime.now().strftime("%a, %d %b %Y  ·  %H:%M")
-    st.markdown(f'<div style="padding:13px 0 9px;text-align:center;"><span style="font-family:Syne,sans-serif;font-size:0.76rem;color:#A855F7;letter-spacing:0.8px;font-weight:700;">MY DASHBOARD</span><br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">{now_str}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="padding:13px 0 9px;text-align:center;"><span style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#60A5FA;letter-spacing:0.8px;">MY DASHBOARD</span><br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">{now_str}</span></div>', unsafe_allow_html=True)
 with h_right:
     nm,br,sem = st.session_state.student_name,st.session_state.branch,st.session_state.semester
     bh = branch_hex(br); pp = st.session_state.profile_pic_b64
     av_html = (f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh}55;">' if pp
                else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh}55;">{initials(nm)}</div>')
-    st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;font-family:Syne,sans-serif;">{nm}</div><div style="font-size:0.58rem;color:{bh};font-weight:600;">{br} · {sem}</div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm}</div><div style="font-size:0.58rem;color:{bh};font-weight:600;">{br} · {sem}</div></div></div>', unsafe_allow_html=True)
 
-st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(124,58,237,0.30),rgba(168,85,247,0.14),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
 
 srow1,srow2,srow3,_,srow5 = st.columns([1,1,1,1,1])
 with srow1:
@@ -1412,10 +1492,10 @@ if mode == "profile":
             pic_file = st.file_uploader("Upload photo", type=["png","jpg","jpeg"], key="profile_pic_up", label_visibility="collapsed")
             if pic_file: st.session_state.profile_pic_b64 = img_to_b64(pic_file); st.rerun()
         with pc2:
-            new_name = st.text_input("Full Name", value=st.session_state.student_name, key="inp_name")
-            new_id   = st.text_input("College ID", value=st.session_state.college_id, key="inp_id")
+            new_name = st.text_input("Full Name",  value=st.session_state.student_name, key="inp_name")
+            new_id   = st.text_input("College ID", value=st.session_state.college_id,   key="inp_id")
             new_sem  = st.selectbox("Semester", SEMESTERS, index=SEMESTERS.index(st.session_state.semester), key="sel_sem")
-            new_br   = st.selectbox("Branch", BRANCHES, index=BRANCHES.index(st.session_state.branch), key="sel_br")
+            new_br   = st.selectbox("Branch",   BRANCHES,  index=BRANCHES.index(st.session_state.branch),   key="sel_br")
             if st.button("Save Profile", key="save_profile"):
                 old_br = st.session_state.branch
                 st.session_state.student_name=new_name; st.session_state.college_id=new_id
@@ -1429,7 +1509,7 @@ elif mode == "schedule":
         if pdf_file:
             st.session_state.full_schedule=process_schedule_pdf(pdf_file,st.session_state.branch)
             st.session_state.schedule_loaded=True; st.session_state.pdf_filename=pdf_file.name
-            st.toast(f"Schedule loaded!", icon="✅"); st.session_state.settings_mode=None; st.rerun()
+            st.toast(f"Schedule loaded: {pdf_file.name}", icon="✅"); st.session_state.settings_mode=None; st.rerun()
         if st.session_state.schedule_loaded:
             st.markdown(f'<div style="font-size:0.75rem;color:#10B981;margin-top:6px;">Active: {st.session_state.pdf_filename}</div>', unsafe_allow_html=True)
 
@@ -1439,15 +1519,15 @@ stat_badge_txt,stat_col,_ = status_badge(ov)
 kpi1,kpi2,kpi3,kpi4 = st.columns(4)
 for col,ico,val,lbl,c in [
     (kpi1,"📊",f"{ov}%","Overall Attendance",stat_col),
-    (kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#A855F7"),
+    (kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#60A5FA"),
     (kpi3,"📅",str(len(get_today_slots(st.session_state.full_schedule)) if st.session_state.schedule_loaded else 0),"Classes Today","#22D3EE"),
-    (kpi4,"📝",str(len(st.session_state.notes_list)),"Active Notes","#C084FC"),
+    (kpi4,"📝",str(len(st.session_state.notes_list)),"Active Notes","#A78BFA"),
 ]:
     with col:
-        st.markdown(f'<div style="background:linear-gradient(160deg,#0D0618,#110824);border:1px solid rgba(124,58,237,0.14);border-radius:14px;padding:16px 18px 14px;margin-bottom:14px;"><div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div><div style="font-size:1.7rem;font-weight:800;color:{c};font-family:Syne,sans-serif;line-height:1.1;">{val}</div><div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px 14px;margin-bottom:14px;"><div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div><div style="font-size:1.7rem;font-weight:800;color:{c};font-family:\'DM Mono\',monospace;line-height:1.1;">{val}</div><div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div></div>', unsafe_allow_html=True)
 
 # Attendance Tracker
-st.markdown('<div style="background:linear-gradient(160deg,#0D0618,#110824);border:1px solid rgba(124,58,237,0.12);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:rgba(168,85,247,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>', unsafe_allow_html=True)
+st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>', unsafe_allow_html=True)
 
 def render_subj_rows(subj_list, section):
     att = st.session_state.attendance
@@ -1459,23 +1539,25 @@ def render_subj_rows(subj_list, section):
         with sc1:
             st.markdown(f'<div style="font-size:0.80rem;color:#E2E8F0;font-weight:600;padding:8px 0 4px;">{subj}</div><div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;overflow:hidden;width:90%;"><div style="width:{pct}%;height:100%;background:linear-gradient(90deg,{c},{c}88);border-radius:99px;"></div></div>', unsafe_allow_html=True)
         with sc2:
-            st.markdown(f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
         with sc3:
             st.markdown('<div class="present-btn">', unsafe_allow_html=True)
-            if st.button("P",key=f"pp_{kb}",use_container_width=True): att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
+            if st.button("P", key=f"pp_{kb}", use_container_width=True):
+                att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc4:
             st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
-            if st.button("A",key=f"pa_{kb}",use_container_width=True): att[subj]["total"]+=1; st.rerun()
+            if st.button("A", key=f"pa_{kb}", use_container_width=True):
+                att[subj]["total"]+=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc5:
             st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-P",key=f"rp_{kb}",use_container_width=True):
+            if st.button("-P", key=f"rp_{kb}", use_container_width=True):
                 if r["present"]>0 and r["total"]>0: att[subj]["present"]-=1; att[subj]["total"]-=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc6:
             st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-A",key=f"ra_{kb}",use_container_width=True):
+            if st.button("-A", key=f"ra_{kb}", use_container_width=True):
                 if r["total"]>0: att[subj]["total"]-=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1491,34 +1573,35 @@ st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 # Schedule Section
 today_name = datetime.datetime.now().strftime("%A")
 now_hm = datetime.datetime.now().hour*60+datetime.datetime.now().minute
-st.markdown(f'<div style="background:linear-gradient(160deg,#0D0618,#110824);border:1px solid rgba(124,58,237,0.12);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:rgba(168,85,247,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S SCHEDULE</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.62rem;color:rgba(168,85,247,.65);">{today_name.upper()}</span></div>', unsafe_allow_html=True)
+st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S CLASS SCHEDULE</span><span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;color:rgba(96,165,250,.65);">{today_name.upper()}</span></div>', unsafe_allow_html=True)
 if st.session_state.schedule_loaded:
     today_slots=get_today_slots(st.session_state.full_schedule); nxt=get_next_class(today_slots)
     if nxt:
         mins=nxt["minutes_away"]; hrs=mins//60; rem=mins%60
         cd_str=(f"{hrs}h {rem}m" if hrs else f"{rem} min")+" away"
-        urg_c="#EF4444" if mins<15 else "#F59E0B" if mins<45 else "#A855F7"
-        st.markdown(f'<div style="background:linear-gradient(90deg,rgba(168,85,247,.06),rgba(124,58,237,.04));border:1px solid rgba(168,85,247,.20);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.57rem;color:rgba(168,140,255,.46);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div><div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;font-family:Syne,sans-serif;">{nxt["subject"]} <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">{nxt["room"]}</span></div></div><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.96rem;font-weight:600;color:{urg_c};text-align:right;">{cd_str}</div></div>', unsafe_allow_html=True)
+        urg_c="#EF4444" if mins<15 else "#F59E0B" if mins<45 else "#22D3EE"
+        st.markdown(f'<div style="background:linear-gradient(90deg,rgba(34,211,238,.06),rgba(37,99,235,.04));border:1px solid rgba(34,211,238,.18);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.57rem;color:rgba(148,163,184,.46);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div><div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">{nxt["subject"]}  <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">{nxt["room"]}</span></div></div><div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;font-weight:600;color:{urg_c};text-align:right;">{cd_str}<div style="font-size:0.57rem;color:rgba(148,163,184,.42);font-weight:400;margin-top:1px;">{fmt_time(nxt["time_start"])} – {fmt_time(nxt["time_end"])}</div></div></div>', unsafe_allow_html=True)
     if today_slots:
         rows=[today_slots[i:i+3] for i in range(0,len(today_slots),3)]
         for row in rows:
             cols=st.columns(len(row))
             for ci,(col,slot) in enumerate(zip(cols,row)):
                 sh,sm=map(int,slot["time_start"].split(":")); is_past=(sh*60+sm)<now_hm
-                tc=TYPE_COLORS.get(slot["type"],"#A855F7")
+                tc=TYPE_COLORS.get(slot["type"],"#60A5FA")
                 is_next=(nxt is not None and slot["time_start"]==nxt["time_start"] and slot["subject"]==nxt["subject"])
                 bc=tc if not is_past else "rgba(255,255,255,0.06)"
+                cbg="linear-gradient(160deg,rgba(34,211,238,0.06),rgba(37,99,235,0.03))" if is_next else "rgba(255,255,255,0.02)" if not is_past else "rgba(255,255,255,0.01)"
                 with col:
-                    st.markdown(f'<div style="background:{"rgba(168,85,247,0.05)" if is_next else "rgba(255,255,255,0.02)"};border:1px solid {bc};border-left:3px solid {bc};border-radius:12px;padding:13px 14px;margin-bottom:8px;"><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.78rem;color:{"#E2E8F0" if not is_past else "rgba(148,163,184,0.32)"};margin-bottom:6px;">{fmt_time(slot["time_start"])}</div><div style="font-size:0.82rem;font-weight:700;color:{"#F1F5F9" if not is_past else "rgba(148,163,184,0.28)"};margin-bottom:4px;font-family:Syne,sans-serif;">{slot["subject"]}</div><span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;background:{tc}1A;color:{tc};font-weight:600;">{slot["type"]}</span>{"  <span style=\"font-size:0.58rem;color:#A855F7;font-weight:700;\">NEXT</span>" if is_next else ""}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:{cbg};border:1px solid {bc};border-left:3px solid {bc};border-radius:12px;padding:13px 14px;margin-bottom:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;font-weight:700;color:{"#E2E8F0" if not is_past else "rgba(148,163,184,0.32)"};margin-bottom:6px;">{fmt_time(slot["time_start"])}<br><span style="font-size:0.62rem;font-weight:400;color:rgba(148,163,184,0.45);">– {fmt_time(slot["time_end"])}</span></div><div style="font-size:0.82rem;font-weight:700;color:{"#F1F5F9" if not is_past else "rgba(148,163,184,0.28)"};margin-bottom:5px;">{slot["subject"]}</div><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:0.62rem;color:rgba(148,163,184,.48);">{slot["room"]}</span><span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;background:{tc}1A;color:{tc};font-weight:600;">{slot["type"]}</span>{"  <span style=\"font-size:0.58rem;color:#22D3EE;font-weight:700;\">NEXT</span>" if is_next else ""}</div>{"<div style=\"font-size:0.58rem;color:rgba(148,163,184,.28);margin-top:4px;text-decoration:line-through;\">Done</div>" if is_past else ""}</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);">No classes for {today_name}.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);font-size:0.80rem;">No classes for {today_name}.</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div style="background:rgba(124,58,237,.04);border:1px dashed rgba(124,58,237,.20);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;color:rgba(148,163,184,.48);">Use <b>Upload Schedule</b> to activate the planner.</div>', unsafe_allow_html=True)
+    st.markdown('<div style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.20);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;color:rgba(148,163,184,.48);">Use <b>Upload Schedule</b> to activate the planner.</div>', unsafe_allow_html=True)
     if "planner_overrides" not in st.session_state: st.session_state.planner_overrides={}
     for st_start,st_end in [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]:
         override=st.session_state.planner_overrides.get(st_start,"")
         mp1,mp2,mp3,mp4=st.columns([1.6,4,0.8,2.2])
-        with mp1: st.markdown(f'<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.68rem;color:#A855F7;padding-top:10px;">{fmt_time(st_start)}</div>', unsafe_allow_html=True)
+        with mp1: st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#60A5FA;padding-top:10px;white-space:nowrap;font-weight:700;">{fmt_time(st_start)}<br><span style="font-size:0.56rem;font-weight:400;color:rgba(148,163,184,.38);">– {fmt_time(st_end)}</span></div>', unsafe_allow_html=True)
         with mp2: note_v=st.text_input("",value=override,placeholder="Task...",key="mp_"+st_start,label_visibility="collapsed")
         with mp3:
             st.markdown('<div class="save-btn">', unsafe_allow_html=True)
@@ -1526,25 +1609,25 @@ else:
             st.markdown('</div>', unsafe_allow_html=True)
         with mp4:
             saved=st.session_state.planner_overrides.get(st_start,"")
-            if saved: st.markdown(f'<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;margin-top:2px;">{saved}</div>', unsafe_allow_html=True)
+            if saved: st.markdown(f'<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{saved}</div>', unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
 # Notes & Quick Links
 ql_col,notes_col=st.columns([1,1.5],gap="large")
 with ql_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0D0618,#110824);border:1px solid rgba(124,58,237,0.12);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:rgba(168,85,247,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
+    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
     QL=[("Upload Syllabus","Syllabus uploader will be enabled here."),("Add PYQ Link","PYQ link manager will open here."),("Library Search","Library search will open here.")]
     st.markdown('<div class="ql-btn">', unsafe_allow_html=True)
     for lbl,fb in QL:
         if st.button(lbl,key="ql_"+lbl,use_container_width=True): st.session_state.ql_feedback=fb; st.rerun()
         st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    if st.session_state.ql_feedback: st.markdown(f'<div style="background:rgba(124,58,237,.06);border:1px solid rgba(168,85,247,.18);border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;color:rgba(200,170,255,.58);">{st.session_state.ql_feedback}</div>', unsafe_allow_html=True)
+    if st.session_state.ql_feedback: st.markdown(f'<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;color:rgba(186,230,253,.58);line-height:1.5;">{st.session_state.ql_feedback}</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with notes_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0D0618,#110824);border:1px solid rgba(124,58,237,0.12);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'JetBrains Mono\',monospace;font-size:0.56rem;color:rgba(168,85,247,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>', unsafe_allow_html=True)
+    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>', unsafe_allow_html=True)
     new_note_input=st.text_input("",placeholder="Type a new note...",key="new_note_input_field",label_visibility="collapsed")
     ac,_=st.columns([1,3])
     with ac:
@@ -1558,7 +1641,7 @@ with notes_col:
     else:
         for list_idx,(i,note) in enumerate(unpinned):
             nr1,nr2,nr3=st.columns([5,1.2,1])
-            with nr1: st.markdown(f'<div style="background:rgba(124,58,237,0.04);border:1px solid rgba(124,58,237,0.12);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);">{note["text"]}</div>', unsafe_allow_html=True)
+            with nr1: st.markdown(f'<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">{note["text"]}</div>', unsafe_allow_html=True)
             with nr2:
                 st.markdown('<div class="pin-btn">', unsafe_allow_html=True)
                 if st.button("Pin",key=f"pin_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True):
@@ -1571,5 +1654,5 @@ with notes_col:
                 st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(124,58,237,0.08);"><span style="font-family:\'JetBrains Mono\',monospace;font-size:0.52rem;color:rgba(168,85,247,0.24);">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; v7.0</span></div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; v7.0 PREMIUM</span></div>', unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)

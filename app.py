@@ -181,6 +181,35 @@ if st.session_state.get("view") == "chat":
     [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
+
+    /* Sidebar panel */
+    .cs-panel{
+      position:fixed;top:0;left:0;width:200px;height:100vh;
+      background:#1a1a2e;border-right:1px solid #333;
+      z-index:9000;padding:16px 10px;
+      transform:translateX(-100%);
+      transition:transform 0.25s ease;
+    }
+    .cs-panel.open{transform:translateX(0);}
+
+    /* Overlay */
+    .cs-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
+    .cs-overlay.open{display:block;}
+
+    /* Hamburger button */
+    .cs-hbtn .stButton>button{
+      position:fixed!important;top:8px!important;left:8px!important;
+      z-index:10001!important;
+      width:34px!important;height:34px!important;
+      min-width:34px!important;min-height:34px!important;
+      background:#1a1a2e!important;border:1px solid #555!important;
+      color:#ccc!important;font-size:1.1rem!important;font-weight:400!important;
+      padding:0!important;line-height:1!important;
+      border-radius:6px!important;box-shadow:none!important;
+    }
+    .cs-hbtn .stButton>button:hover{background:#2a2a3e!important;transform:none!important;}
+
+    /* Chat area */
     .chat-area{padding:20px 16px 40px;max-width:800px;margin:0 auto;}
     .msg-u{text-align:right;margin:8px 0;}
     .msg-a{text-align:left;margin:8px 0;}
@@ -189,6 +218,21 @@ if st.session_state.get("view") == "chat":
     .bub-a{display:inline-block;background:#2a2a3e;color:#e0e0e0;
       padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
     </style>""", unsafe_allow_html=True)
+
+    # ── Hamburger button ──────────────────────────────────────────────────
+    st.markdown('<div class="cs-hbtn">', unsafe_allow_html=True)
+    if st.button("✕" if st.session_state.chat_sb_open else "☰", key="_cs_hbtn"):
+        st.session_state.chat_sb_open = not st.session_state.chat_sb_open
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Overlay ───────────────────────────────────────────────────────────
+    _oc = "open" if st.session_state.chat_sb_open else ""
+    st.markdown(f'<div class="cs-overlay {_oc}"></div>', unsafe_allow_html=True)
+
+    # ── Sidebar panel (empty — tabs will be added later) ──────────────────
+    st.markdown(f'<div class="cs-panel {_oc}">', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Messages ──────────────────────────────────────────────────────────
     st.markdown('<div class="chat-area">', unsafe_allow_html=True)

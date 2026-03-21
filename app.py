@@ -177,130 +177,23 @@ def dispatch_message(text):
 # ─────────────────────────────────────────────────────────────────────────────
 if st.session_state.get("view") == "chat":
 
-    # Hide Streamlit sidebar
     st.markdown("""<style>
     [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
-
-    /* Simple sidebar */
-    .sb-panel{position:fixed;top:0;left:0;width:190px;height:100vh;
-      background:#1a1a2e;border-right:1px solid #333;z-index:9000;
-      padding:20px 10px;display:flex;flex-direction:column;gap:4px;
-      transform:translateX(-100%);transition:transform 0.25s ease;}
-    .sb-panel.open{transform:translateX(0);}
-    .sb-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
-    .sb-overlay.open{display:block;}
-    .sb-title{font-size:0.7rem;color:#888;text-transform:uppercase;
-      letter-spacing:1px;padding:0 8px 10px;border-bottom:1px solid #333;margin-bottom:6px;}
-    .sb-div{height:1px;background:#333;margin:4px 4px;}
-    .sb-panel .stButton>button{background:transparent!important;border:none!important;
-      color:#ccc!important;font-size:0.82rem!important;font-weight:400!important;
-      text-align:left!important;justify-content:flex-start!important;
-      padding:8px 10px!important;border-radius:6px!important;
-      width:100%!important;box-shadow:none!important;}
-    .sb-panel .stButton>button:hover{background:#2a2a3e!important;color:#fff!important;transform:none!important;}
-
-    /* Hamburger button */
-    .hbtn .stButton>button{position:fixed!important;top:8px!important;left:8px!important;
-      z-index:10001!important;width:32px!important;height:32px!important;
-      min-width:32px!important;min-height:32px!important;
-      background:#1a1a2e!important;border:1px solid #444!important;
-      color:#ccc!important;font-size:1rem!important;font-weight:400!important;
-      padding:0!important;line-height:1!important;border-radius:6px!important;box-shadow:none!important;}
-    .hbtn .stButton>button:hover{background:#2a2a3e!important;transform:none!important;}
-
-    /* Chat area */
-    .chat-area{padding:50px 16px 100px;max-width:800px;margin:0 auto;}
+    .chat-area{padding:20px 16px 40px;max-width:800px;margin:0 auto;}
     .msg-u{text-align:right;margin:8px 0;}
     .msg-a{text-align:left;margin:8px 0;}
     .bub-u{display:inline-block;background:#2563eb;color:#fff;
       padding:9px 14px;border-radius:14px 14px 2px 14px;font-size:0.85rem;max-width:70%;text-align:left;}
     .bub-a{display:inline-block;background:#2a2a3e;color:#e0e0e0;
       padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
-
-    /* Input at bottom */
-    .input-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;
-      background:#0f0f1a;border-top:1px solid #333;
-      padding:10px max(16px,calc((100% - 800px)/2)) 12px;}
-    .input-bar [data-testid="stForm"]{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;}
-    .input-bar [data-testid="stTextInput"] label{display:none!important;}
-    .input-bar [data-testid="stTextInput"] input{background:#1a1a2e!important;border:1px solid #444!important;
-      border-radius:8px!important;color:#e0e0e0!important;font-size:0.88rem!important;padding:9px 12px!important;}
-    .input-bar [data-testid="stHorizontalBlock"]{gap:6px!important;align-items:center!important;}
-    .input-bar [data-testid="stFormSubmitButton"]>button{background:#2563eb!important;
-      border:none!important;color:#fff!important;border-radius:8px!important;
-      font-size:0.82rem!important;font-weight:600!important;padding:9px 18px!important;
-      height:38px!important;box-shadow:none!important;}
     </style>""", unsafe_allow_html=True)
-
-    # ── Pending pill ──────────────────────────────────────────────────────
-    if st.session_state._pending_pill:
-        txt = st.session_state._pending_pill
-        st.session_state._pending_pill = ""
-        dispatch_message(txt); st.rerun()
-
-    # ── Hamburger toggle ──────────────────────────────────────────────────
-    st.markdown('<div class="hbtn">', unsafe_allow_html=True)
-    if st.button("✕" if st.session_state.chat_sb_open else "☰", key="_ct_hbtn"):
-        st.session_state.chat_sb_open = not st.session_state.chat_sb_open; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Overlay ───────────────────────────────────────────────────────────
-    _oc = "open" if st.session_state.chat_sb_open else ""
-    st.markdown(f'<div class="sb-overlay {_oc}"></div>', unsafe_allow_html=True)
-
-    # ── Sidebar ───────────────────────────────────────────────────────────
-    st.markdown(f'<div class="sb-panel {_oc}">', unsafe_allow_html=True)
-    st.markdown('<div class="sb-title">Menu</div>', unsafe_allow_html=True)
-
-    if st.button("🔗  ERP Login", key="_ct_erp"):
-        st.session_state.chat_sb_open = False
-        import streamlit.components.v1 as _cv1
-        _cv1.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
-
-    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
-
-    if st.button("✦  New Chat", key="_ct_new"):
-        if st.session_state.chat_messages:
-            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-            st.session_state.chat_sessions.append({"label":fu,"messages":list(st.session_state.chat_messages)})
-        st.session_state.chat_messages = []
-        st.session_state.chat_sb_open = False; st.rerun()
-
-    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
-
-    if st.button("🕐  Chat History", key="_ct_hist"):
-        st.session_state.show_chat_history = not st.session_state.get("show_chat_history", False)
-        st.session_state.chat_sb_open = False; st.rerun()
-
-    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
-
-    if st.button("⊞  Back to Dashboard", key="_ct_back_sb"):
-        st.session_state.view = "dashboard"
-        st.session_state.chat_sb_open = False; st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Chat History panel ────────────────────────────────────────────────
-    if st.session_state.get("show_chat_history"):
-        with st.expander("🕐 Chat History", expanded=True):
-            sessions = st.session_state.chat_sessions
-            if not sessions:
-                st.write("No saved chats yet.")
-            else:
-                for i, sess in enumerate(reversed(sessions[-8:])):
-                    c1, c2 = st.columns([5, 1])
-                    with c1: st.write(sess.get("label","Chat")[:40])
-                    with c2:
-                        if st.button("↩", key=f"_ct_ld_{i}"):
-                            st.session_state.chat_messages = list(sess["messages"])
-                            st.session_state.show_chat_history = False; st.rerun()
 
     # ── Messages ──────────────────────────────────────────────────────────
     st.markdown('<div class="chat-area">', unsafe_allow_html=True)
     if not st.session_state.chat_messages:
-        st.markdown('<p style="color:#666;text-align:center;margin-top:30px;">AskMNIT AI — Type a message to start</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#666;text-align:center;margin-top:40px;">AskMNIT AI — No messages yet</p>', unsafe_allow_html=True)
     else:
         for msg in st.session_state.chat_messages:
             c = msg["content"].replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
@@ -309,20 +202,6 @@ if st.session_state.get("view") == "chat":
             else:
                 st.markdown(f'<div class="msg-a"><div class="bub-a">{c}</div></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── Input bar ─────────────────────────────────────────────────────────
-    st.markdown('<div class="input-bar">', unsafe_allow_html=True)
-    with st.form(key="ct_form", clear_on_submit=True):
-        _fi, _fs = st.columns([1, 0.15])
-        with _fi:
-            _txt = st.text_input("m", placeholder="Type your message...",
-                                 label_visibility="collapsed", key="_ct_input")
-        with _fs:
-            _send = st.form_submit_button("Send")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if _send and _txt and _txt.strip():
-        dispatch_message(_txt.strip()); st.rerun()
 
     st.stop()
 # DASHBOARD VIEW  (100% UNCHANGED)

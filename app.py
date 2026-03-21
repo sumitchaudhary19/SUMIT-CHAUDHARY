@@ -177,263 +177,154 @@ def dispatch_message(text):
 # ─────────────────────────────────────────────────────────────────────────────
 if st.session_state.get("view") == "chat":
 
+    # Hide Streamlit sidebar
     st.markdown("""<style>
     [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
-    [data-testid="stAppViewContainer"]::before{
-      content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-      background:
-        radial-gradient(ellipse 80% 60% at 50% -10%,rgba(120,40,200,0.38) 0%,transparent 70%),
-        radial-gradient(ellipse 60% 50% at 85% 80%,rgba(30,60,180,0.28) 0%,transparent 60%),
-        radial-gradient(ellipse 50% 40% at 10% 90%,rgba(60,20,140,0.22) 0%,transparent 55%);}
-    .ct-topbar{position:fixed;top:0;left:0;right:0;z-index:9999;height:52px;
-      background:rgba(14,10,28,0.92);backdrop-filter:blur(24px);
-      border-bottom:1px solid rgba(140,80,255,0.14);box-shadow:0 2px 20px rgba(0,0,0,0.50);
-      display:flex;align-items:center;padding:0 20px;gap:12px;}
-    .ct-logo{display:flex;align-items:center;gap:9px;font-size:0.92rem;font-weight:700;color:#e8e8f8;}
-    .ct-logo-icon{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);
-      display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 4px 16px rgba(120,60,220,0.45);}
-    .ct-badge{font-size:0.52rem;padding:2px 7px;border-radius:4px;background:rgba(140,80,255,0.15);
-      border:1px solid rgba(140,80,255,0.28);color:rgba(200,170,255,0.80);font-weight:600;letter-spacing:0.6px;}
-    .ct-live{font-size:0.52rem;padding:2px 7px;border-radius:4px;margin-left:auto;
-      background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.28);
-      color:rgba(100,220,160,0.80);font-weight:600;}
-    .ct-spacer{height:60px;width:100%;}
-    .ct-hbtn .stButton>button{position:fixed!important;top:9px!important;left:10px!important;
-      z-index:10001!important;width:34px!important;height:34px!important;
-      min-width:34px!important;min-height:34px!important;border-radius:8px!important;
-      background:rgba(140,80,255,0.14)!important;border:1px solid rgba(140,80,255,0.28)!important;
-      color:rgba(210,180,255,0.85)!important;font-size:1.0rem!important;font-weight:400!important;
-      padding:0!important;line-height:1!important;box-shadow:none!important;}
-    .ct-hbtn .stButton>button:hover{background:rgba(160,100,255,0.24)!important;transform:none!important;}
-    .ct-sidebar{position:fixed;top:52px;left:0;width:200px;height:calc(100vh - 52px);
-      background:rgba(10,6,22,0.97);backdrop-filter:blur(28px);
-      border-right:1px solid rgba(140,80,255,0.16);box-shadow:6px 0 40px rgba(60,10,130,0.28);
-      transform:translateX(-100%);transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
-      z-index:9000;padding:16px 10px;display:flex;flex-direction:column;gap:3px;}
-    .ct-sidebar.sb-open{transform:translateX(0);}
-    .ct-sb-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.40);display:none;}
-    .ct-sb-overlay.sb-open{display:block;}
-    .ct-sb-head{font-size:0.50rem;color:rgba(180,140,255,0.35);text-transform:uppercase;
-      letter-spacing:1.8px;padding:0 8px 10px;border-bottom:1px solid rgba(140,80,255,0.12);
-      margin-bottom:8px;font-family:'DM Mono',monospace;}
-    .ct-sb-div{height:1px;background:rgba(140,80,255,0.10);margin:6px 4px;}
-    .ct-sidebar .stButton>button{border-radius:10px!important;padding:9px 12px!important;
-      font-size:0.79rem!important;font-weight:500!important;height:38px!important;min-height:38px!important;
-      border:1px solid rgba(140,80,220,0.16)!important;background:rgba(60,20,120,0.18)!important;
-      color:rgba(200,175,255,0.78)!important;box-shadow:none!important;transition:all 0.14s!important;
-      width:100%!important;text-align:left!important;justify-content:flex-start!important;}
-    .ct-sidebar .stButton>button:hover{background:rgba(110,45,210,0.26)!important;
-      border-color:rgba(180,100,255,0.35)!important;color:#E0CCFF!important;transform:none!important;}
-    .ct-sb-new .stButton>button{background:rgba(37,99,235,0.14)!important;
-      border-color:rgba(59,130,246,0.28)!important;color:#93C5FD!important;}
-    .ct-hero{text-align:center;padding:8vh 20px 220px;animation:ctFU 0.5s ease both;}
-    @keyframes ctFU{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-    .ct-orb{width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
-      background:radial-gradient(circle at 35% 35%,#c084fc,#7c3aed 55%,#4f46e5);
-      box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50);
-      display:flex;align-items:center;justify-content:center;font-size:1.8rem;
-      animation:ctOrb 4s ease-in-out infinite;}
-    @keyframes ctOrb{0%,100%{box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50);}
-      50%{box-shadow:0 0 0 2px rgba(200,140,255,0.35),0 20px 80px rgba(140,80,240,0.65);}}
-    .ct-title{font-size:2.2rem;font-weight:700;letter-spacing:-1px;margin-bottom:8px;
-      background:linear-gradient(135deg,#e8d8ff 30%,#a78bfa 70%,#818cf8);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .ct-sub{font-size:0.82rem;color:rgba(180,160,220,0.48);margin-bottom:28px;line-height:1.6;}
-    .ct-pill .stButton>button{background:rgba(140,80,255,0.08)!important;
-      border:1px solid rgba(140,80,255,0.22)!important;color:rgba(200,175,255,0.72)!important;
-      border-radius:999px!important;font-size:0.77rem!important;font-weight:500!important;
-      padding:8px 16px!important;box-shadow:none!important;transition:all 0.16s!important;}
-    .ct-pill .stButton>button:hover{background:rgba(140,80,255,0.20)!important;
-      border-color:rgba(180,120,255,0.42)!important;color:#d4aaff!important;transform:translateY(-2px)!important;}
-    .ct-msgs{padding:0 0 200px;}
-    .ct-mu{display:flex;justify-content:flex-end;margin:6px 16px;}
-    .ct-ma{display:flex;justify-content:flex-start;margin:6px 16px;}
-    .ct-bu{max-width:62%;padding:12px 16px;border-radius:18px;border-bottom-right-radius:5px;
-      background:linear-gradient(135deg,rgba(79,70,229,0.55),rgba(124,58,237,0.45));
-      border:1px solid rgba(140,80,255,0.30);color:#ede8ff;font-size:0.87rem;line-height:1.65;}
-    .ct-ba{max-width:68%;padding:12px 16px;border-radius:18px;border-bottom-left-radius:5px;
-      background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
-      color:rgba(230,225,255,0.88);font-size:0.87rem;line-height:1.65;}
-    .ct-avu{width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-left:8px;
-      background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;
-      justify-content:center;font-size:0.68rem;font-weight:700;color:white;}
-    .ct-ava{width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-right:8px;
-      background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;
-      justify-content:center;font-size:0.68rem;font-weight:800;color:white;}
-    .ct-iz{position:fixed;bottom:0;left:0;right:0;z-index:500;
-      padding:10px max(16px,calc((100% - 700px)/2)) 16px;
-      background:linear-gradient(to top,rgba(9,7,15,0.98) 0%,rgba(9,7,15,0.85) 75%,transparent 100%);
-      backdrop-filter:blur(10px);}
-    .ct-iz [data-testid="stForm"]{background:rgba(22,14,42,0.92)!important;
-      border:1px solid rgba(140,80,255,0.22)!important;border-radius:20px!important;
-      padding:10px 14px 10px 16px!important;box-shadow:0 -4px 40px rgba(80,30,160,0.28)!important;
-      animation:ctBP 5s ease-in-out infinite!important;}
-    .ct-iz [data-testid="stForm"]:focus-within{border-color:rgba(160,100,255,0.55)!important;
-      box-shadow:0 0 0 3px rgba(140,80,255,0.12),0 -4px 40px rgba(100,40,200,0.45)!important;animation:none!important;}
-    @keyframes ctBP{0%,100%{box-shadow:0 -4px 40px rgba(80,30,160,0.28);}
-      50%{box-shadow:0 -4px 48px rgba(100,40,200,0.40),0 0 18px rgba(140,80,255,0.10);}}
-    .ct-iz [data-testid="stTextInput"] input{background:transparent!important;border:none!important;
-      outline:none!important;box-shadow:none!important;color:#e8e0ff!important;
-      font-family:'Inter',sans-serif!important;font-size:0.93rem!important;caret-color:#a78bfa!important;padding:4px 0!important;}
-    .ct-iz [data-testid="stTextInput"] input::placeholder{color:rgba(180,155,240,0.38)!important;}
-    .ct-iz [data-testid="stTextInput"]>div{background:transparent!important;border:none!important;box-shadow:none!important;}
-    .ct-iz [data-testid="stTextInput"] label{display:none!important;}
-    .ct-send [data-testid="stFormSubmitButton"]>button{background:linear-gradient(135deg,#7c3aed,#4f46e5)!important;
-      border:none!important;border-radius:50%!important;color:#fff!important;font-size:1.1rem!important;
-      font-weight:700!important;width:38px!important;height:38px!important;min-width:38px!important;
-      padding:0!important;line-height:1!important;box-shadow:0 4px 18px rgba(120,60,220,0.50)!important;transition:all 0.16s!important;}
-    .ct-send [data-testid="stFormSubmitButton"]>button:hover{transform:scale(1.08)!important;
-      box-shadow:0 6px 24px rgba(140,80,240,0.65)!important;}
-    .ct-fn{text-align:center;font-size:0.52rem;color:rgba(140,100,200,0.28);letter-spacing:0.8px;margin-top:5px;}
-    /* Dashboard button top-right */
-    .ct-dash-btn .stButton>button{background:rgba(255,255,255,0.06)!important;
-      border:1px solid rgba(255,255,255,0.12)!important;color:rgba(226,232,240,0.75)!important;
-      box-shadow:none!important;font-size:0.76rem!important;padding:5px 12px!important;
-      border-radius:8px!important;height:30px!important;min-height:30px!important;}
+
+    /* Simple sidebar */
+    .sb-panel{position:fixed;top:0;left:0;width:190px;height:100vh;
+      background:#1a1a2e;border-right:1px solid #333;z-index:9000;
+      padding:20px 10px;display:flex;flex-direction:column;gap:4px;
+      transform:translateX(-100%);transition:transform 0.25s ease;}
+    .sb-panel.open{transform:translateX(0);}
+    .sb-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
+    .sb-overlay.open{display:block;}
+    .sb-title{font-size:0.7rem;color:#888;text-transform:uppercase;
+      letter-spacing:1px;padding:0 8px 10px;border-bottom:1px solid #333;margin-bottom:6px;}
+    .sb-div{height:1px;background:#333;margin:4px 4px;}
+    .sb-panel .stButton>button{background:transparent!important;border:none!important;
+      color:#ccc!important;font-size:0.82rem!important;font-weight:400!important;
+      text-align:left!important;justify-content:flex-start!important;
+      padding:8px 10px!important;border-radius:6px!important;
+      width:100%!important;box-shadow:none!important;}
+    .sb-panel .stButton>button:hover{background:#2a2a3e!important;color:#fff!important;transform:none!important;}
+
+    /* Hamburger button */
+    .hbtn .stButton>button{position:fixed!important;top:8px!important;left:8px!important;
+      z-index:10001!important;width:32px!important;height:32px!important;
+      min-width:32px!important;min-height:32px!important;
+      background:#1a1a2e!important;border:1px solid #444!important;
+      color:#ccc!important;font-size:1rem!important;font-weight:400!important;
+      padding:0!important;line-height:1!important;border-radius:6px!important;box-shadow:none!important;}
+    .hbtn .stButton>button:hover{background:#2a2a3e!important;transform:none!important;}
+
+    /* Chat area */
+    .chat-area{padding:50px 16px 100px;max-width:800px;margin:0 auto;}
+    .msg-u{text-align:right;margin:8px 0;}
+    .msg-a{text-align:left;margin:8px 0;}
+    .bub-u{display:inline-block;background:#2563eb;color:#fff;
+      padding:9px 14px;border-radius:14px 14px 2px 14px;font-size:0.85rem;max-width:70%;text-align:left;}
+    .bub-a{display:inline-block;background:#2a2a3e;color:#e0e0e0;
+      padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
+
+    /* Input at bottom */
+    .input-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;
+      background:#0f0f1a;border-top:1px solid #333;
+      padding:10px max(16px,calc((100% - 800px)/2)) 12px;}
+    .input-bar [data-testid="stForm"]{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important;}
+    .input-bar [data-testid="stTextInput"] label{display:none!important;}
+    .input-bar [data-testid="stTextInput"] input{background:#1a1a2e!important;border:1px solid #444!important;
+      border-radius:8px!important;color:#e0e0e0!important;font-size:0.88rem!important;padding:9px 12px!important;}
+    .input-bar [data-testid="stHorizontalBlock"]{gap:6px!important;align-items:center!important;}
+    .input-bar [data-testid="stFormSubmitButton"]>button{background:#2563eb!important;
+      border:none!important;color:#fff!important;border-radius:8px!important;
+      font-size:0.82rem!important;font-weight:600!important;padding:9px 18px!important;
+      height:38px!important;box-shadow:none!important;}
     </style>""", unsafe_allow_html=True)
 
-    has_messages = bool(st.session_state.chat_messages)
-    nm = st.session_state.student_name.split()[0]
-    br = st.session_state.branch
-
+    # ── Pending pill ──────────────────────────────────────────────────────
     if st.session_state._pending_pill:
         txt = st.session_state._pending_pill
         st.session_state._pending_pill = ""
         dispatch_message(txt); st.rerun()
 
-    # Topbar
-    st.markdown("""<div class="ct-topbar">
-      <div style="width:46px;"></div>
-      <div class="ct-logo"><div class="ct-logo-icon">✦</div>AskMNIT</div>
-      <div class="ct-badge">AI</div>
-      <div class="ct-live">● LIVE</div>
-    </div><div class="ct-spacer"></div>""", unsafe_allow_html=True)
-
-    # Hamburger
-    st.markdown('<div class="ct-hbtn">', unsafe_allow_html=True)
+    # ── Hamburger toggle ──────────────────────────────────────────────────
+    st.markdown('<div class="hbtn">', unsafe_allow_html=True)
     if st.button("✕" if st.session_state.chat_sb_open else "☰", key="_ct_hbtn"):
         st.session_state.chat_sb_open = not st.session_state.chat_sb_open; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Overlay + Sidebar
-    _sc = "sb-open" if st.session_state.chat_sb_open else ""
-    st.markdown(f'<div class="ct-sb-overlay {_sc}"></div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="ct-sidebar {_sc}">', unsafe_allow_html=True)
-    st.markdown('<div class="ct-sb-head">Menu</div>', unsafe_allow_html=True)
+    # ── Overlay ───────────────────────────────────────────────────────────
+    _oc = "open" if st.session_state.chat_sb_open else ""
+    st.markdown(f'<div class="sb-overlay {_oc}"></div>', unsafe_allow_html=True)
 
-    # ERP
+    # ── Sidebar ───────────────────────────────────────────────────────────
+    st.markdown(f'<div class="sb-panel {_oc}">', unsafe_allow_html=True)
+    st.markdown('<div class="sb-title">Menu</div>', unsafe_allow_html=True)
+
     if st.button("🔗  ERP Login", key="_ct_erp"):
         st.session_state.chat_sb_open = False
         import streamlit.components.v1 as _cv1
         _cv1.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
 
-    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
 
-    # New Chat
-    st.markdown('<div class="ct-sb-new">', unsafe_allow_html=True)
     if st.button("✦  New Chat", key="_ct_new"):
         if st.session_state.chat_messages:
-            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"),"Session")
+            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
             st.session_state.chat_sessions.append({"label":fu,"messages":list(st.session_state.chat_messages)})
         st.session_state.chat_messages = []
         st.session_state.chat_sb_open = False; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
 
-    # Chat History
     if st.button("🕐  Chat History", key="_ct_hist"):
-        st.session_state.show_chat_history = not st.session_state.get("show_chat_history",False)
+        st.session_state.show_chat_history = not st.session_state.get("show_chat_history", False)
         st.session_state.chat_sb_open = False; st.rerun()
 
-    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
 
-    # Back to Dashboard
     if st.button("⊞  Back to Dashboard", key="_ct_back_sb"):
         st.session_state.view = "dashboard"
         st.session_state.chat_sb_open = False; st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close sidebar
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # History panel
+    # ── Chat History panel ────────────────────────────────────────────────
     if st.session_state.get("show_chat_history"):
         with st.expander("🕐 Chat History", expanded=True):
             sessions = st.session_state.chat_sessions
             if not sessions:
-                st.markdown('<div style="font-size:0.76rem;color:rgba(180,160,220,0.35);text-align:center;padding:12px;">No saved chats yet</div>', unsafe_allow_html=True)
+                st.write("No saved chats yet.")
             else:
-                for i,sess in enumerate(reversed(sessions[-8:])):
-                    c1,c2 = st.columns([5,1])
-                    with c1: st.markdown(f'<div style="font-size:0.74rem;color:rgba(200,180,240,0.65);padding:5px 8px;background:rgba(140,80,255,0.06);border-radius:7px;border:1px solid rgba(140,80,255,0.14);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{sess.get("label","Chat")[:38]}</div>', unsafe_allow_html=True)
+                for i, sess in enumerate(reversed(sessions[-8:])):
+                    c1, c2 = st.columns([5, 1])
+                    with c1: st.write(sess.get("label","Chat")[:40])
                     with c2:
                         if st.button("↩", key=f"_ct_ld_{i}"):
                             st.session_state.chat_messages = list(sess["messages"])
                             st.session_state.show_chat_history = False; st.rerun()
 
-    # Hero
-    if not has_messages:
-        st.markdown(f"""<div class="ct-hero">
-          <div class="ct-orb">✦</div>
-          <div class="ct-title">AskMNIT AI</div>
-          <div class="ct-sub">Hey {nm}! Your smart MNIT senior 🎓<br>Attendance · PYQs · Schedule · Exam prep</div>
-        </div>""", unsafe_allow_html=True)
-        pills = ["📊 My attendance %","📅 Next class today?",f"📚 PYQs for {br}",
-                 "💰 Fee status","📖 Subjects this sem","🎯 Exam tips"]
-        _, pc, _ = st.columns([1,8,1])
-        with pc:
-            r1 = st.columns(4)
-            for i,p in enumerate(pills[:4]):
-                with r1[i]:
-                    st.markdown('<div class="ct-pill">', unsafe_allow_html=True)
-                    if st.button(p, key=f"ct_p_{i}", use_container_width=True):
-                        st.session_state._pending_pill = p; st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            _, c1, c2, _ = st.columns([1.5,2,2,1.5])
-            for i,(p,col) in enumerate(zip(pills[4:],[c1,c2])):
-                with col:
-                    st.markdown('<div class="ct-pill">', unsafe_allow_html=True)
-                    if st.button(p, key=f"ct_pb_{i}", use_container_width=True):
-                        st.session_state._pending_pill = p; st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
+    # ── Messages ──────────────────────────────────────────────────────────
+    st.markdown('<div class="chat-area">', unsafe_allow_html=True)
+    if not st.session_state.chat_messages:
+        st.markdown('<p style="color:#666;text-align:center;margin-top:30px;">AskMNIT AI — Type a message to start</p>', unsafe_allow_html=True)
     else:
-        st.markdown("<div class='ct-msgs'>", unsafe_allow_html=True)
         for msg in st.session_state.chat_messages:
-            c = msg["content"].replace("\n","<br>")
-            if msg["role"]=="user":
-                st.markdown(f'<div class="ct-mu"><div class="ct-bu">{c}</div><div class="ct-avu">U</div></div>', unsafe_allow_html=True)
+            c = msg["content"].replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
+            if msg["role"] == "user":
+                st.markdown(f'<div class="msg-u"><div class="bub-u">{c}</div></div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="ct-ma"><div class="ct-ava">✦</div><div class="ct-ba">{c}</div></div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(f'<div class="msg-a"><div class="bub-a">{c}</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Input bar
-    st.markdown('<div class="ct-iz">', unsafe_allow_html=True)
+    # ── Input bar ─────────────────────────────────────────────────────────
+    st.markdown('<div class="input-bar">', unsafe_allow_html=True)
     with st.form(key="ct_form", clear_on_submit=True):
-        _fi, _fs = st.columns([1, 0.06])
+        _fi, _fs = st.columns([1, 0.15])
         with _fi:
-            _txt = st.text_input("m", placeholder="Ask AskMNIT anything...",
+            _txt = st.text_input("m", placeholder="Type your message...",
                                  label_visibility="collapsed", key="_ct_input")
         with _fs:
-            st.markdown('<div class="ct-send">', unsafe_allow_html=True)
-            _send = st.form_submit_button("↑")
-            st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('<div class="ct-fn">AskMNIT AI may make mistakes · Verify with official ERP</div>', unsafe_allow_html=True)
+            _send = st.form_submit_button("Send")
     st.markdown('</div>', unsafe_allow_html=True)
 
     if _send and _txt and _txt.strip():
         dispatch_message(_txt.strip()); st.rerun()
 
-    # Dashboard back button
-    st.markdown('<div style="position:fixed;top:10px;right:16px;z-index:10000;"><div class="ct-dash-btn">', unsafe_allow_html=True)
-    if st.button("⊞ Dashboard", key="_ct_back"):
-        st.session_state.view = "dashboard"; st.rerun()
-    st.markdown('</div></div>', unsafe_allow_html=True)
-
     st.stop()
-
-###############################################################################
 # DASHBOARD VIEW  (100% UNCHANGED)
 ###############################################################################
 NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]

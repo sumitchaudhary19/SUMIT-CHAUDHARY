@@ -3,7 +3,6 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
-import streamlit.components.v1 as components
 import datetime, random, base64
 
 st.set_page_config(page_title="AskMNIT", page_icon="🎓",
@@ -73,7 +72,8 @@ def _safe_key(s): return "".join(c if c.isalnum() else "_" for c in s)
 # ─────────────────────────────────────────────────────────────────────────────
 _def_branch = "CSE"
 _DEFAULTS = {
-    "view":"dashboard","nav_page":"My Dashboard",
+    "view":"dashboard",
+    "nav_page":"My Dashboard",
     "student_name":"Sumit Chaudhary","college_id":"2022UMT1234",
     "semester":"Semester 6","branch":_def_branch,"profile_pic_b64":"",
     "settings_mode":None,
@@ -82,77 +82,13 @@ _DEFAULTS = {
     "notes_list":[{"text":"Mid-sem revision starts Monday","pinned":False},
                   {"text":"Submit fee by 17 Mar","pinned":False},
                   {"text":"Collect hall ticket from ERP","pinned":False}],
-    "ql_feedback":"","chat_messages":[],"chat_sessions":[],
-    "attached_file_name":"","is_recording":False,
-    "voice_transcript":"","_voice_submit":False,
-    "response_style":"Concise","voice_output":False,"strict_mode":False,
-    "show_history_panel":False,"show_settings_panel":False,"sb_open":False,
-    "_pending_pill":"","planner_overrides":{},
+    "ql_feedback":"",
+    # Chat
+    "chat_messages":[],"chat_sessions":[],"chat_sb_open":False,
+    "show_chat_history":False,"_pending_pill":"",
 }
 for k,v in _DEFAULTS.items():
     if k not in st.session_state: st.session_state[k]=v
-
-# ─────────────────────────────────────────────────────────────────────────────
-# AI RESPONSE
-# ─────────────────────────────────────────────────────────────────────────────
-def _build_ctx():
-    att=st.session_state.attendance; br=st.session_state.branch
-    nm=st.session_state.student_name; sem=st.session_state.semester
-    ov=overall_pct(att)
-    low=[(s,att_pct(r)) for s,r in att.items() if att_pct(r)<75 and r["total"]>0]
-    good=[(s,att_pct(r)) for s,r in att.items() if att_pct(r)>=75 and r["total"]>0]
-    att_s=f"Overall: {ov}%\n"
-    for s,p in low:
-        r=att[s]; need=max(0,int((0.75*r["total"]-r["present"])/0.25)+1)
-        att_s+=f"  LOW - {s}: {p}% needs {need} more\n"
-    for s,p in good[:4]: att_s+=f"  OK  - {s}: {p}%\n"
-    sched_s="Schedule not uploaded."
-    if st.session_state.schedule_loaded:
-        ts=get_today_slots(st.session_state.full_schedule)
-        nxt=get_next_class(ts); dn=datetime.datetime.now().strftime("%A")
-        sched_s=f"Today ({dn}):\n"+"".join(f"  {sl['time_start']}: {sl['subject']} @{sl['room']}\n" for sl in ts)
-        sched_s+=f"Next: {nxt['subject']} in {nxt['minutes_away']}min\n" if nxt else "No more classes.\n"
-    return f"Student: {nm} | Branch: {br} | Sem: {sem}\nAttendance:\n{att_s}Schedule:\n{sched_s}"
-
-def _mood(t):
-    t=t.lower()
-    if any(w in t for w in ["stressed","tension","worried","fail","rona","confused"]): return "STRESSED"
-    if any(w in t for w in ["happy","khush","amazing","cleared","yay"]): return "EXCITED"
-    if any(w in t for w in ["bored","kya karu","boring"]): return "BORED"
-    if any(w in t for w in ["angry","gussa","worst","hate"]): return "FRUSTRATED"
-    return "NEUTRAL"
-
-def generate_ai_response(last):
-    import requests
-    nm=st.session_state.student_name.split()[0]
-    sys=f"""You are AskMNIT — {nm}'s brilliant chill senior at MNIT Jaipur.
-MOOD: {_mood(last)} → adjust tone from first word.
-PERSONALITY: Warm friend + sharp topper. Mix Hinglish naturally. Short punchy sentences.
-STUDENT DATA:\n{_build_ctx()}
-RULES: Call them "{nm}" or "yaar/bhai". Attendance math must be exact. Never say "I'm an AI"."""
-    msgs=[{"role":m["role"],"content":m["content"]} for m in st.session_state.chat_messages[-16:-1]]
-    msgs.append({"role":"user","content":last})
-    KEY=st.secrets.get("GROQ_API_KEY","") or st.session_state.get("groq_api_key","")
-    if not KEY:
-        return "Yaar GROQ_API_KEY set nahi hai 😅 `.streamlit/secrets.toml` mein add kar: `GROQ_API_KEY='gsk_...'`"
-    try:
-        r=requests.post("https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization":f"Bearer {KEY}","Content-Type":"application/json"},
-            json={"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":sys},*msgs],
-                  "max_tokens":900,"temperature":0.82},timeout=30)
-        d=r.json()
-        if r.status_code==200: return d["choices"][0]["message"]["content"].strip()
-        return f"Groq error: {d.get('error',{}).get('message','Unknown')}"
-    except requests.Timeout: return "Connection timeout yaar ⏳ — dobara try kar!"
-    except Exception as e: return f"Kuch gadbad hai 😅 ({str(e)[:60]})"
-
-def dispatch_message(text):
-    text=text.strip()
-    if not text: return
-    st.session_state.chat_messages.append({"role":"user","content":text})
-    with st.spinner("AskMNIT soch raha hai... 🤔"):
-        reply=generate_ai_response(text)
-    st.session_state.chat_messages.append({"role":"assistant","content":reply})
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GLOBAL CSS  (dashboard + chat both)
@@ -201,421 +137,294 @@ hr{border-color:rgba(255,255,255,0.08)!important;}
 [data-testid="column"]{padding:0 4px!important;}
 </style>""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# VIEW ROUTER
-# ─────────────────────────────────────────────────────────────────────────────
-view = st.session_state.view
-
 ###############################################################################
-# CHAT VIEW — Pure Streamlit, no components.html hacks
+# AI RESPONSE
 ###############################################################################
-if view == "chat":
+def generate_ai_response(last):
+    import requests
+    nm = st.session_state.student_name.split()[0]
+    br = st.session_state.branch; sem = st.session_state.semester
+    sys_p = f"""You are AskMNIT — {nm}'s brilliant chill senior at MNIT Jaipur.
+Mix Hinglish naturally. Short punchy sentences. Warm like a best friend.
+Student: {nm} | Branch: {br} | Semester: {sem}
+RULES: Call them "{nm}" or "yaar/bhai". Never say "I'm an AI"."""
+    msgs = [{"role":m["role"],"content":m["content"]} for m in st.session_state.chat_messages[-14:-1]]
+    msgs.append({"role":"user","content":last})
+    KEY = st.secrets.get("GROQ_API_KEY","") or st.session_state.get("groq_api_key","")
+    if not KEY:
+        return "Yaar GROQ_API_KEY set nahi hai 😅 `.streamlit/secrets.toml` mein add kar: `GROQ_API_KEY='gsk_...'`"
+    try:
+        r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization":f"Bearer {KEY}","Content-Type":"application/json"},
+            json={"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":sys_p},*msgs],
+                  "max_tokens":900,"temperature":0.82},timeout=30)
+        d = r.json()
+        if r.status_code==200: return d["choices"][0]["message"]["content"].strip()
+        return f"Groq error: {d.get('error',{}).get('message','Unknown')}"
+    except requests.Timeout: return "Connection timeout yaar ⏳"
+    except Exception as e: return f"Kuch gadbad hai 😅 ({str(e)[:60]})"
 
-    # Hide Streamlit sidebar
+def dispatch_message(text):
+    text = text.strip()
+    if not text: return
+    st.session_state.chat_messages.append({"role":"user","content":text})
+    with st.spinner("AskMNIT soch raha hai... 🤔"):
+        reply = generate_ai_response(text)
+    st.session_state.chat_messages.append({"role":"assistant","content":reply})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VIEW ROUTER — CHAT
+# ─────────────────────────────────────────────────────────────────────────────
+if st.session_state.get("view") == "chat":
+
     st.markdown("""<style>
     [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"]{display:none!important;}
     section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
-    </style>""", unsafe_allow_html=True)
-
-    # ── Premium CSS for chat UI ───────────────────────────────────────────
-    st.markdown("""<style>
-    /* Animated background */
     [data-testid="stAppViewContainer"]::before{
       content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
       background:
         radial-gradient(ellipse 80% 60% at 50% -10%,rgba(120,40,200,0.38) 0%,transparent 70%),
         radial-gradient(ellipse 60% 50% at 85% 80%,rgba(30,60,180,0.28) 0%,transparent 60%),
-        radial-gradient(ellipse 50% 40% at 10% 90%,rgba(60,20,140,0.22) 0%,transparent 55%);
-    }
-    /* Topbar */
-    .chat-topbar{
-      position:fixed;top:0;left:0;right:0;z-index:9999;height:52px;
+        radial-gradient(ellipse 50% 40% at 10% 90%,rgba(60,20,140,0.22) 0%,transparent 55%);}
+    .ct-topbar{position:fixed;top:0;left:0;right:0;z-index:9999;height:52px;
       background:rgba(14,10,28,0.92);backdrop-filter:blur(24px);
-      border-bottom:1px solid rgba(140,80,255,0.14);
-      box-shadow:0 2px 20px rgba(0,0,0,0.50);
-      display:flex;align-items:center;padding:0 20px;gap:12px;
-    }
-    .tb-logo{display:flex;align-items:center;gap:9px;font-size:0.92rem;font-weight:700;color:#e8e8f8;}
-    .tb-logo-icon{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);
-      display:flex;align-items:center;justify-content:center;font-size:1rem;
-      box-shadow:0 4px 16px rgba(120,60,220,0.45);}
-    .tb-badge{font-size:0.52rem;padding:2px 7px;border-radius:4px;
-      background:rgba(140,80,255,0.15);border:1px solid rgba(140,80,255,0.28);
-      color:rgba(200,170,255,0.80);font-weight:600;letter-spacing:0.6px;}
-    .tb-live{font-size:0.52rem;padding:2px 7px;border-radius:4px;
+      border-bottom:1px solid rgba(140,80,255,0.14);box-shadow:0 2px 20px rgba(0,0,0,0.50);
+      display:flex;align-items:center;padding:0 20px;gap:12px;}
+    .ct-logo{display:flex;align-items:center;gap:9px;font-size:0.92rem;font-weight:700;color:#e8e8f8;}
+    .ct-logo-icon{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);
+      display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 4px 16px rgba(120,60,220,0.45);}
+    .ct-badge{font-size:0.52rem;padding:2px 7px;border-radius:4px;background:rgba(140,80,255,0.15);
+      border:1px solid rgba(140,80,255,0.28);color:rgba(200,170,255,0.80);font-weight:600;letter-spacing:0.6px;}
+    .ct-live{font-size:0.52rem;padding:2px 7px;border-radius:4px;margin-left:auto;
       background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.28);
-      color:rgba(100,220,160,0.80);font-weight:600;margin-left:auto;}
-    .topbar-spacer{height:60px;width:100%;}
-    /* Sidebar open/close button */
-    .sb-toggle-wrap .stButton>button{
-      position:fixed!important;top:9px!important;left:10px!important;
+      color:rgba(100,220,160,0.80);font-weight:600;}
+    .ct-spacer{height:60px;width:100%;}
+    .ct-hbtn .stButton>button{position:fixed!important;top:9px!important;left:10px!important;
       z-index:10001!important;width:34px!important;height:34px!important;
-      min-width:34px!important;min-height:34px!important;
-      border-radius:8px!important;
-      background:rgba(140,80,255,0.14)!important;
-      border:1px solid rgba(140,80,255,0.28)!important;
-      color:rgba(210,180,255,0.85)!important;
-      font-size:1.0rem!important;font-weight:400!important;
-      padding:0!important;line-height:1!important;box-shadow:none!important;
-    }
-    .sb-toggle-wrap .stButton>button:hover{background:rgba(160,100,255,0.24)!important;transform:none!important;}
-    /* Sidebar panel */
-    .chat-sidebar-panel{
-      position:fixed;top:52px;left:0;width:210px;height:calc(100vh - 52px);
+      min-width:34px!important;min-height:34px!important;border-radius:8px!important;
+      background:rgba(140,80,255,0.14)!important;border:1px solid rgba(140,80,255,0.28)!important;
+      color:rgba(210,180,255,0.85)!important;font-size:1.0rem!important;font-weight:400!important;
+      padding:0!important;line-height:1!important;box-shadow:none!important;}
+    .ct-hbtn .stButton>button:hover{background:rgba(160,100,255,0.24)!important;transform:none!important;}
+    .ct-sidebar{position:fixed;top:52px;left:0;width:200px;height:calc(100vh - 52px);
       background:rgba(10,6,22,0.97);backdrop-filter:blur(28px);
-      border-right:1px solid rgba(140,80,255,0.16);
-      box-shadow:6px 0 40px rgba(60,10,130,0.28);
-      transform:translateX(-100%);
-      transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
-      z-index:9000;padding:16px 10px;
-      display:flex;flex-direction:column;gap:3px;
-    }
-    .chat-sidebar-panel.sb-open{transform:translateX(0);}
-    .sb-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.40);
-      display:none;}
-    .sb-overlay.sb-open{display:block;}
-    .sb-head{font-size:0.50rem;color:rgba(180,140,255,0.35);text-transform:uppercase;
+      border-right:1px solid rgba(140,80,255,0.16);box-shadow:6px 0 40px rgba(60,10,130,0.28);
+      transform:translateX(-100%);transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
+      z-index:9000;padding:16px 10px;display:flex;flex-direction:column;gap:3px;}
+    .ct-sidebar.sb-open{transform:translateX(0);}
+    .ct-sb-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.40);display:none;}
+    .ct-sb-overlay.sb-open{display:block;}
+    .ct-sb-head{font-size:0.50rem;color:rgba(180,140,255,0.35);text-transform:uppercase;
       letter-spacing:1.8px;padding:0 8px 10px;border-bottom:1px solid rgba(140,80,255,0.12);
       margin-bottom:8px;font-family:'DM Mono',monospace;}
-    .sb-divider{height:1px;background:rgba(140,80,255,0.10);margin:8px 4px;}
-    .sb-section{font-size:0.48rem;color:rgba(180,140,255,0.28);text-transform:uppercase;
-      letter-spacing:1.5px;padding:6px 12px 4px;font-family:'DM Mono',monospace;}
-    /* Nav buttons inside sidebar */
-    .chat-sidebar-panel .stButton>button{
-      border-radius:10px!important;padding:9px 12px!important;
-      font-size:0.79rem!important;font-weight:500!important;
-      height:38px!important;min-height:38px!important;
-      border:1px solid rgba(140,80,220,0.16)!important;
-      background:rgba(60,20,120,0.18)!important;
-      color:rgba(200,175,255,0.78)!important;
-      box-shadow:none!important;transition:all 0.14s!important;
-      width:100%!important;text-align:left!important;justify-content:flex-start!important;
-    }
-    .chat-sidebar-panel .stButton>button:hover{
-      background:rgba(110,45,210,0.26)!important;
-      border-color:rgba(180,100,255,0.35)!important;
-      color:#E0CCFF!important;transform:none!important;
-    }
-    .sb-new-btn .stButton>button{background:rgba(37,99,235,0.14)!important;
+    .ct-sb-div{height:1px;background:rgba(140,80,255,0.10);margin:6px 4px;}
+    .ct-sidebar .stButton>button{border-radius:10px!important;padding:9px 12px!important;
+      font-size:0.79rem!important;font-weight:500!important;height:38px!important;min-height:38px!important;
+      border:1px solid rgba(140,80,220,0.16)!important;background:rgba(60,20,120,0.18)!important;
+      color:rgba(200,175,255,0.78)!important;box-shadow:none!important;transition:all 0.14s!important;
+      width:100%!important;text-align:left!important;justify-content:flex-start!important;}
+    .ct-sidebar .stButton>button:hover{background:rgba(110,45,210,0.26)!important;
+      border-color:rgba(180,100,255,0.35)!important;color:#E0CCFF!important;transform:none!important;}
+    .ct-sb-new .stButton>button{background:rgba(37,99,235,0.14)!important;
       border-color:rgba(59,130,246,0.28)!important;color:#93C5FD!important;}
-    /* Hero area */
-    .chat-hero{text-align:center;padding:8vh 20px 220px;animation:fadeUp 0.5s ease both;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-    .hero-orb{
-      width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
+    .ct-hero{text-align:center;padding:8vh 20px 220px;animation:ctFU 0.5s ease both;}
+    @keyframes ctFU{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .ct-orb{width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
       background:radial-gradient(circle at 35% 35%,#c084fc,#7c3aed 55%,#4f46e5);
       box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50);
       display:flex;align-items:center;justify-content:center;font-size:1.8rem;
-      animation:orbPulse 4s ease-in-out infinite;
-    }
-    @keyframes orbPulse{
-      0%,100%{box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50);}
-      50%{box-shadow:0 0 0 2px rgba(200,140,255,0.35),0 20px 80px rgba(140,80,240,0.65);}
-    }
-    .hero-title{font-size:2.2rem;font-weight:700;letter-spacing:-1px;margin-bottom:8px;
+      animation:ctOrb 4s ease-in-out infinite;}
+    @keyframes ctOrb{0%,100%{box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50);}
+      50%{box-shadow:0 0 0 2px rgba(200,140,255,0.35),0 20px 80px rgba(140,80,240,0.65);}}
+    .ct-title{font-size:2.2rem;font-weight:700;letter-spacing:-1px;margin-bottom:8px;
       background:linear-gradient(135deg,#e8d8ff 30%,#a78bfa 70%,#818cf8);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .hero-sub{font-size:0.82rem;color:rgba(180,160,220,0.48);margin-bottom:28px;line-height:1.6;}
-    /* Suggestion pills — pure Streamlit buttons */
-    .pill-wrap .stButton>button{
-      background:rgba(140,80,255,0.08)!important;
-      border:1px solid rgba(140,80,255,0.22)!important;
-      color:rgba(200,175,255,0.72)!important;
-      border-radius:999px!important;
-      font-size:0.77rem!important;font-weight:500!important;
-      padding:8px 16px!important;box-shadow:none!important;
-      transition:all 0.16s!important;
-    }
-    .pill-wrap .stButton>button:hover{
-      background:rgba(140,80,255,0.20)!important;
-      border-color:rgba(180,120,255,0.42)!important;
-      color:#d4aaff!important;transform:translateY(-2px)!important;
-    }
-    /* Messages */
-    .chat-msg-area{padding:0 0 200px;}
-    .msg-user{display:flex;justify-content:flex-end;margin:6px 16px;}
-    .msg-ai{display:flex;justify-content:flex-start;margin:6px 16px;}
-    .bubble-user{
-      max-width:62%;padding:12px 16px;border-radius:18px;border-bottom-right-radius:5px;
+    .ct-sub{font-size:0.82rem;color:rgba(180,160,220,0.48);margin-bottom:28px;line-height:1.6;}
+    .ct-pill .stButton>button{background:rgba(140,80,255,0.08)!important;
+      border:1px solid rgba(140,80,255,0.22)!important;color:rgba(200,175,255,0.72)!important;
+      border-radius:999px!important;font-size:0.77rem!important;font-weight:500!important;
+      padding:8px 16px!important;box-shadow:none!important;transition:all 0.16s!important;}
+    .ct-pill .stButton>button:hover{background:rgba(140,80,255,0.20)!important;
+      border-color:rgba(180,120,255,0.42)!important;color:#d4aaff!important;transform:translateY(-2px)!important;}
+    .ct-msgs{padding:0 0 200px;}
+    .ct-mu{display:flex;justify-content:flex-end;margin:6px 16px;}
+    .ct-ma{display:flex;justify-content:flex-start;margin:6px 16px;}
+    .ct-bu{max-width:62%;padding:12px 16px;border-radius:18px;border-bottom-right-radius:5px;
       background:linear-gradient(135deg,rgba(79,70,229,0.55),rgba(124,58,237,0.45));
-      border:1px solid rgba(140,80,255,0.30);color:#ede8ff;
-      font-size:0.87rem;line-height:1.65;
-    }
-    .bubble-ai{
-      max-width:68%;padding:12px 16px;border-radius:18px;border-bottom-left-radius:5px;
+      border:1px solid rgba(140,80,255,0.30);color:#ede8ff;font-size:0.87rem;line-height:1.65;}
+    .ct-ba{max-width:68%;padding:12px 16px;border-radius:18px;border-bottom-left-radius:5px;
       background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
-      color:rgba(230,225,255,0.88);font-size:0.87rem;line-height:1.65;
-    }
-    .msg-av-user{width:28px;height:28px;border-radius:50%;flex-shrink:0;
-      background:linear-gradient(135deg,#4f46e5,#7c3aed);
-      display:flex;align-items:center;justify-content:center;
-      font-size:0.68rem;font-weight:700;color:white;margin-left:8px;}
-    .msg-av-ai{width:28px;height:28px;border-radius:50%;flex-shrink:0;
-      background:linear-gradient(135deg,#7c3aed,#a855f7);
-      display:flex;align-items:center;justify-content:center;
-      font-size:0.68rem;font-weight:800;color:white;margin-right:8px;}
-    /* Input bar */
-    .chat-input-zone{
-      position:fixed;bottom:0;left:0;right:0;z-index:500;
+      color:rgba(230,225,255,0.88);font-size:0.87rem;line-height:1.65;}
+    .ct-avu{width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-left:8px;
+      background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;
+      justify-content:center;font-size:0.68rem;font-weight:700;color:white;}
+    .ct-ava{width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-right:8px;
+      background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;
+      justify-content:center;font-size:0.68rem;font-weight:800;color:white;}
+    .ct-iz{position:fixed;bottom:0;left:0;right:0;z-index:500;
       padding:10px max(16px,calc((100% - 700px)/2)) 16px;
       background:linear-gradient(to top,rgba(9,7,15,0.98) 0%,rgba(9,7,15,0.85) 75%,transparent 100%);
-      backdrop-filter:blur(10px);
-    }
-    /* Override Streamlit form styling */
-    .chat-input-zone [data-testid="stForm"]{
-      background:rgba(22,14,42,0.92)!important;
-      border:1px solid rgba(140,80,255,0.22)!important;
-      border-radius:20px!important;padding:10px 14px 10px 16px!important;
-      box-shadow:0 -4px 40px rgba(80,30,160,0.28)!important;
-      animation:barPulse 5s ease-in-out infinite!important;
-    }
-    .chat-input-zone [data-testid="stForm"]:focus-within{
-      border-color:rgba(160,100,255,0.55)!important;
-      box-shadow:0 0 0 3px rgba(140,80,255,0.12),0 -4px 40px rgba(100,40,200,0.45)!important;
-      animation:none!important;
-    }
-    @keyframes barPulse{
-      0%,100%{box-shadow:0 -4px 40px rgba(80,30,160,0.28);}
-      50%{box-shadow:0 -4px 48px rgba(100,40,200,0.40),0 0 18px rgba(140,80,255,0.10);}
-    }
-    .chat-input-zone [data-testid="stTextInput"] input{
-      background:transparent!important;border:none!important;outline:none!important;
-      box-shadow:none!important;color:#e8e0ff!important;
-      font-family:'Inter',sans-serif!important;font-size:0.93rem!important;
-      caret-color:#a78bfa!important;padding:4px 0!important;
-    }
-    .chat-input-zone [data-testid="stTextInput"] input::placeholder{color:rgba(180,155,240,0.38)!important;}
-    .chat-input-zone [data-testid="stTextInput"]>div{background:transparent!important;border:none!important;box-shadow:none!important;}
-    .chat-input-zone [data-testid="stTextInput"] label{display:none!important;}
-    /* Send button inside form */
-    .send-btn-wrap [data-testid="stFormSubmitButton"]>button{
-      background:linear-gradient(135deg,#7c3aed,#4f46e5)!important;
-      border:none!important;border-radius:50%!important;color:#fff!important;
-      font-size:1.1rem!important;font-weight:700!important;
-      width:38px!important;height:38px!important;min-width:38px!important;
-      padding:0!important;line-height:1!important;
-      box-shadow:0 4px 18px rgba(120,60,220,0.50)!important;
-      transition:all 0.16s!important;
-    }
-    .send-btn-wrap [data-testid="stFormSubmitButton"]>button:hover{
-      transform:scale(1.08)!important;
-      box-shadow:0 6px 24px rgba(140,80,240,0.65)!important;
-    }
-    /* File attach + mic buttons */
-    .icon-btn-wrap .stButton>button{
-      background:rgba(140,80,255,0.10)!important;
-      border:1px solid rgba(140,80,255,0.20)!important;
-      color:rgba(190,160,255,0.65)!important;
-      border-radius:10px!important;
-      width:34px!important;height:34px!important;
-      min-width:34px!important;padding:0!important;
-      font-size:1rem!important;box-shadow:none!important;
-    }
-    .icon-btn-wrap .stButton>button:hover{
-      background:rgba(160,100,255,0.22)!important;
-      border-color:rgba(180,120,255,0.38)!important;
-      color:#d4aaff!important;transform:none!important;
-    }
-    .footer-note{text-align:center;font-size:0.52rem;color:rgba(140,100,200,0.28);
-      letter-spacing:0.8px;margin-top:5px;}
-    /* History panel as expander */
-    .hist-panel [data-testid="stExpander"]{
-      background:rgba(14,8,30,0.95)!important;
-      border:1px solid rgba(140,80,255,0.18)!important;border-radius:14px!important;
-      position:fixed;top:60px;left:220px;width:300px;z-index:8990;
-    }
-    /* scrollbar */
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-thumb{background:rgba(140,80,255,0.25);border-radius:4px;}
+      backdrop-filter:blur(10px);}
+    .ct-iz [data-testid="stForm"]{background:rgba(22,14,42,0.92)!important;
+      border:1px solid rgba(140,80,255,0.22)!important;border-radius:20px!important;
+      padding:10px 14px 10px 16px!important;box-shadow:0 -4px 40px rgba(80,30,160,0.28)!important;
+      animation:ctBP 5s ease-in-out infinite!important;}
+    .ct-iz [data-testid="stForm"]:focus-within{border-color:rgba(160,100,255,0.55)!important;
+      box-shadow:0 0 0 3px rgba(140,80,255,0.12),0 -4px 40px rgba(100,40,200,0.45)!important;animation:none!important;}
+    @keyframes ctBP{0%,100%{box-shadow:0 -4px 40px rgba(80,30,160,0.28);}
+      50%{box-shadow:0 -4px 48px rgba(100,40,200,0.40),0 0 18px rgba(140,80,255,0.10);}}
+    .ct-iz [data-testid="stTextInput"] input{background:transparent!important;border:none!important;
+      outline:none!important;box-shadow:none!important;color:#e8e0ff!important;
+      font-family:'Inter',sans-serif!important;font-size:0.93rem!important;caret-color:#a78bfa!important;padding:4px 0!important;}
+    .ct-iz [data-testid="stTextInput"] input::placeholder{color:rgba(180,155,240,0.38)!important;}
+    .ct-iz [data-testid="stTextInput"]>div{background:transparent!important;border:none!important;box-shadow:none!important;}
+    .ct-iz [data-testid="stTextInput"] label{display:none!important;}
+    .ct-send [data-testid="stFormSubmitButton"]>button{background:linear-gradient(135deg,#7c3aed,#4f46e5)!important;
+      border:none!important;border-radius:50%!important;color:#fff!important;font-size:1.1rem!important;
+      font-weight:700!important;width:38px!important;height:38px!important;min-width:38px!important;
+      padding:0!important;line-height:1!important;box-shadow:0 4px 18px rgba(120,60,220,0.50)!important;transition:all 0.16s!important;}
+    .ct-send [data-testid="stFormSubmitButton"]>button:hover{transform:scale(1.08)!important;
+      box-shadow:0 6px 24px rgba(140,80,240,0.65)!important;}
+    .ct-fn{text-align:center;font-size:0.52rem;color:rgba(140,100,200,0.28);letter-spacing:0.8px;margin-top:5px;}
+    /* Dashboard button top-right */
+    .ct-dash-btn .stButton>button{background:rgba(255,255,255,0.06)!important;
+      border:1px solid rgba(255,255,255,0.12)!important;color:rgba(226,232,240,0.75)!important;
+      box-shadow:none!important;font-size:0.76rem!important;padding:5px 12px!important;
+      border-radius:8px!important;height:30px!important;min-height:30px!important;}
     </style>""", unsafe_allow_html=True)
 
     has_messages = bool(st.session_state.chat_messages)
-    br = st.session_state.branch
     nm = st.session_state.student_name.split()[0]
+    br = st.session_state.branch
 
-    # ── Handle pending pill ───────────────────────────────────────────────
     if st.session_state._pending_pill:
         txt = st.session_state._pending_pill
         st.session_state._pending_pill = ""
-        dispatch_message(txt)
-        st.rerun()
+        dispatch_message(txt); st.rerun()
 
-    # ── TOPBAR ────────────────────────────────────────────────────────────
-    st.markdown(f"""
-    <div class="chat-topbar">
+    # Topbar
+    st.markdown("""<div class="ct-topbar">
       <div style="width:46px;"></div>
-      <div class="tb-logo">
-        <div class="tb-logo-icon">✦</div>
-        AskMNIT
-      </div>
-      <div class="tb-badge">AI</div>
-      <div class="tb-live">● LIVE</div>
-    </div>
-    <div class="topbar-spacer"></div>
-    """, unsafe_allow_html=True)
+      <div class="ct-logo"><div class="ct-logo-icon">✦</div>AskMNIT</div>
+      <div class="ct-badge">AI</div>
+      <div class="ct-live">● LIVE</div>
+    </div><div class="ct-spacer"></div>""", unsafe_allow_html=True)
 
-    # ── SIDEBAR TOGGLE BUTTON (real st.button, position:fixed via CSS) ───
-    st.markdown('<div class="sb-toggle-wrap">', unsafe_allow_html=True)
-    _sb_icon = "✕" if st.session_state.sb_open else "☰"
-    if st.button(_sb_icon, key="_sb_toggle"):
-        st.session_state.sb_open = not st.session_state.sb_open
-        st.rerun()
+    # Hamburger
+    st.markdown('<div class="ct-hbtn">', unsafe_allow_html=True)
+    if st.button("✕" if st.session_state.chat_sb_open else "☰", key="_ct_hbtn"):
+        st.session_state.chat_sb_open = not st.session_state.chat_sb_open; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── SIDEBAR OVERLAY ───────────────────────────────────────────────────
-    _sb_cls = "sb-open" if st.session_state.sb_open else ""
-    st.markdown(f'<div class="sb-overlay {_sb_cls}" id="sb-overlay"></div>', unsafe_allow_html=True)
+    # Overlay + Sidebar
+    _sc = "sb-open" if st.session_state.chat_sb_open else ""
+    st.markdown(f'<div class="ct-sb-overlay {_sc}"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="ct-sidebar {_sc}">', unsafe_allow_html=True)
+    st.markdown('<div class="ct-sb-head">Menu</div>', unsafe_allow_html=True)
 
-    # ── SIDEBAR PANEL ─────────────────────────────────────────────────────
-    st.markdown(f'<div class="chat-sidebar-panel {_sb_cls}">', unsafe_allow_html=True)
-    st.markdown('<div class="sb-head">AskMNIT Menu</div>', unsafe_allow_html=True)
+    # ERP
+    if st.button("🔗  ERP Login", key="_ct_erp"):
+        st.session_state.chat_sb_open = False
+        import streamlit.components.v1 as _cv1
+        _cv1.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
 
-    st.markdown('<div class="sb-new-btn">', unsafe_allow_html=True)
-    if st.button("✦  New Chat", key="_sb_new"):
+    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
+
+    # New Chat
+    st.markdown('<div class="ct-sb-new">', unsafe_allow_html=True)
+    if st.button("✦  New Chat", key="_ct_new"):
         if st.session_state.chat_messages:
-            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"),"Session")
             st.session_state.chat_sessions.append({"label":fu,"messages":list(st.session_state.chat_messages)})
         st.session_state.chat_messages = []
-        st.session_state.attached_file_name = ""
-        st.session_state.sb_open = False; st.rerun()
+        st.session_state.chat_sb_open = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("🕐  Chat History", key="_sb_hist"):
-        st.session_state.show_history_panel = not st.session_state.get("show_history_panel",False)
-        st.session_state.sb_open = False; st.rerun()
+    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="sb-divider"></div><div class="sb-section">Navigation</div>', unsafe_allow_html=True)
+    # Chat History
+    if st.button("🕐  Chat History", key="_ct_hist"):
+        st.session_state.show_chat_history = not st.session_state.get("show_chat_history",False)
+        st.session_state.chat_sb_open = False; st.rerun()
 
-    if st.button("⊞  Back to Dashboard", key="_sb_dash"):
-        st.session_state.view = "dashboard"
-        st.session_state.sb_open = False; st.rerun()
-
-    # ERP opens via JS in a tiny component
-    if st.button("🔗  ERP Login", key="_sb_erp"):
-        st.session_state.sb_open = False
-        components.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
     st.markdown('</div>', unsafe_allow_html=True)  # close sidebar
 
-    # ── HISTORY PANEL ─────────────────────────────────────────────────────
-    if st.session_state.get("show_history_panel"):
-        st.markdown('<div class="hist-panel">', unsafe_allow_html=True)
+    # History panel
+    if st.session_state.get("show_chat_history"):
         with st.expander("🕐 Chat History", expanded=True):
             sessions = st.session_state.chat_sessions
             if not sessions:
-                st.markdown('<div style="font-size:0.76rem;color:rgba(180,160,220,0.35);text-align:center;padding:16px;">No saved chats yet</div>', unsafe_allow_html=True)
+                st.markdown('<div style="font-size:0.76rem;color:rgba(180,160,220,0.35);text-align:center;padding:12px;">No saved chats yet</div>', unsafe_allow_html=True)
             else:
-                for i, sess in enumerate(reversed(sessions[-8:])):
-                    c1, c2 = st.columns([5, 1])
-                    with c1:
-                        st.markdown(f'<div style="font-size:0.76rem;color:rgba(200,180,240,0.65);padding:6px 8px;background:rgba(140,80,255,0.06);border-radius:7px;border:1px solid rgba(140,80,255,0.14);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{sess.get("label","Chat")[:40]}</div>', unsafe_allow_html=True)
+                for i,sess in enumerate(reversed(sessions[-8:])):
+                    c1,c2 = st.columns([5,1])
+                    with c1: st.markdown(f'<div style="font-size:0.74rem;color:rgba(200,180,240,0.65);padding:5px 8px;background:rgba(140,80,255,0.06);border-radius:7px;border:1px solid rgba(140,80,255,0.14);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{sess.get("label","Chat")[:38]}</div>', unsafe_allow_html=True)
                     with c2:
-                        if st.button("↩", key=f"_load_{i}"):
+                        if st.button("↩", key=f"_ct_ld_{i}"):
                             st.session_state.chat_messages = list(sess["messages"])
-                            st.session_state.show_history_panel = False; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+                            st.session_state.show_chat_history = False; st.rerun()
 
-    # ══════════════════════════════════════════════════════════════════════
-    # HERO STATE (no messages)
-    # ══════════════════════════════════════════════════════════════════════
+    # Hero
     if not has_messages:
-        st.markdown(f"""
-        <div class="chat-hero">
-          <div class="hero-orb">✦</div>
-          <div class="hero-title">AskMNIT AI</div>
-          <div class="hero-sub">
-            Hey {nm}! Your smart MNIT senior — always here 🎓<br>
-            Attendance · PYQs · Schedule · Exam prep
-          </div>
+        st.markdown(f"""<div class="ct-hero">
+          <div class="ct-orb">✦</div>
+          <div class="ct-title">AskMNIT AI</div>
+          <div class="ct-sub">Hey {nm}! Your smart MNIT senior 🎓<br>Attendance · PYQs · Schedule · Exam prep</div>
         </div>""", unsafe_allow_html=True)
-
-        # Suggestion pills — real st.buttons
-        pills = [f"📊 My attendance %", f"📅 Next class today?",
-                 f"📚 PYQs for {br}", f"💰 Fee status",
-                 f"📖 Subjects this sem", f"🎯 Exam tips"]
-        _, pc, _ = st.columns([1, 8, 1])
+        pills = ["📊 My attendance %","📅 Next class today?",f"📚 PYQs for {br}",
+                 "💰 Fee status","📖 Subjects this sem","🎯 Exam tips"]
+        _, pc, _ = st.columns([1,8,1])
         with pc:
             r1 = st.columns(4)
-            for i, p in enumerate(pills[:4]):
+            for i,p in enumerate(pills[:4]):
                 with r1[i]:
-                    st.markdown('<div class="pill-wrap">', unsafe_allow_html=True)
-                    if st.button(p, key=f"pill_{i}", use_container_width=True):
+                    st.markdown('<div class="ct-pill">', unsafe_allow_html=True)
+                    if st.button(p, key=f"ct_p_{i}", use_container_width=True):
                         st.session_state._pending_pill = p; st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            _, c1, c2, _ = st.columns([1.5, 2, 2, 1.5])
-            for i, (p, col) in enumerate(zip(pills[4:], [c1, c2])):
+            _, c1, c2, _ = st.columns([1.5,2,2,1.5])
+            for i,(p,col) in enumerate(zip(pills[4:],[c1,c2])):
                 with col:
-                    st.markdown('<div class="pill-wrap">', unsafe_allow_html=True)
-                    if st.button(p, key=f"pill_b_{i}", use_container_width=True):
+                    st.markdown('<div class="ct-pill">', unsafe_allow_html=True)
+                    if st.button(p, key=f"ct_pb_{i}", use_container_width=True):
                         st.session_state._pending_pill = p; st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
-
-    # ══════════════════════════════════════════════════════════════════════
-    # ACTIVE CHAT STATE
-    # ══════════════════════════════════════════════════════════════════════
     else:
-        st.markdown("<div class='chat-msg-area'>", unsafe_allow_html=True)
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='ct-msgs'>", unsafe_allow_html=True)
         for msg in st.session_state.chat_messages:
-            content = msg["content"].replace("\n","<br>")
-            if msg["role"] == "user":
-                st.markdown(f'<div class="msg-user"><div class="bubble-user">{content}</div><div class="msg-av-user">U</div></div>', unsafe_allow_html=True)
+            c = msg["content"].replace("\n","<br>")
+            if msg["role"]=="user":
+                st.markdown(f'<div class="ct-mu"><div class="ct-bu">{c}</div><div class="ct-avu">U</div></div>', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="msg-ai"><div class="msg-av-ai">✦</div><div class="bubble-ai">{content}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="ct-ma"><div class="ct-ava">✦</div><div class="ct-ba">{c}</div></div>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════════════════════════════════
-    # INPUT BAR — always fixed at bottom, pure Streamlit form
-    # ══════════════════════════════════════════════════════════════════════
-    # File chip
-    if st.session_state.attached_file_name:
-        st.markdown(f'<div style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:501;"><div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 10px;background:rgba(140,80,255,0.14);border:1px solid rgba(140,80,255,0.32);border-radius:999px;font-size:0.72rem;color:#c4aaff;">📎 {st.session_state.attached_file_name[:22]}</div></div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="chat-input-zone">', unsafe_allow_html=True)
-
-    with st.form(key="chat_form", clear_on_submit=True):
-        _fc, _fi, _fs = st.columns([0.08, 1, 0.06])
-        with _fc:
-            st.markdown('<div class="icon-btn-wrap">', unsafe_allow_html=True)
-            _attach = st.form_submit_button("📎", help="Attach file")
-            st.markdown('</div>', unsafe_allow_html=True)
+    # Input bar
+    st.markdown('<div class="ct-iz">', unsafe_allow_html=True)
+    with st.form(key="ct_form", clear_on_submit=True):
+        _fi, _fs = st.columns([1, 0.06])
         with _fi:
-            _user_text = st.text_input("msg", placeholder="Ask AskMNIT anything...",
-                                       label_visibility="collapsed", key="_chat_input_field")
+            _txt = st.text_input("m", placeholder="Ask AskMNIT anything...",
+                                 label_visibility="collapsed", key="_ct_input")
         with _fs:
-            st.markdown('<div class="send-btn-wrap">', unsafe_allow_html=True)
+            st.markdown('<div class="ct-send">', unsafe_allow_html=True)
             _send = st.form_submit_button("↑")
             st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ct-fn">AskMNIT AI may make mistakes · Verify with official ERP</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="footer-note">AskMNIT AI may make mistakes · Verify with official ERP</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)  # close input-zone
+    if _send and _txt and _txt.strip():
+        dispatch_message(_txt.strip()); st.rerun()
 
-    # File uploader (shown when attach clicked)
-    if st.session_state.get("show_uploader"):
-        with st.expander("📎 Attach File", expanded=True):
-            _uf = st.file_uploader("Choose file", type=["pdf","txt","png","jpg","docx","csv"], key="chat_file_up")
-            if _uf:
-                st.session_state.attached_file_name = _uf.name
-                st.session_state.show_uploader = False
-                st.toast(f"📎 {_uf.name} attached!", icon="✅"); st.rerun()
-            if st.button("Cancel", key="cancel_upload"):
-                st.session_state.show_uploader = False; st.rerun()
-
-    # ── Handle form submissions ───────────────────────────────────────────
-    if _attach:
-        st.session_state.show_uploader = True; st.rerun()
-
-    if _send and _user_text and _user_text.strip():
-        msg = _user_text.strip()
-        if st.session_state.attached_file_name:
-            msg += f" [File: {st.session_state.attached_file_name}]"
-        dispatch_message(msg)
-        st.session_state.attached_file_name = ""
-        st.rerun()
+    # Dashboard back button
+    st.markdown('<div style="position:fixed;top:10px;right:16px;z-index:10000;"><div class="ct-dash-btn">', unsafe_allow_html=True)
+    if st.button("⊞ Dashboard", key="_ct_back"):
+        st.session_state.view = "dashboard"; st.rerun()
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
     st.stop()
-
 
 ###############################################################################
 # DASHBOARD VIEW  (100% UNCHANGED)
@@ -674,10 +483,6 @@ with srow2:
 with srow3:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
     if st.button("Notifications",key="open_notif"): st.toast("No new notifications.",icon="🔔")
-    st.markdown('</div>', unsafe_allow_html=True)
-with srow5:
-    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
-    if st.button("Open AskMNIT AI",key="btn_open_chat_dash"): st.session_state.view="chat"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 mode=st.session_state.settings_mode

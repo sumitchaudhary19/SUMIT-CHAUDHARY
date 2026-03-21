@@ -180,70 +180,100 @@ if st.session_state.get("view") == "chat":
     st.markdown("""<style>
     [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"]{display:none!important;}
-    section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
+    section[data-testid="stMain"]{margin-left:200px!important;padding-left:0!important;}
 
-    /* Sidebar panel */
-    .cs-panel{
+    /* Permanent sidebar */
+    .cs-sidebar{
       position:fixed;top:0;left:0;width:200px;height:100vh;
       background:#1a1a2e;border-right:1px solid #333;
-      z-index:9000;padding:16px 10px;
-      transform:translateX(-100%);
-      transition:transform 0.25s ease;
+      z-index:100;display:flex;flex-direction:column;
+      padding:20px 0 0 0;
     }
-    .cs-panel.open{transform:translateX(0);}
-
-    /* Toggle button — always visible, moves with sidebar */
-    .cs-hbtn .stButton>button{
-      position:fixed!important;
-      top:12px!important;
-      left:0px!important;
-      z-index:10001!important;
-      width:32px!important;height:32px!important;
-      min-width:32px!important;min-height:32px!important;
-      background:#1a1a2e!important;border:1px solid #555!important;
-      color:#ccc!important;font-size:0.85rem!important;font-weight:400!important;
-      padding:0!important;line-height:1!important;
-      border-radius:0 6px 6px 0!important;box-shadow:none!important;
-      transition:left 0.25s ease!important;
+    .cs-logo{
+      font-size:0.78rem;font-weight:700;color:#aaa;
+      letter-spacing:1px;text-transform:uppercase;
+      padding:0 16px 16px;border-bottom:1px solid #2a2a3e;
+      margin-bottom:8px;
     }
-    .cs-hbtn-open .stButton>button{
-      left:200px!important;
+    /* Tab buttons inside sidebar */
+    .cs-tab-btn .stButton>button{
+      background:#1a1a2e!important;border:none!important;
+      border-bottom:1px solid #2a2a3e!important;
+      color:#bbb!important;font-size:0.85rem!important;font-weight:500!important;
+      text-align:left!important;justify-content:flex-start!important;
+      padding:14px 20px!important;border-radius:0!important;
+      width:100%!important;box-shadow:none!important;
+      height:56px!important;min-height:56px!important;
     }
-    .cs-hbtn .stButton>button:hover,.cs-hbtn-open .stButton>button:hover{
-      background:#2a2a3e!important;color:#fff!important;transform:none!important;
+    .cs-tab-btn .stButton>button:hover{
+      background:#252540!important;color:#fff!important;transform:none!important;
     }
 
-    /* Chat area */
-    .chat-area{padding:20px 16px 40px;max-width:800px;margin:0 auto;}
+    /* Chat area — offset for sidebar */
+    .chat-area{padding:20px 24px 40px;max-width:860px;}
     .msg-u{text-align:right;margin:8px 0;}
     .msg-a{text-align:left;margin:8px 0;}
     .bub-u{display:inline-block;background:#2563eb;color:#fff;
-      padding:9px 14px;border-radius:14px 14px 2px 14px;font-size:0.85rem;max-width:70%;text-align:left;}
-    .bub-a{display:inline-block;background:#2a2a3e;color:#e0e0e0;
-      padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
+      padding:9px 14px;border-radius:14px 14px 2px 14px;
+      font-size:0.85rem;max-width:65%;text-align:left;}
+    .bub-a{display:inline-block;background:#252540;color:#e0e0e0;
+      padding:9px 14px;border-radius:14px 14px 14px 2px;
+      font-size:0.85rem;max-width:65%;text-align:left;}
     </style>""", unsafe_allow_html=True)
 
-    # ── Toggle button (always visible on sidebar right edge) ─────────────
-    _sb_cls = "cs-hbtn-open" if st.session_state.chat_sb_open else "cs-hbtn"
-    _sb_icon = "✕" if st.session_state.chat_sb_open else "☰"
-    st.markdown(f'<div class="{_sb_cls}">', unsafe_allow_html=True)
-    if st.button(_sb_icon, key="_cs_hbtn"):
-        st.session_state.chat_sb_open = not st.session_state.chat_sb_open
-        st.rerun()
+    # ── PERMANENT SIDEBAR ─────────────────────────────────────────────────
+    st.markdown('<div class="cs-sidebar">', unsafe_allow_html=True)
+    st.markdown('<div class="cs-logo">AskMNIT</div>', unsafe_allow_html=True)
+
+    # Tab 1 — New Chat
+    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
+    if st.button("✦  New Chat", key="_cs_new", use_container_width=True):
+        if st.session_state.chat_messages:
+            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+            st.session_state.chat_sessions.append({"label":fu,"messages":list(st.session_state.chat_messages)})
+        st.session_state.chat_messages = []; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Overlay ───────────────────────────────────────────────────────────
-    _oc = "open" if st.session_state.chat_sb_open else ""
-    st.markdown(f'<div class="cs-overlay {_oc}"></div>', unsafe_allow_html=True)
-
-    # ── Sidebar panel ─────────────────────────────────────────────────────
-    st.markdown(f'<div class="cs-panel {_oc}">', unsafe_allow_html=True)
+    # Tab 2 — ERP Login
+    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
+    if st.button("🔗  ERP Login", key="_cs_erp", use_container_width=True):
+        import streamlit.components.v1 as _c
+        _c.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # Tab 3 — Chat History
+    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
+    if st.button("🕐  Chat History", key="_cs_hist", use_container_width=True):
+        st.session_state.show_chat_history = not st.session_state.get("show_chat_history", False); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Tab 4 — Dashboard
+    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
+    if st.button("⊞  Dashboard", key="_cs_dash", use_container_width=True):
+        st.session_state.view = "dashboard"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close sidebar
+
+    # ── Chat History panel ────────────────────────────────────────────────
+    if st.session_state.get("show_chat_history"):
+        with st.expander("🕐 Chat History", expanded=True):
+            sessions = st.session_state.chat_sessions
+            if not sessions:
+                st.write("No saved chats yet.")
+            else:
+                for i, sess in enumerate(reversed(sessions[-8:])):
+                    c1, c2 = st.columns([5,1])
+                    with c1: st.write(sess.get("label","Chat")[:40])
+                    with c2:
+                        if st.button("↩", key=f"_cs_ld_{i}"):
+                            st.session_state.chat_messages = list(sess["messages"])
+                            st.session_state.show_chat_history = False; st.rerun()
 
     # ── Messages ──────────────────────────────────────────────────────────
     st.markdown('<div class="chat-area">', unsafe_allow_html=True)
     if not st.session_state.chat_messages:
-        st.markdown('<p style="color:#666;text-align:center;margin-top:40px;">AskMNIT AI — No messages yet</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#555;text-align:center;margin-top:40px;">AskMNIT AI — No messages yet</p>', unsafe_allow_html=True)
     else:
         for msg in st.session_state.chat_messages:
             c = msg["content"].replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")

@@ -348,6 +348,13 @@ if st.session_state.get("view") == "chat":
         st.session_state.show_chat_history = not st.session_state.get("show_chat_history",False)
         st.session_state.chat_sb_open = False; st.rerun()
 
+    st.markdown('<div class="ct-sb-div"></div>', unsafe_allow_html=True)
+
+    # Back to Dashboard
+    if st.button("⊞  Back to Dashboard", key="_ct_back_sb"):
+        st.session_state.view = "dashboard"
+        st.session_state.chat_sb_open = False; st.rerun()
+
     st.markdown('</div>', unsafe_allow_html=True)  # close sidebar
 
     # History panel
@@ -471,7 +478,7 @@ with h_right:
     av_html=(f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh2}55;">' if pp else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh2},{bh2}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh2}55;">{initials(nm2)}</div>')
     st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm2}</div><div style="font-size:0.58rem;color:{bh2};font-weight:600;">{br2} · {sem2}</div></div></div>', unsafe_allow_html=True)
 st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
-srow1,srow2,srow3,_,srow5=st.columns([1,1,1,1,1])
+srow1,srow2,srow3,srow4,_=st.columns([1,1,1,1,1])
 with srow1:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
     if st.button("Settings & Profile",key="open_settings"): st.session_state.settings_mode=None if st.session_state.settings_mode=="profile" else "profile"; st.rerun()
@@ -483,6 +490,11 @@ with srow2:
 with srow3:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
     if st.button("Notifications",key="open_notif"): st.toast("No new notifications.",icon="🔔")
+    st.markdown('</div>', unsafe_allow_html=True)
+with srow4:
+    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
+    if st.button("✦  AskMNIT AI", key="open_chatbot"):
+        st.session_state.view = "chat"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 mode=st.session_state.settings_mode

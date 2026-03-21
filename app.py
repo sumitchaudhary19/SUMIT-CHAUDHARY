@@ -1,11 +1,12 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AskMNIT — v8.0 FIXED PREMIUM                                               ║
-# ║  Chat: components.html() full-page + query params for message handling      ║
+# ║  AskMNIT — v2.0 PREMIUM CHATBOT  (Dashboard untouched)                      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
 import streamlit.components.v1 as components
-import datetime, random, base64
+import datetime
+import random
+import base64
 
 st.set_page_config(
     page_title="AskMNIT",
@@ -18,22 +19,22 @@ st.set_page_config(
 # SUBJECT DATABASE
 # ─────────────────────────────────────────────────────────────────────────────
 COMMON_SUBJECTS = [
-    "Mathematics I/II","Physics","Chemistry","Computer Programming",
-    "Basic Electrical","Basic Electronics","Basic Mechanical",
-    "Engineering Drawing","Environmental Science",
-    "Technical Communication","Basic Economics",
+    "Mathematics I/II", "Physics", "Chemistry", "Computer Programming",
+    "Basic Electrical", "Basic Electronics", "Basic Mechanical",
+    "Engineering Drawing", "Environmental Science",
+    "Technical Communication", "Basic Economics",
 ]
-BRANCH_SUBJECTS = {
-    "CSE":        ["Discrete Mathematics","Problem Solving using C"],
-    "AI & ML":    ["Mathematics for AI","Data Structures and Algorithms"],
-    "ECE":        ["Signals and Systems","Electronic Devices and Circuits"],
-    "Civil":      ["Mechanics of Solid","Engineering Geology"],
-    "Metallurgy": ["Engineering Materials","Mineral Processing"],
+BRANCH_SUBJECTS: dict[str, list[str]] = {
+    "CSE":        ["Discrete Mathematics", "Problem Solving using C"],
+    "AI & ML":    ["Mathematics for AI", "Data Structures and Algorithms"],
+    "ECE":        ["Signals and Systems", "Electronic Devices and Circuits"],
+    "Civil":      ["Mechanics of Solid", "Engineering Geology"],
+    "Metallurgy": ["Engineering Materials", "Mineral Processing"],
 }
-BRANCHES  = ["CSE","AI & ML","ECE","Civil","Metallurgy"]
-SEMESTERS = [f"Semester {i}" for i in range(1,9)]
-DAYS      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-TYPE_COLORS = {"Lecture":"#22D3EE","Lab":"#F59E0B","Tutorial":"#A78BFA"}
+BRANCHES  = ["CSE", "AI & ML", "ECE", "Civil", "Metallurgy"]
+SEMESTERS = [f"Semester {i}" for i in range(1, 9)]
+DAYS      = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+TYPE_COLORS = {"Lecture": "#22D3EE", "Lab": "#F59E0B", "Tutorial": "#A78BFA"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
@@ -41,166 +42,247 @@ TYPE_COLORS = {"Lecture":"#22D3EE","Lab":"#F59E0B","Tutorial":"#A78BFA"}
 def process_schedule_pdf(file, branch):
     pool = COMMON_SUBJECTS[:4] + BRANCH_SUBJECTS.get(branch, [])
     random.seed(42)
-    TIME_PAIRS = [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),
-                  ("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]
+    TIME_PAIRS = [
+        ("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),
+        ("12:00","13:00"),("14:00","15:00"),("15:30","16:30"),
+    ]
     sched = {}
     for day in DAYS[:6]:
         chosen = sorted(random.sample(range(len(TIME_PAIRS)), k=random.randint(2,4)))
-        sched[day] = [{"time_start":TIME_PAIRS[ci][0],"time_end":TIME_PAIRS[ci][1],
-             "subject":random.choice(pool),"room":random.choice(["LT-1","LT-2","Lab-A","Lab-B","CR-3","CR-5"]),
-             "type":random.choice(["Lecture","Lecture","Lab","Tutorial"])} for ci in chosen]
+        sched[day] = [
+            {"time_start":TIME_PAIRS[ci][0],"time_end":TIME_PAIRS[ci][1],
+             "subject":random.choice(pool),
+             "room":random.choice(["LT-1","LT-2","Lab-A","Lab-B","CR-3","CR-5"]),
+             "type":random.choice(["Lecture","Lecture","Lab","Tutorial"])}
+            for ci in chosen
+        ]
     return sched
 
-def get_today_slots(fs):  return fs.get(datetime.datetime.now().strftime("%A"), [])
+def get_today_slots(fs):
+    return fs.get(datetime.datetime.now().strftime("%A"), [])
+
 def get_next_class(slots):
     now = datetime.datetime.now()
     for slot in slots:
-        h,m = map(int, slot["time_start"].split(":"))
-        dt = now.replace(hour=h,minute=m,second=0,microsecond=0)
-        if dt > now: return {**slot,"minutes_away":int((dt-now).total_seconds()//60)}
+        h, m = map(int, slot["time_start"].split(":"))
+        dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
+        if dt > now:
+            return {**slot, "minutes_away": int((dt - now).total_seconds() // 60)}
     return None
 
-def subjects_for_branch(b): return COMMON_SUBJECTS + BRANCH_SUBJECTS.get(b,[])
-def blank_att(s):  return {x:{"present":0,"total":0} for x in s}
-def att_pct(r):    return round(r["present"]/r["total"]*100,1) if r["total"] else 0.0
+def subjects_for_branch(b): return COMMON_SUBJECTS + BRANCH_SUBJECTS.get(b, [])
+def blank_att(s):           return {x: {"present":0,"total":0} for x in s}
+def att_pct(r):             return round(r["present"]/r["total"]*100,1) if r["total"] else 0.0
 def overall_pct(a):
-    tp=sum(r["present"] for r in a.values()); tt=sum(r["total"] for r in a.values())
+    tp = sum(r["present"] for r in a.values())
+    tt = sum(r["total"]   for r in a.values())
     return round(tp/tt*100,1) if tt else 0.0
 def status_badge(p):
     if p>=75: return "Safe","#10B981","rgba(16,185,129,0.12)"
     if p>=65: return "Low","#F59E0B","rgba(245,158,11,0.12)"
     return "Critical","#EF4444","rgba(239,68,68,0.12)"
-def att_color(p):  return "#10B981" if p>=75 else "#F59E0B" if p>=65 else "#EF4444"
-def initials(n):   return "".join(w[0].upper() for w in n.split()[:2]) if n else "??"
-def branch_hex(b): return {"CSE":"#3B82F6","AI & ML":"#8B5CF6","ECE":"#06B6D4","Civil":"#F59E0B","Metallurgy":"#10B981"}.get(b,"#6366F1")
+def att_color(p):   return "#10B981" if p>=75 else "#F59E0B" if p>=65 else "#EF4444"
+def initials(n):    return "".join(w[0].upper() for w in n.split()[:2]) if n else "??"
+def branch_hex(b):  return {"CSE":"#3B82F6","AI & ML":"#8B5CF6","ECE":"#06B6D4","Civil":"#F59E0B","Metallurgy":"#10B981"}.get(b,"#6366F1")
 def img_to_b64(f):
-    d=f.read(); m=f.type or "image/png"; return f"data:{m};base64,{base64.b64encode(d).decode()}"
+    d=f.read(); m=f.type or "image/png"
+    return f"data:{m};base64,{base64.b64encode(d).decode()}"
 def fmt_time(t):
     try:
         h,m=map(int,t.split(":")); return f"{h%12 or 12:02d}:{m:02d} {'AM' if h<12 else 'PM'}"
     except: return t
 def _safe_key(s): return "".join(c if c.isalnum() else "_" for c in s)
-def esc(s): return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace('"',"&quot;")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SESSION STATE
 # ─────────────────────────────────────────────────────────────────────────────
 _def_branch = "CSE"
 _DEFAULTS = {
-    "view":"dashboard","nav_page":"My Dashboard",
-    "student_name":"Sumit Chaudhary","college_id":"2022UMT1234",
-    "semester":"Semester 6","branch":_def_branch,"profile_pic_b64":"",
-    "settings_mode":None,"attendance":blank_att(subjects_for_branch(_def_branch)),
-    "schedule_loaded":False,"full_schedule":{},"pdf_filename":"",
-    "notes_list":[
+    "view":              "dashboard",
+    "nav_page":          "My Dashboard",
+    "student_name":      "Sumit Chaudhary",
+    "college_id":        "2022UMT1234",
+    "semester":          "Semester 6",
+    "branch":            _def_branch,
+    "profile_pic_b64":   "",
+    "settings_mode":     None,
+    "attendance":        blank_att(subjects_for_branch(_def_branch)),
+    "schedule_loaded":   False,
+    "full_schedule":     {},
+    "pdf_filename":      "",
+    "notes_list": [
         {"text":"Mid-sem revision starts Monday","pinned":False},
         {"text":"Submit fee by 17 Mar","pinned":False},
         {"text":"Collect hall ticket from ERP","pinned":False},
     ],
-    "ql_feedback":"","chat_messages":[],"chat_sessions":[],
-    "is_recording":False,"planner_overrides":{},
-    "attached_file_name":"","response_style":"Concise",
-    "_lct":"","_lsbt":"","_laft":"","_lmic":"",
+    "ql_feedback":       "",
+    # ── CHATBOT STATE ──
+    "chat_messages":     [],
+    "chat_sessions":     [],
+    "chat_input_text":   "",
+    "attached_file_name": "",
+    "is_recording":      False,
+    "voice_transcript":  "",
+    "_voice_submit":     False,
+    "show_uploader":     False,
+    "response_style":    "Concise",
+    "voice_output":      False,
+    "strict_mode":       False,
+    "show_history_panel": False,
+    "show_settings_panel": False,
+    "sb_open":           False,
 }
-for k,v in _DEFAULTS.items():
-    if k not in st.session_state: st.session_state[k] = v
+for k, v in _DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # ─────────────────────────────────────────────────────────────────────────────
 # AI RESPONSE GENERATOR
 # ─────────────────────────────────────────────────────────────────────────────
-def _build_student_context():
-    att=st.session_state.attendance; br=st.session_state.branch
-    nm=st.session_state.student_name; sem=st.session_state.semester; ov=overall_pct(att)
-    low=[(s,att_pct(r)) for s,r in att.items() if att_pct(r)<75 and r["total"]>0]
-    good=[(s,att_pct(r)) for s,r in att.items() if att_pct(r)>=75 and r["total"]>0]
-    att_summary=f"Overall attendance: {ov}%\n"
+def _build_student_context() -> str:
+    att  = st.session_state.attendance
+    br   = st.session_state.branch
+    nm   = st.session_state.student_name
+    sem  = st.session_state.semester
+    ov   = overall_pct(att)
+    low  = [(s, att_pct(r)) for s, r in att.items() if att_pct(r) < 75 and r["total"] > 0]
+    good = [(s, att_pct(r)) for s, r in att.items() if att_pct(r) >= 75 and r["total"] > 0]
+    att_summary = f"Overall attendance: {ov}%\n"
     if low:
-        att_summary+="BELOW 75%:\n"
-        for s,p in low:
-            r=att[s]; need=max(0,int((0.75*r["total"]-r["present"])/0.25)+1)
-            att_summary+=f"  - {s}: {p}% ({r['present']}/{r['total']}) — needs {need} more\n"
+        att_summary += "BELOW 75% (critical):\n"
+        for s, p in low:
+            r = att[s]
+            need = max(0, int((0.75 * r["total"] - r["present"]) / 0.25) + 1)
+            att_summary += f"  - {s}: {p}% ({r['present']}/{r['total']}) — needs {need} more classes\n"
     if good:
-        att_summary+="Above 75%:\n"
-        for s,p in good[:5]: att_summary+=f"  - {s}: {p}%\n"
-    sched_summary="Schedule not uploaded yet."
+        att_summary += "Above 75%:\n"
+        for s, p in good[:5]:
+            att_summary += f"  - {s}: {p}%\n"
+    sched_summary = "Schedule not uploaded yet."
     if st.session_state.schedule_loaded:
-        today_slots=get_today_slots(st.session_state.full_schedule)
-        nxt=get_next_class(today_slots); dn=datetime.datetime.now().strftime("%A")
+        today_slots = get_today_slots(st.session_state.full_schedule)
+        nxt = get_next_class(today_slots)
+        dn  = datetime.datetime.now().strftime("%A")
         if today_slots:
-            sched_summary=f"Today ({dn}):\n"
+            sched_summary = f"Today ({dn}):\n"
             for sl in today_slots:
-                sched_summary+=f"  {fmt_time(sl['time_start'])}-{fmt_time(sl['time_end'])}: {sl['subject']} @ {sl['room']} ({sl['type']})\n"
-            sched_summary+=f"Next: {nxt['subject']} in {nxt['minutes_away']} min\n" if nxt else "No more classes today.\n"
-        else: sched_summary=f"No classes today ({dn})."
-    return f"""Student: {nm} | Branch: {br} | Semester: {sem} | ID: {st.session_state.college_id}
+                sched_summary += f"  {fmt_time(sl['time_start'])}–{fmt_time(sl['time_end'])}: {sl['subject']} @ {sl['room']} ({sl['type']})\n"
+            sched_summary += f"Next class: {nxt['subject']} in {nxt['minutes_away']} min\n" if nxt else "No more classes today.\n"
+        else:
+            sched_summary = f"No classes today ({dn})."
+    return f"""
+Student: {nm} | Branch: {br} | Semester: {sem} | ID: {st.session_state.college_id}
 Subjects: {", ".join(subjects_for_branch(br))}
 Attendance: {att_summary}
 Schedule: {sched_summary}
-Response style: {st.session_state.response_style}"""
+Response style pref: {st.session_state.response_style}
+"""
 
 def _detect_mood(text):
-    t=text.lower()
-    if any(w in t for w in ["stressed","tension","worried","exam tension","fail","nahi hua","confused"]): return "STRESSED — warm and reassuring first"
-    if any(w in t for w in ["happy","khush","amazing","cleared","hogaya","yay"]): return "EXCITED — match energy"
-    if any(w in t for w in ["angry","gussa","bakwas","worst","frustrat"]): return "FRUSTRATED — validate first"
-    if any(w in t for w in ["thak","tired","neend","exhausted"]): return "TIRED — gentle and short"
-    return "NEUTRAL — friendly and natural"
+    t = text.lower()
+    if any(w in t for w in ["stressed","tension","worried","dar","bhot pressure","exam tension","fail","nahi hua","rona","roo","samajh nahi","confused"]):
+        return "STRESSED/ANXIOUS — be warm and reassuring first, solutions after"
+    if any(w in t for w in ["happy","khush","amazing","got","cleared","hogaya","yay","😄","🎉","🥳","woah","lets go"]):
+        return "EXCITED/HAPPY — match their energy, celebrate with them"
+    if any(w in t for w in ["bored","kya karu","nothing","bakwaas","boring","time pass"]):
+        return "BORED — be playful and engaging"
+    if any(w in t for w in ["angry","gussa","bakwas","worst","hate","ugh","aarrgh","irritating","frustrat"]):
+        return "FRUSTRATED — validate their feelings immediately before solving"
+    if any(w in t for w in ["thak","tired","neend","so raha","sleep","exhausted"]):
+        return "TIRED — be gentle, keep it short and supportive"
+    return "NEUTRAL/CASUAL — be friendly and natural"
 
 def generate_ai_response(last: str) -> str:
     import requests
-    nm=st.session_state.student_name.split()[0]
-    system_prompt=f"""You are AskMNIT — {nm}'s brilliant senior at MNIT Jaipur.
-Mood: {_detect_mood(last)}
-Personality: warm, funny, mix Hinglish naturally, short punchy sentences.
-Student data:
-{_build_student_context()}
-Rules:
-1. Call them "{nm}" or "yaar/bhai"
-2. Attendance math must be EXACT
-3. If unsure say "yaar iske baare mein sure nahi, ERP check kar"
-4. Never say "I'm an AI" — you're AskMNIT"""
+    nm          = st.session_state.student_name.split()[0]
+    br          = st.session_state.branch
+    student_ctx = _build_student_context()
+    mood_hint   = _detect_mood(last)
+    system_prompt = f"""You are AskMNIT — not a bot, but {nm}'s most brilliant and chill senior at MNIT Jaipur.
 
-    api_messages=[]
-    for msg in st.session_state.chat_messages[:-1][-14:]:
-        api_messages.append({"role":msg["role"],"content":msg["content"]})
-    api_messages.append({"role":"user","content":last})
+DETECTED STUDENT MOOD: {mood_hint}
+→ Adjust tone accordingly from the first word.
 
-    GROQ_API_KEY=st.secrets.get("GROQ_API_KEY","") or st.session_state.get("groq_api_key","")
+YOUR PERSONALITY:
+- Warm like a best friend, sharp like a topper
+- Naturally mix Hindi + English (Hinglish) if student uses it
+- Funny when appropriate — NEVER sound like a corporate chatbot
+- Short punchy sentences > long paragraphs
+- When stressed → acknowledge feeling first, THEN help
+- When excited → vibe with them first
+
+STUDENT DATA:
+{student_ctx}
+
+HARD RULES:
+1. Call them "{nm}" or "yaar/bhai" — never "user" or "student"
+2. Attendance math must be EXACT using data above
+3. Schedule info must come EXACTLY from data above
+4. If unsure → say "yaar iske baare mein sure nahi, ERP check kar"
+5. NEVER say "I'm an AI" — you're AskMNIT, {nm}'s senior
+6. Keep it conversational and natural"""
+
+    history = st.session_state.chat_messages[:-1]
+    api_messages = []
+    for msg in history[-16:]:
+        api_messages.append({"role": msg["role"], "content": msg["content"]})
+    api_messages.append({"role": "user", "content": last})
+
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "") or st.session_state.get("groq_api_key", "")
     if not GROQ_API_KEY:
-        return "Yaar, Groq API key set nahi hai 😅\n\n`.streamlit/secrets.toml` mein `GROQ_API_KEY = 'gsk_...'` add kar, phir restart kar!"
+        return (f"Yaar, Groq API key set nahi hai abhi 😅\n\n"
+                f"`.streamlit/secrets.toml` mein `GROQ_API_KEY = 'gsk_...'` add kar, phir restart kar!")
     try:
-        resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization":f"Bearer {GROQ_API_KEY}","Content-Type":"application/json"},
-            json={"model":"llama-3.3-70b-versatile",
-                  "messages":[{"role":"system","content":system_prompt},*api_messages],
-                  "max_tokens":900,"temperature":0.82,"top_p":0.90},
-            timeout=30)
-        data=resp.json()
-        if resp.status_code==200: return data["choices"][0]["message"]["content"].strip()
-        return f"Groq error: {data.get('error',{}).get('message','unknown')}"
-    except requests.Timeout: return "Yaar connection slow hai ⏳ — thodi der baad try kar!"
-    except Exception as e:   return f"Kuch gadbad hai 😅 — {str(e)[:60]}"
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role":"system","content":system_prompt}, *api_messages],
+                "max_tokens": 900, "temperature": 0.82, "top_p": 0.90, "stream": False,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+        if resp.status_code == 200:
+            return data["choices"][0]["message"]["content"].strip()
+        else:
+            err = data.get("error", {}).get("message", "Unknown Groq error")
+            return f"Arrey yaar, Groq API ne chakkar de diya 😬\n`{err}`\n\nThodi der baad try kar!"
+    except requests.Timeout:
+        return "Yaar connection slow lag raha hai ⏳ — ek minute ruk ke dobara try kar!"
+    except Exception as e:
+        return f"Kuch toh gadbad hai yaar 😅 ({str(e)[:80]})\n\nInternet/API key check kar!"
 
 def dispatch_message(text: str):
-    text=text.strip()
+    text = text.strip()
     if not text: return
     st.session_state.chat_messages.append({"role":"user","content":text})
-    with st.spinner("AskMNIT soch raha hai..."):
-        reply=generate_ai_response(text)
+    with st.spinner(""):
+        reply = generate_ai_response(text)
     st.session_state.chat_messages.append({"role":"assistant","content":reply})
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DASHBOARD CSS
+# GLOBAL CSS
 # ─────────────────────────────────────────────────────────────────────────────
-DASH_CSS = """<style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700;9..144,900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 *,html,body{box-sizing:border-box;margin:0;padding:0;}
-html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{font-family:'Outfit',sans-serif!important;background:#070B14!important;color:#E2E8F0!important;}
+html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{font-family:'Inter',sans-serif!important;}
 header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none!important;}
 [data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important;}
+
+/* Dashboard sidebar */
 [data-testid="stSidebar"]{background:#0B1120!important;border-right:1px solid rgba(59,130,246,0.16)!important;min-width:260px!important;max-width:260px!important;}
 [data-testid="stSidebar"]>div{padding:0!important;}
-.stButton>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;color:#fff!important;border:none!important;border-radius:9px!important;font-family:'Outfit',sans-serif!important;font-weight:600!important;font-size:0.82rem!important;padding:9px 16px!important;box-shadow:0 3px 14px rgba(37,99,235,0.20)!important;transition:all 0.16s ease!important;}
+.sb-section-header{font-family:'DM Mono',monospace;font-size:0.60rem;font-weight:700;color:rgba(148,163,184,0.50);text-transform:uppercase;letter-spacing:1.4px;padding:14px 16px 6px;border-top:1px solid rgba(255,255,255,0.05);margin-top:4px;}
+[data-testid="stSidebar"] .stButton>button{background:rgba(239,68,68,0.10)!important;border:1px solid rgba(239,68,68,0.28)!important;color:#FCA5A5!important;border-radius:8px!important;font-size:0.80rem!important;font-weight:600!important;padding:7px 14px!important;box-shadow:none!important;}
+[data-testid="stSidebar"] .stButton>button:hover{background:rgba(239,68,68,0.20)!important;transform:none!important;}
+
+/* ── Global buttons ── */
+.stButton>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;color:#fff!important;border:none!important;border-radius:9px!important;font-family:'Inter',sans-serif!important;font-weight:600!important;font-size:0.82rem!important;padding:9px 16px!important;box-shadow:0 3px 14px rgba(37,99,235,0.20)!important;transition:all 0.16s ease!important;}
 .stButton>button:hover{opacity:.88!important;transform:translateY(-1px)!important;}
 .ghost-btn .stButton>button{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(226,232,240,.55)!important;box-shadow:none!important;}
 .present-btn .stButton>button{background:linear-gradient(135deg,#065F46,#10B981)!important;box-shadow:0 2px 10px rgba(16,185,129,.18)!important;padding:6px 11px!important;font-size:0.75rem!important;border-radius:7px!important;}
@@ -210,599 +292,850 @@ header[data-testid="stHeader"],footer,#MainMenu,[data-testid="stToolbar"],[data-
 .del-btn .stButton>button{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.18)!important;color:rgba(252,165,165,0.70)!important;box-shadow:none!important;font-size:0.68rem!important;padding:3px 8px!important;border-radius:6px!important;}
 .ql-btn .stButton>button{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(186,230,253,.65)!important;box-shadow:none!important;text-align:left!important;justify-content:flex-start!important;font-size:0.80rem!important;padding:9px 14px!important;border-radius:9px!important;}
 .logout-btn .stButton>button{background:rgba(239,68,68,.09)!important;border:1px solid rgba(239,68,68,.20)!important;color:#FCA5A5!important;box-shadow:none!important;font-size:0.80rem!important;}
-.open-chat-btn .stButton>button{background:linear-gradient(135deg,#059669,#10B981)!important;border-radius:12px!important;font-weight:700!important;font-size:0.88rem!important;padding:11px 22px!important;box-shadow:0 5px 24px rgba(16,185,129,.36)!important;font-family:'DM Mono',monospace!important;}
+.open-chat-btn .stButton>button{background:linear-gradient(135deg,#059669,#10B981)!important;border-radius:12px!important;font-weight:700!important;font-size:0.88rem!important;padding:11px 22px!important;box-shadow:0 5px 24px rgba(16,185,129,.36)!important;}
 .settings-menu-btn .stButton>button{background:rgba(255,255,255,0.06)!important;border:1px solid rgba(255,255,255,0.12)!important;color:rgba(226,232,240,0.75)!important;box-shadow:none!important;font-size:0.82rem!important;font-weight:600!important;padding:8px 16px!important;border-radius:10px!important;}
 .nav-btn .stButton>button{background:transparent!important;color:rgba(148,163,184,.65)!important;border:none!important;box-shadow:none!important;text-align:left!important;justify-content:flex-start!important;padding:10px 14px!important;font-size:0.83rem!important;font-weight:500!important;border-radius:8px!important;}
 .nav-btn .stButton>button:hover{background:rgba(59,130,246,.10)!important;color:#BAE6FD!important;transform:none!important;}
 .nav-btn-active .stButton>button{background:rgba(59,130,246,.14)!important;color:#60A5FA!important;border-left:2px solid #3B82F6!important;font-weight:700!important;box-shadow:none!important;}
-[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;font-family:'Outfit',sans-serif!important;font-size:0.87rem!important;}
+
+/* ── Inputs ── */
+[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;font-family:'Inter',sans-serif!important;font-size:0.87rem!important;}
 [data-testid="stTextInput"] input:focus,[data-testid="stTextArea"] textarea:focus{border-color:rgba(59,130,246,0.55)!important;box-shadow:0 0 0 2.5px rgba(59,130,246,0.13)!important;}
 [data-testid="stTextInput"] label,[data-testid="stTextArea"] label{color:rgba(148,163,184,0.55)!important;font-size:0.70rem!important;font-weight:600!important;text-transform:uppercase!important;letter-spacing:0.6px!important;}
 [data-testid="stSelectbox"]>div>div{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;}
-[data-testid="stSelectbox"] label{color:rgba(148,163,184,0.55)!important;font-size:0.70rem!important;font-weight:600!important;text-transform:uppercase!important;}
 [data-testid="stFileUploader"]{background:rgba(59,130,246,0.04)!important;border:1px dashed rgba(59,130,246,0.26)!important;border-radius:12px!important;}
+[data-testid="stToggle"] label{color:#E2E8F0!important;font-size:0.86rem!important;}
 [data-testid="stExpander"]{background:rgba(255,255,255,.018)!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:12px!important;}
 [data-testid="stProgress"]>div>div{border-radius:99px!important;background:linear-gradient(90deg,#2563EB,#22D3EE)!important;}
 [data-testid="stProgress"]>div{background:rgba(255,255,255,.07)!important;border-radius:99px!important;height:5px!important;}
 h1,h2,h3,h4{font-family:'DM Mono',monospace!important;font-weight:500!important;}
-[data-testid="stMarkdown"] p,[data-testid="stMarkdown"] li{color:rgba(226,232,240,.72)!important;font-family:'Outfit',sans-serif!important;}
+[data-testid="stMarkdown"] p,[data-testid="stMarkdown"] li{color:rgba(226,232,240,.72)!important;}
 hr{border-color:rgba(255,255,255,0.08)!important;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:rgba(59,130,246,.22);border-radius:4px;}
+::-webkit-scrollbar-thumb{background:rgba(100,60,200,.30);border-radius:4px;}
 [data-testid="column"]{padding:0 4px!important;}
-</style>"""
+html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{background:#0a0a12!important;color:#E2E8F0!important;}
+</style>
+""", unsafe_allow_html=True)
 
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 # VIEW ROUTER
-# ═════════════════════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────────────────────
 view = st.session_state.view
 
 ###############################################################################
-# ████████████████████  CHAT VIEW — v8 FIXED  █████████████████████████████████
+# ██████╗ ██╗  ██╗ █████╗ ████████╗██████╗  ██████╗ ████████╗
+# ██╔════╝██║  ██║██╔══██╗╚══██╔══╝██╔══██╗██╔═══██╗╚══██╔══╝
+# ██║     ███████║███████║   ██║   ██████╔╝██║   ██║   ██║
+# ██║     ██╔══██║██╔══██║   ██║   ██╔══██╗██║   ██║   ██║
+# ╚██████╗██║  ██║██║  ██║   ██║   ██████╔╝╚██████╔╝   ██║
+#  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═════╝  ╚═════╝    ╚═╝
 ###############################################################################
 if view == "chat":
 
-    # ── Hide Streamlit chrome ─────────────────────────────────────────────
-    st.markdown("""<style>
+    # Hide Streamlit sidebar
+    st.markdown("""
+    <style>
     [data-testid="stSidebar"]{display:none!important;}
     [data-testid="stSidebarCollapseButton"]{display:none!important;}
     [data-testid="collapsedControl"]{display:none!important;}
-    section[data-testid="stMain"]{margin-left:0!important;padding:0!important;}
-    [data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important;}
-    .stSpinner > div{display:none!important;}
-    iframe{border:none!important;}
-    </style>""", unsafe_allow_html=True)
+    section[data-testid="stMain"]{margin-left:0!important;padding-left:0!important;}
+    </style>
+    """, unsafe_allow_html=True)
 
-    # ── Process query param actions BEFORE rendering ──────────────────────
-    qp = st.query_params
+    has_messages = bool(st.session_state.chat_messages)
 
-    def qpget(k): return qp.get(k, "")
-
-    # Incoming chat message
-    cm=qpget("_cm"); ct=qpget("_ct")
-    if cm and ct and ct != st.session_state._lct:
-        st.session_state._lct = ct
-        try: del st.query_params["_cm"]
-        except: pass
-        try: del st.query_params["_ct"]
-        except: pass
-        full_msg = cm
-        if st.session_state.attached_file_name:
-            full_msg += f" [File: {st.session_state.attached_file_name}]"
-            st.session_state.attached_file_name = ""
-        dispatch_message(full_msg)
+    # ── Voice done handler ────────────────────────────────────────────────
+    if st.session_state._voice_submit:
+        st.session_state._voice_submit = False
+        msg = st.session_state.voice_transcript or "[Voice message]"
+        st.session_state.voice_transcript = ""
+        dispatch_message(f"🎤 {msg}")
+        st.toast("Voice message sent!", icon="🎤")
         st.rerun()
 
-    # Sidebar/topbar action
-    sb=qpget("_sb"); sbt=qpget("_sbt")
-    if sb and sbt and sbt != st.session_state._lsbt:
-        st.session_state._lsbt = sbt
-        try: del st.query_params["_sb"]
-        except: pass
-        try: del st.query_params["_sbt"]
-        except: pass
-        if sb == "new_chat":
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"),"Chat")
-                st.session_state.chat_sessions.append({"label":fu+"...","messages":list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []; st.session_state.attached_file_name = ""
-            st.rerun()
-        elif sb == "dashboard":
-            st.session_state.view = "dashboard"; st.rerun()
-        elif sb == "clear":
-            st.session_state.chat_messages = []; st.session_state.attached_file_name = ""
-            st.rerun()
+    # ═════════════════════════════════════════════════════════════════════
+    # PREMIUM CHATBOT FULL UI — injected as one big HTML/CSS/JS block
+    # ═════════════════════════════════════════════════════════════════════
 
-    # Attach file
-    af=qpget("_af"); aft=qpget("_at")
-    if af and aft and aft != st.session_state._laft:
-        st.session_state._laft = aft
-        st.session_state.attached_file_name = af
-        try: del st.query_params["_af"]
-        except: pass
-        st.toast(f"📎 {af} attached!", icon="✅"); st.rerun()
-
-    # Mic toggle
-    mic=qpget("_mic")
-    if mic and mic != st.session_state._lmic:
-        st.session_state._lmic = mic
-        try: del st.query_params["_mic"]
-        except: pass
-        st.session_state.is_recording = not st.session_state.is_recording
-        st.toast("🎤 Recording started! Again dabao to stop." if st.session_state.is_recording else "⏹ Stopped.", icon="🎤" if st.session_state.is_recording else "✅")
-        st.rerun()
-
-    # ── Build HTML parts ──────────────────────────────────────────────────
-    nm    = st.session_state.student_name
-    br    = st.session_state.branch
-    bh    = branch_hex(br)
-    inits = initials(nm)
-    has_messages = len(st.session_state.chat_messages) > 0
-    rec   = st.session_state.is_recording
-
-    # Messages HTML
+    # Build messages HTML
     msgs_html = ""
     for msg in st.session_state.chat_messages:
-        content = esc(msg["content"]).replace("\n","<br>")
-        if msg["role"] == "user":
-            msgs_html += f'<div class="msg-row msg-user"><div class="msg-bubble user-bubble">{content}</div><div class="av av-user">{inits}</div></div>'
+        role = msg["role"]
+        content = msg["content"].replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
+        if role == "user":
+            msgs_html += f"""
+            <div class="msg-row user">
+              <div class="msg-bubble user-bubble">{content}</div>
+              <div class="msg-avatar user-av">U</div>
+            </div>"""
         else:
-            msgs_html += f'<div class="msg-row msg-ai"><div class="av av-ai">&#10022;</div><div class="msg-bubble ai-bubble">{content}</div></div>'
+            msgs_html += f"""
+            <div class="msg-row ai">
+              <div class="msg-avatar ai-av">✦</div>
+              <div class="msg-bubble ai-bubble">{content}</div>
+            </div>"""
 
-    # History HTML
+    # Build history items
     hist_html = ""
-    if st.session_state.chat_sessions:
-        for sess in reversed(st.session_state.chat_sessions[-10:]):
-            lbl = esc(sess.get("label","Chat")[:30])
-            hist_html += f'<div class="hi">&#128172; {lbl}&hellip;</div>'
-    else:
-        hist_html = '<div class="he">No saved chats yet</div>'
+    for i, sess in enumerate(reversed(st.session_state.chat_sessions[-8:])):
+        label = sess.get("label","Chat")[:36]
+        hist_html += f'<div class="hist-item" onclick="loadSession({len(st.session_state.chat_sessions)-1-i})"><span class="hist-dot"></span>{label}</div>'
+    if not hist_html:
+        hist_html = '<div style="padding:18px 12px;font-size:0.76rem;color:rgba(180,180,220,0.35);text-align:center;">No saved chats yet</div>'
 
+    # Suggestion pills
+    br = st.session_state.branch
+    pills = [
+        f"📊 My attendance %",
+        f"📅 Next class today?",
+        f"📚 PYQs for {br}",
+        f"💰 Fee status",
+        f"📖 Subjects this sem",
+        f"🎯 Exam tips",
+    ]
+    pills_html = "".join(f'<button class="pill-btn" onclick="sendPill(`{p}`)">{p}</button>' for p in pills)
+
+    # Attached file chip
     chip_html = ""
     if st.session_state.attached_file_name:
-        chip_html = f'<div class="chip">&#128206; {esc(st.session_state.attached_file_name[:22])} <span onclick="clearChip()" style="cursor:pointer;opacity:.6;margin-left:3px;">&#10005;</span></div>'
+        fn = st.session_state.attached_file_name[:22]
+        chip_html = f'<div class="file-chip"><span>📎</span>{fn}<button onclick="clearFile()">✕</button></div>'
 
-    mic_class = "recording" if rec else ""
-    mic_icon  = "&#9209;" if rec else "&#127908;"
+    nm = st.session_state.student_name.split()[0]
 
-    sug_html = ""
-    if not has_messages:
-        sug_items = [
-            ("&#128202;","Attendance check karo"),
-            ("&#128197;","Next class kaunsi hai?"),
-            (f"&#128196;",f"PYQs for {esc(br)}"),
-            ("&#127919;","Exam preparation tips"),
-            ("&#128218;","Subjects list karo"),
-            ("&#128179;","Fee status check karo"),
-        ]
-        for icon, label in sug_items:
-            sug_html += f'<div class="sug" onclick="sendMsg(\'{label.replace(chr(39), chr(39))}\')">{icon} {label}</div>'
-
-    CHAT_HTML = f"""<!DOCTYPE html>
+    components.html(f"""
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="utf-8">
 <style>
-*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0;}}
-html,body{{height:100%;overflow:hidden;background:#050810;color:#E2E8F0;font-family:'Space Grotesk',sans-serif;}}
-#app{{display:flex;height:100vh;overflow:hidden;position:relative;}}
+/* ═══════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════ */
+*{{margin:0;padding:0;box-sizing:border-box;}}
+html,body{{
+  width:100%;height:100%;
+  font-family:'Inter',system-ui,sans-serif;
+  background:transparent;
+  overflow:hidden;
+  color:#e8e8f0;
+}}
 
-/* BG */
-.bg{{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}}
-.bg::before{{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 60% at 15% 10%,rgba(99,102,241,.20) 0%,transparent 60%),
-    radial-gradient(ellipse 55% 50% at 85% 85%,rgba(34,211,238,.13) 0%,transparent 55%),
-    radial-gradient(ellipse 40% 40% at 50% 45%,rgba(139,92,246,.07) 0%,transparent 70%);
-  animation:bgP 9s ease-in-out infinite alternate;}}
-@keyframes bgP{{0%{{opacity:.7;transform:scale(1);}}100%{{opacity:1;transform:scale(1.03);}}}}
-.orb{{position:absolute;border-radius:50%;filter:blur(90px);}}
-.o1{{width:480px;height:480px;background:radial-gradient(circle,rgba(99,102,241,.22) 0%,transparent 70%);top:-150px;left:-80px;animation:o1a 24s ease-in-out infinite;}}
-.o2{{width:380px;height:380px;background:radial-gradient(circle,rgba(34,211,238,.16) 0%,transparent 70%);bottom:-100px;right:-60px;animation:o2a 19s ease-in-out infinite;}}
-.o3{{width:280px;height:280px;background:radial-gradient(circle,rgba(167,139,250,.13) 0%,transparent 70%);top:45%;left:55%;animation:o3a 28s ease-in-out infinite;}}
-@keyframes o1a{{0%,100%{{transform:translate(0,0);opacity:.6;}}50%{{transform:translate(50px,60px);opacity:1;}}}}
-@keyframes o2a{{0%,100%{{transform:translate(0,0);opacity:.5;}}50%{{transform:translate(-40px,-50px);opacity:.9;}}}}
-@keyframes o3a{{0%,100%{{transform:translate(0,0);opacity:.4;}}50%{{transform:translate(-60px,30px);opacity:.7;}}}}
-.grid{{position:absolute;inset:0;
-  background-image:linear-gradient(rgba(99,102,241,.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(99,102,241,.04) 1px,transparent 1px);
-  background-size:55px 55px;
-  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 100%);
-  -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 100%);}}
+/* ═══════════════════════════════════════════════════════
+   ANIMATED BACKGROUND
+═══════════════════════════════════════════════════════ */
+#bg{{
+  position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(120,40,200,0.38) 0%, transparent 70%),
+             radial-gradient(ellipse 60% 50% at 85% 80%, rgba(30,60,180,0.28) 0%, transparent 60%),
+             radial-gradient(ellipse 50% 40% at 10% 90%, rgba(60,20,140,0.22) 0%, transparent 55%),
+             #09070f;
+}}
+/* floating orbs */
+.orb{{
+  position:absolute;border-radius:50%;filter:blur(80px);
+  animation:orbFloat linear infinite;
+  pointer-events:none;
+}}
+.orb1{{width:320px;height:320px;background:rgba(100,30,200,0.18);top:-80px;left:10%;animation-duration:18s;}}
+.orb2{{width:240px;height:240px;background:rgba(40,80,220,0.14);bottom:10%;right:5%;animation-duration:24s;animation-delay:-8s;}}
+.orb3{{width:180px;height:180px;background:rgba(160,40,255,0.12);top:40%;left:-60px;animation-duration:20s;animation-delay:-5s;}}
+@keyframes orbFloat{{
+  0%{{transform:translateY(0) scale(1);}}
+  33%{{transform:translateY(-30px) scale(1.05);}}
+  66%{{transform:translateY(20px) scale(0.96);}}
+  100%{{transform:translateY(0) scale(1);}}
+}}
+/* grid overlay */
+#bg::after{{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(140,80,255,0.04) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(140,80,255,0.04) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;
+}}
 
-/* SIDEBAR */
-.sb{{position:relative;z-index:10;width:248px;min-width:248px;height:100vh;
+/* ═══════════════════════════════════════════════════════
+   LAYOUT SHELL
+═══════════════════════════════════════════════════════ */
+#shell{{
+  position:fixed;inset:0;z-index:1;
   display:flex;flex-direction:column;
-  background:rgba(7,10,24,.95);border-right:1px solid rgba(99,102,241,.18);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}}
-.sb-brand{{padding:17px 15px 13px;border-bottom:1px solid rgba(255,255,255,.06);
-  display:flex;align-items:center;gap:10px;}}
-.sb-logo{{width:33px;height:33px;border-radius:9px;
-  background:linear-gradient(135deg,#4338CA,#818CF8);
+  overflow:hidden;
+}}
+
+/* ═══════════════════════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════════════════════ */
+#topbar{{
+  height:52px;
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;
+  background:rgba(14,10,28,0.82);
+  backdrop-filter:blur(24px);
+  border-bottom:1px solid rgba(140,80,255,0.14);
+  flex-shrink:0;
+  position:relative;z-index:100;
+}}
+.tb-logo{{
+  display:flex;align-items:center;gap:9px;
+  font-size:0.92rem;font-weight:700;color:#e8e8f8;
+  letter-spacing:-0.3px;
+}}
+.tb-logo-icon{{
+  width:30px;height:30px;border-radius:9px;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#fff;
-  box-shadow:0 4px 13px rgba(67,56,202,.40);flex-shrink:0;}}
-.sb-name{{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#F1F5F9;letter-spacing:-.3px;}}
-.sb-sub{{font-size:.53rem;color:rgba(148,163,184,.38);text-transform:uppercase;letter-spacing:1px;margin-top:1px;}}
-.sb-sec{{padding:11px 11px 5px;}}
-.sb-sec-t{{font-family:'JetBrains Mono',monospace;font-size:.53rem;font-weight:500;
-  color:rgba(148,163,184,.33);text-transform:uppercase;letter-spacing:1.6px;padding:0 4px 7px;}}
-.sb-btn{{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;
-  cursor:pointer;margin-bottom:3px;transition:all .18s;border:1px solid transparent;}}
-.sb-btn:hover{{background:rgba(99,102,241,.10);border-color:rgba(99,102,241,.22);}}
-.sb-ico{{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;
-  justify-content:center;font-size:.80rem;flex-shrink:0;}}
-.sb-lbl{{font-size:.79rem;font-weight:500;color:rgba(226,232,240,.70);}}
-.new-c{{background:rgba(99,102,241,.07);border-color:rgba(99,102,241,.16)!important;}}
-.new-c .sb-ico{{background:rgba(99,102,241,.20);color:#818CF8;}}
-.new-c .sb-lbl{{color:#A5B4FC;font-weight:600;}}
-.erp .sb-ico{{background:rgba(34,211,238,.12);color:#22D3EE;}}
-.dash .sb-ico{{background:rgba(16,185,129,.12);color:#10B981;}}
-.hist-wrap{{flex:1;overflow-y:auto;padding:0 11px 10px;}}
-.hist-wrap::-webkit-scrollbar{{width:3px;}}
-.hist-wrap::-webkit-scrollbar-thumb{{background:rgba(99,102,241,.22);border-radius:3px;}}
-.hi{{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:8px;
-  margin-bottom:2px;cursor:pointer;font-size:.73rem;color:rgba(148,163,184,.56);
-  transition:background .15s;border:1px solid transparent;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}}
-.hi:hover{{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.07);}}
-.he{{font-size:.70rem;color:rgba(148,163,184,.26);text-align:center;padding:20px 0;font-style:italic;}}
-.sb-foot{{padding:11px 13px;border-top:1px solid rgba(255,255,255,.05);}}
-.sb-user{{display:flex;align-items:center;gap:8px;padding:7px 9px;
-  border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);}}
-.sb-av{{width:27px;height:27px;border-radius:50%;
-  background:linear-gradient(135deg,{bh},{bh}88);
+  font-size:1rem;box-shadow:0 4px 16px rgba(120,60,220,0.45);
+}}
+.tb-badge{{
+  font-size:0.52rem;padding:2px 7px;border-radius:4px;
+  background:rgba(140,80,255,0.15);
+  border:1px solid rgba(140,80,255,0.28);
+  color:rgba(200,170,255,0.80);font-weight:600;
+  letter-spacing:0.6px;
+}}
+.tb-spacer{{flex:1;}}
+.tb-menu-btn{{
+  width:34px;height:34px;border-radius:8px;
+  background:rgba(140,80,255,0.12);
+  border:1px solid rgba(140,80,255,0.24);
+  cursor:pointer;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  transition:all 0.18s;
+  flex-shrink:0;
+}}
+.tb-menu-btn:hover{{background:rgba(160,100,255,0.22);border-color:rgba(180,120,255,0.40);}}
+.tb-hbar{{width:14px;height:2px;background:rgba(210,180,255,0.80);border-radius:2px;transition:all 0.22s;}}
+.tb-menu-btn.open .tb-hbar:nth-child(1){{transform:rotate(45deg) translate(4.5px,4.5px);}}
+.tb-menu-btn.open .tb-hbar:nth-child(2){{opacity:0;transform:scaleX(0);}}
+.tb-menu-btn.open .tb-hbar:nth-child(3){{transform:rotate(-45deg) translate(4.5px,-4.5px);}}
+
+/* ═══════════════════════════════════════════════════════
+   LEFT SIDEBAR
+═══════════════════════════════════════════════════════ */
+#sidebar{{
+  position:fixed;top:52px;left:0;
+  width:220px;height:calc(100vh - 52px);
+  background:rgba(10,6,22,0.97);
+  backdrop-filter:blur(28px);
+  border-right:1px solid rgba(140,80,255,0.16);
+  box-shadow:6px 0 40px rgba(60,10,130,0.30);
+  transform:translateX(-100%);
+  transition:transform 0.28s cubic-bezier(0.22,0.61,0.36,1);
+  z-index:90;
+  display:flex;flex-direction:column;
+  padding:20px 10px 16px;
+  gap:3px;
+  overflow-y:auto;
+}}
+#sidebar.open{{transform:translateX(0);}}
+.sb-head{{
+  font-size:0.50rem;color:rgba(180,140,255,0.35);
+  text-transform:uppercase;letter-spacing:1.8px;
+  padding:0 8px 10px;
+  border-bottom:1px solid rgba(140,80,255,0.12);
+  margin-bottom:8px;
+  font-family:'DM Mono',monospace;
+}}
+.sb-item{{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  font-size:0.80rem;font-weight:500;
+  color:rgba(200,180,240,0.70);
+  cursor:pointer;user-select:none;
+  border:1px solid transparent;
+  transition:all 0.15s;
+  margin-bottom:2px;
+}}
+.sb-item:hover{{
+  background:rgba(140,80,255,0.14);
+  border-color:rgba(180,120,255,0.22);
+  color:#d4aaff;
+}}
+.sb-item.active{{
+  background:rgba(140,80,255,0.20);
+  border-color:rgba(180,120,255,0.35);
+  color:#e0ccff;
+}}
+.sb-item-icon{{font-size:0.90rem;width:20px;text-align:center;}}
+.sb-divider{{height:1px;background:rgba(140,80,255,0.10);margin:8px 4px;}}
+.sb-section-label{{
+  font-size:0.48rem;color:rgba(180,140,255,0.28);
+  text-transform:uppercase;letter-spacing:1.5px;
+  padding:6px 12px 4px;
+  font-family:'DM Mono',monospace;
+}}
+/* History inside sidebar */
+.hist-item{{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:8px;
+  font-size:0.73rem;color:rgba(180,160,220,0.58);
+  cursor:pointer;
+  transition:all 0.14s;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  border:1px solid transparent;
+}}
+.hist-item:hover{{background:rgba(100,60,200,0.12);border-color:rgba(140,80,255,0.18);color:rgba(210,190,255,0.75);}}
+.hist-dot{{width:5px;height:5px;border-radius:50%;background:rgba(140,80,255,0.50);flex-shrink:0;}}
+
+/* ═══════════════════════════════════════════════════════
+   OVERLAY
+═══════════════════════════════════════════════════════ */
+#overlay{{
+  position:fixed;inset:0;z-index:80;
+  background:rgba(0,0,0,0);pointer-events:none;
+  transition:background 0.28s;
+}}
+#overlay.open{{background:rgba(0,0,0,0.45);pointer-events:auto;}}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════════════════════ */
+#main{{
+  flex:1;display:flex;flex-direction:column;
+  overflow:hidden;position:relative;z-index:2;
+}}
+
+/* ─── HERO (no messages) ─── */
+#hero{{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:20px 24px 180px;
+  animation:fadeUp 0.5s ease both;
+}}
+@keyframes fadeUp{{from{{opacity:0;transform:translateY(20px);}}to{{opacity:1;transform:translateY(0);}}}}
+.hero-orb{{
+  width:72px;height:72px;border-radius:50%;margin-bottom:20px;
+  background:radial-gradient(circle at 35% 35%, #c084fc, #7c3aed 55%, #4f46e5);
+  box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50),0 0 80px rgba(100,40,200,0.25);
   display:flex;align-items:center;justify-content:center;
-  font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0;}}
-.sb-un{{font-size:.74rem;font-weight:600;color:rgba(226,232,240,.78);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-.sb-ub{{font-size:.56rem;color:{bh};font-weight:600;}}
+  font-size:1.8rem;
+  animation:orb3dPulse 4s ease-in-out infinite;
+}}
+@keyframes orb3dPulse{{
+  0%,100%{{box-shadow:0 0 0 1px rgba(180,120,255,0.25),0 16px 60px rgba(120,60,220,0.50),0 0 80px rgba(100,40,200,0.20);}}
+  50%{{box-shadow:0 0 0 2px rgba(200,140,255,0.35),0 20px 80px rgba(140,80,240,0.65),0 0 100px rgba(120,60,220,0.32);}}
+}}
+.hero-title{{
+  font-size:2.2rem;font-weight:700;
+  background:linear-gradient(135deg,#e8d8ff 30%,#a78bfa 70%,#818cf8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:-1px;margin-bottom:8px;text-align:center;
+}}
+.hero-sub{{
+  font-size:0.82rem;color:rgba(180,160,220,0.48);
+  margin-bottom:32px;text-align:center;letter-spacing:0.2px;
+  line-height:1.6;
+}}
+/* pills */
+.pills-wrap{{
+  display:flex;flex-wrap:wrap;gap:8px;
+  justify-content:center;margin-bottom:36px;
+  max-width:640px;
+}}
+.pill-btn{{
+  padding:8px 16px;border-radius:999px;
+  background:rgba(140,80,255,0.08);
+  border:1px solid rgba(140,80,255,0.22);
+  color:rgba(200,175,255,0.72);
+  font-size:0.77rem;font-weight:500;
+  cursor:pointer;
+  transition:all 0.16s;font-family:'Inter',sans-serif;
+}}
+.pill-btn:hover{{
+  background:rgba(140,80,255,0.20);
+  border-color:rgba(180,120,255,0.42);
+  color:#d4aaff;transform:translateY(-2px);
+}}
 
-/* MAIN */
-.main{{flex:1;display:flex;flex-direction:column;position:relative;z-index:5;overflow:hidden;min-width:0;}}
+/* ─── MESSAGES ─── */
+#messages{{
+  flex:1;overflow-y:auto;
+  padding:20px 0 200px;
+  scroll-behavior:smooth;
+}}
+#messages::-webkit-scrollbar{{width:4px;}}
+#messages::-webkit-scrollbar-thumb{{background:rgba(140,80,255,0.25);border-radius:4px;}}
+.msg-row{{
+  display:flex;align-items:flex-end;gap:10px;
+  padding:6px 20px;
+  animation:msgIn 0.28s ease both;
+}}
+@keyframes msgIn{{from{{opacity:0;transform:translateY(10px);}}to{{opacity:1;transform:translateY(0);}}}}
+.msg-row.user{{flex-direction:row-reverse;}}
+.msg-avatar{{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.80rem;font-weight:700;flex-shrink:0;
+}}
+.user-av{{
+  background:linear-gradient(135deg,#4f46e5,#7c3aed);
+  color:white;box-shadow:0 3px 12px rgba(100,60,220,0.35);
+  font-size:0.72rem;
+}}
+.ai-av{{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);
+  color:white;box-shadow:0 3px 12px rgba(140,80,220,0.35);
+  font-size:0.68rem;font-weight:800;
+}}
+.msg-bubble{{
+  max-width:62%;padding:12px 16px;
+  border-radius:18px;font-size:0.84rem;line-height:1.65;
+}}
+.user-bubble{{
+  background:linear-gradient(135deg,rgba(79,70,229,0.55),rgba(124,58,237,0.45));
+  border:1px solid rgba(140,80,255,0.30);
+  color:#ede8ff;border-bottom-right-radius:5px;
+}}
+.ai-bubble{{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  color:rgba(230,225,255,0.88);border-bottom-left-radius:5px;
+}}
 
-/* Topbar */
-.tb{{height:50px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;border-bottom:1px solid rgba(255,255,255,.05);
-  background:rgba(5,8,16,.65);backdrop-filter:blur(20px);flex-shrink:0;}}
-.tb-badge{{display:flex;align-items:center;gap:6px;padding:4px 12px;
-  background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.22);border-radius:20px;}}
-.tb-dot{{width:6px;height:6px;border-radius:50%;background:#818CF8;animation:blink 2s ease infinite;}}
-@keyframes blink{{0%,100%{{opacity:1;}}50%{{opacity:.25;}}}}
-.tb-model{{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:#A5B4FC;font-weight:500;}}
-.tb-r{{display:flex;gap:7px;}}
-.tb-pill{{padding:4px 12px;border-radius:20px;font-size:.70rem;font-weight:500;
-  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);
-  color:rgba(226,232,240,.58);cursor:pointer;transition:all .18s;}}
-.tb-pill:hover{{background:rgba(99,102,241,.13);border-color:rgba(99,102,241,.30);color:#BAE6FD;}}
+/* ─── TYPING indicator ─── */
+.typing-row{{display:flex;align-items:flex-end;gap:10px;padding:6px 20px;}}
+.typing-bubble{{
+  padding:12px 18px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;border-bottom-left-radius:5px;
+  display:flex;gap:5px;align-items:center;
+}}
+.t-dot{{
+  width:7px;height:7px;border-radius:50%;
+  background:rgba(180,140,255,0.60);
+  animation:typingPulse 1.4s ease-in-out infinite;
+}}
+.t-dot:nth-child(2){{animation-delay:0.2s;}}
+.t-dot:nth-child(3){{animation-delay:0.4s;}}
+@keyframes typingPulse{{0%,80%,100%{{transform:scale(0.7);opacity:0.4;}}40%{{transform:scale(1);opacity:1;}}}}
 
-/* Messages */
-.msgs{{flex:1;overflow-y:auto;padding:18px 0;}}
-.msgs::-webkit-scrollbar{{width:4px;}}
-.msgs::-webkit-scrollbar-thumb{{background:rgba(99,102,241,.17);border-radius:4px;}}
-.mi{{max-width:720px;margin:0 auto;padding:0 20px;}}
-.msg-row{{display:flex;align-items:flex-end;gap:9px;margin-bottom:13px;animation:mi .28s cubic-bezier(.22,.61,.36,1) both;}}
-@keyframes mi{{from{{opacity:0;transform:translateY(9px);}}to{{opacity:1;transform:translateY(0);}}}}
-.msg-user{{flex-direction:row-reverse;}}
-.av{{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.66rem;font-weight:700;}}
-.av-user{{background:linear-gradient(135deg,{bh},{bh}88);color:#fff;border:1.5px solid {bh}55;}}
-.av-ai{{background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid rgba(99,102,241,.35);color:#818CF8;font-size:.88rem;}}
-.msg-bubble{{max-width:70%;padding:10px 14px;border-radius:16px;font-size:.86rem;line-height:1.65;word-wrap:break-word;}}
-.user-bubble{{background:linear-gradient(135deg,#3730a3,#4338ca);color:#e0e7ff;
-  border-radius:16px 16px 4px 16px;border:1px solid rgba(99,102,241,.38);
-  box-shadow:0 4px 16px rgba(67,56,202,.26);}}
-.ai-bubble{{background:rgba(255,255,255,.04);color:rgba(226,232,240,.90);
-  border:1px solid rgba(255,255,255,.08);border-radius:16px 16px 16px 4px;}}
+/* ═══════════════════════════════════════════════════════
+   INPUT BAR — BOTTOM (always centered)
+═══════════════════════════════════════════════════════ */
+#input-zone{{
+  position:fixed;bottom:0;left:0;right:0;
+  z-index:50;
+  padding:12px max(16px,calc((100% - 720px)/2)) 18px;
+  background:linear-gradient(to top, rgba(9,7,15,0.98) 0%, rgba(9,7,15,0.90) 70%, transparent 100%);
+  backdrop-filter:blur(12px);
+}}
+/* file chip */
+.file-chip{{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px 4px 10px;margin-bottom:8px;
+  background:rgba(140,80,255,0.14);
+  border:1px solid rgba(140,80,255,0.32);
+  border-radius:999px;font-size:0.72rem;color:#c4aaff;
+  font-weight:600;
+}}
+.file-chip button{{background:none;border:none;cursor:pointer;color:rgba(180,150,255,0.55);margin-left:2px;font-size:0.75rem;}}
+/* Bar card */
+.bar-card{{
+  background:rgba(22,14,42,0.92);
+  border:1px solid rgba(140,80,255,0.22);
+  border-radius:20px;
+  box-shadow:0 -4px 40px rgba(80,30,160,0.30), 0 0 0 0 rgba(140,80,255,0);
+  overflow:hidden;
+  animation:barGlow 5s ease-in-out infinite;
+  transition:border-color 0.22s, box-shadow 0.22s;
+}}
+.bar-card:focus-within{{
+  border-color:rgba(160,100,255,0.55) !important;
+  box-shadow:0 0 0 3px rgba(140,80,255,0.14),0 -4px 40px rgba(100,40,200,0.45) !important;
+  animation:none !important;
+}}
+@keyframes barGlow{{
+  0%,100%{{box-shadow:0 -4px 40px rgba(80,30,160,0.28), 0 0 0 0 rgba(140,80,255,0);}}
+  50%{{box-shadow:0 -4px 48px rgba(100,40,200,0.40), 0 0 18px rgba(140,80,255,0.10);}}
+}}
+/* Input row */
+.bar-inner{{display:flex;align-items:center;padding:10px 10px 10px 14px;gap:6px;}}
+#chat-input{{
+  flex:1;background:transparent;border:none;outline:none;
+  color:#e8e0ff;font-family:'Inter',sans-serif;
+  font-size:0.93rem;line-height:1.5;
+  resize:none;max-height:120px;min-height:24px;height:auto;
+  caret-color:#a78bfa;
+  padding:0 4px;
+}}
+#chat-input::placeholder{{color:rgba(180,155,240,0.35);font-size:0.90rem;}}
+/* bottom row of bar */
+.bar-bottom{{
+  display:flex;align-items:center;
+  padding:0 12px 11px 14px;gap:8px;
+}}
+.bar-bottom-left{{display:flex;gap:6px;flex:1;}}
+/* icon buttons */
+.icon-btn{{
+  width:34px;height:34px;border-radius:10px;
+  background:rgba(140,80,255,0.10);
+  border:1px solid rgba(140,80,255,0.20);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:rgba(190,160,255,0.65);font-size:1rem;
+  transition:all 0.16s;user-select:none;
+  flex-shrink:0;
+}}
+.icon-btn:hover{{background:rgba(160,100,255,0.22);border-color:rgba(180,120,255,0.38);color:#d4aaff;}}
+.icon-btn.active{{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.40);color:#fca5a5;animation:micPulse 1.1s ease-in-out infinite;}}
+@keyframes micPulse{{0%,100%{{box-shadow:0 0 0 0 rgba(239,68,68,0.40);}}50%{{box-shadow:0 0 0 6px rgba(239,68,68,0);}}}}
+/* send button */
+.send-btn{{
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:white;font-size:1.1rem;font-weight:700;
+  box-shadow:0 4px 18px rgba(120,60,220,0.50);
+  transition:all 0.16s;flex-shrink:0;
+}}
+.send-btn:hover{{transform:scale(1.08);box-shadow:0 6px 24px rgba(140,80,240,0.65);}}
+.send-btn:active{{transform:scale(0.96);}}
+/* label tags */
+.bar-tag{{
+  font-size:0.62rem;color:rgba(180,150,255,0.40);
+  padding:3px 9px;border-radius:5px;
+  background:rgba(140,80,255,0.06);
+  border:1px solid rgba(140,80,255,0.12);
+  user-select:none;
+}}
 
-/* HERO */
-.hero{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:0 24px 24px;animation:fu .45s cubic-bezier(.22,.61,.36,1) both;}}
-@keyframes fu{{from{{opacity:0;transform:translateY(16px);}}to{{opacity:1;transform:translateY(0);}}}}
-.hero-orb{{width:84px;height:84px;border-radius:50%;margin-bottom:24px;
-  background:linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#4338ca 70%,#6366f1 100%);
-  display:flex;align-items:center;justify-content:center;font-size:2.2rem;
-  box-shadow:0 0 0 1px rgba(99,102,241,.28),0 0 38px rgba(99,102,241,.34),0 0 76px rgba(99,102,241,.13);
-  animation:op 3s ease-in-out infinite;}}
-@keyframes op{{0%,100%{{box-shadow:0 0 0 1px rgba(99,102,241,.28),0 0 38px rgba(99,102,241,.34),0 0 76px rgba(99,102,241,.13);transform:scale(1);}}
-  50%{{box-shadow:0 0 0 2px rgba(99,102,241,.48),0 0 56px rgba(99,102,241,.48),0 0 110px rgba(99,102,241,.18);transform:scale(1.04);}}}}
-.hero-title{{font-family:'Syne',sans-serif;font-size:2.6rem;font-weight:800;
-  color:#F1F5F9;letter-spacing:-1.5px;text-align:center;line-height:1.05;margin-bottom:8px;}}
-.hero-title span{{background:linear-gradient(90deg,#818CF8,#22D3EE);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}}
-.hero-sub{{font-size:.82rem;color:rgba(148,163,184,.50);text-align:center;line-height:1.7;
-  margin-bottom:32px;max-width:360px;}}
-.sugs{{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px;margin-bottom:34px;}}
-.sug{{padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.09);color:rgba(186,230,253,.68);
-  font-size:.78rem;font-weight:500;cursor:pointer;transition:all .2s cubic-bezier(.22,.61,.36,1);
-  white-space:nowrap;user-select:none;}}
-.sug:hover{{background:rgba(99,102,241,.13);border-color:rgba(99,102,241,.34);
-  color:#BAE6FD;transform:translateY(-2px);box-shadow:0 4px 13px rgba(99,102,241,.16);}}
+/* ═══════════════════════════════════════════════════════
+   PLACEHOLDER SHIMMER
+═══════════════════════════════════════════════════════ */
+@keyframes phShimmer{{0%,100%{{opacity:0.35;}}50%{{opacity:0.65;}}}}
+#chat-input:placeholder-shown{{animation:phShimmer 3s ease-in-out infinite;}}
 
-/* Input zone */
-.iz{{flex-shrink:0;padding:9px 18px 14px;
-  background:rgba(5,8,16,.72);backdrop-filter:blur(22px);
-  border-top:1px solid rgba(255,255,255,.05);}}
-.iz.hm{{background:transparent;border-top:none;padding:0 18px 5px;}}
-.ii{{max-width:700px;margin:0 auto;}}
-.chip{{display:inline-flex;align-items:center;gap:5px;padding:3px 11px 3px 8px;
-  background:rgba(99,102,241,.13);border:1px solid rgba(99,102,241,.28);
-  border-radius:18px;font-size:.70rem;color:#A5B4FC;font-weight:600;margin-bottom:7px;}}
-.lb{{display:flex;align-items:center;gap:7px;padding:6px 13px;margin-bottom:7px;
-  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.16);
-  border-radius:8px;font-size:.75rem;color:#FCA5A5;}}
-.ld{{width:6px;height:6px;border-radius:50%;background:#EF4444;animation:lda 1s ease infinite;flex-shrink:0;}}
-@keyframes lda{{0%,100%{{opacity:1;}}50%{{opacity:.2;}}}}
-.ib{{display:flex;align-items:center;gap:6px;
-  background:rgba(12,16,36,.90);border:1.5px solid rgba(99,102,241,.22);
-  border-radius:17px;padding:5px 6px 5px 13px;
-  transition:border-color .22s,box-shadow .22s;
-  box-shadow:0 4px 26px rgba(0,0,0,.38),0 0 0 1px rgba(99,102,241,.08);
-  animation:barI 5s ease-in-out infinite;}}
-.ib:focus-within{{border-color:rgba(99,102,241,.55)!important;
-  box-shadow:0 0 0 3px rgba(99,102,241,.12),0 8px 34px rgba(67,56,202,.18)!important;
-  animation:none!important;}}
-@keyframes barI{{0%,100%{{box-shadow:0 4px 26px rgba(0,0,0,.38),0 0 0 1px rgba(99,102,241,.08);}}
-  50%{{box-shadow:0 4px 26px rgba(0,0,0,.38),0 0 0 1px rgba(99,102,241,.17),0 0 22px rgba(99,102,241,.10);}}}}
-.ib input{{flex:1;background:transparent;border:none;outline:none;
-  color:#E2E8F0;font-family:'Space Grotesk',sans-serif;font-size:.90rem;
-  padding:10px 4px;min-height:42px;caret-color:#818CF8;}}
-.ib input::placeholder{{color:rgba(148,163,184,.30);}}
-.div{{width:1px;height:19px;background:rgba(255,255,255,.08);flex-shrink:0;}}
-.ib-btn{{width:34px;height:34px;border-radius:50%;border:none;outline:none;
-  background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .18s;font-size:.95rem;color:rgba(148,163,184,.50);flex-shrink:0;}}
-.ib-btn:hover{{background:rgba(255,255,255,.08);color:rgba(186,230,253,.85);}}
-.mic{{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;}}
-.mic.recording{{background:rgba(239,68,68,.18)!important;border-color:rgba(239,68,68,.42)!important;
-  color:#FCA5A5!important;animation:mpulse 1.1s ease-in-out infinite!important;}}
-@keyframes mpulse{{0%,100%{{box-shadow:0 0 0 0 rgba(239,68,68,.38);}}50%{{box-shadow:0 0 0 7px rgba(239,68,68,.00);}}}}
-.send{{width:37px;height:37px;border-radius:50%;border:none;outline:none;
-  background:linear-gradient(135deg,#4338CA,#6366F1);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;color:#fff;
-  font-size:1.1rem;font-weight:700;flex-shrink:0;
-  box-shadow:0 3px 12px rgba(67,56,202,.38);transition:all .18s;}}
-.send:hover{{opacity:.88;transform:scale(1.07);}}
-.disc{{text-align:center;font-family:'JetBrains Mono',monospace;
-  font-size:.52rem;color:rgba(100,116,139,.28);margin-top:6px;letter-spacing:.5px;}}
+/* ═══════════════════════════════════════════════════════
+   VOICE INDICATOR
+═══════════════════════════════════════════════════════ */
+#voice-bar{{
+  display:none;
+  align-items:center;gap:8px;
+  margin-bottom:8px;padding:8px 14px;
+  background:rgba(239,68,68,0.08);
+  border:1px solid rgba(239,68,68,0.22);
+  border-radius:10px;font-size:0.78rem;color:#fca5a5;
+}}
+#voice-bar.show{{display:flex;}}
+.v-dot{{width:7px;height:7px;border-radius:50%;background:#ef4444;animation:blinkDot 1.1s ease infinite;}}
+@keyframes blinkDot{{0%,100%{{opacity:1;}}50%{{opacity:0.2;}}}}
+
 </style>
 </head>
 <body>
-<div id="app">
-  <div class="bg">
-    <div class="orb o1"></div>
-    <div class="orb o2"></div>
-    <div class="orb o3"></div>
-    <div class="grid"></div>
-  </div>
 
-  <!-- SIDEBAR -->
-  <div class="sb">
-    <div class="sb-brand">
-      <div class="sb-logo">A</div>
-      <div><div class="sb-name">AskMNIT</div><div class="sb-sub">AI Assistant &middot; MNIT Jaipur</div></div>
-    </div>
-    <div class="sb-sec">
-      <div class="sb-sec-t">Actions</div>
-      <div class="sb-btn new-c" onclick="sbAct('new_chat')"><div class="sb-ico">&#10022;</div><span class="sb-lbl">New Chat</span></div>
-      <div class="sb-btn erp" onclick="window.open('https://erp.mnit.ac.in','_blank')"><div class="sb-ico">&#127891;</div><span class="sb-lbl">ERP Login</span></div>
-      <div class="sb-btn dash" onclick="sbAct('dashboard')"><div class="sb-ico">&#x2B21;</div><span class="sb-lbl">Back to Dashboard</span></div>
-    </div>
-    <div class="sb-sec" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-      <div class="sb-sec-t">Chat History</div>
-      <div class="hist-wrap">{hist_html}</div>
-    </div>
-    <div class="sb-foot">
-      <div class="sb-user">
-        <div class="sb-av">{inits}</div>
-        <div style="min-width:0;"><div class="sb-un">{esc(nm)}</div><div class="sb-ub">{esc(br)}</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="tb">
-      <div class="tb-badge"><div class="tb-dot"></div><span class="tb-model">AskMNIT &middot; Llama 3.3 70B</span></div>
-      <div class="tb-r">
-        <div class="tb-pill" onclick="sbAct('clear')">&#128465; Clear</div>
-        <div class="tb-pill" onclick="sbAct('dashboard')">&larr; Dashboard</div>
-      </div>
-    </div>
-
-    <!-- HERO or MESSAGES -->
-    {'<div class="hero">' if not has_messages else '<div class="msgs" id="msgsDiv">'}
-    {'<div class="hero-orb">&#129302;</div><div class="hero-title">Ready to <span>Ask?</span></div><div class="hero-sub">Tera AI senior at MNIT &mdash; attendance, schedule, PYQs, sab kuch!</div><div class="sugs">' + sug_html + '</div>' if not has_messages else '<div class="mi" id="mi">' + msgs_html + '<div id="bot"></div></div>'}
-    </div>
-
-    <!-- INPUT -->
-    <div class="iz {'hm' if not has_messages else ''}" id="iz">
-      <div class="ii">
-        {chip_html}
-        {'<div class="lb"><div class="ld"></div><span>Recording... mic dabao stop karne ke liye</span></div>' if rec else ''}
-        <div class="ib" id="ib">
-          <button class="ib-btn" title="Attach" onclick="doAttach()">&#65291;</button>
-          <div class="div"></div>
-          <input type="text" id="inp" placeholder="Ask AskMNIT anything..." autocomplete="off" onkeydown="onKey(event)">
-          <button class="ib-btn mic {mic_class}" id="mic" title="Voice" onclick="doMic()">{mic_icon}</button>
-          <button class="send" title="Send" onclick="doSend()">&#8679;</button>
-        </div>
-        <div class="disc">AskMNIT AI &nbsp;&middot;&nbsp; MNIT Jaipur &nbsp;&middot;&nbsp; Important info ERP se verify karein</div>
-      </div>
-    </div>
-  </div>
+<!-- Animated BG -->
+<div id="bg">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
 </div>
 
-<script>
-// Scroll to bottom on load
-(function(){{
-  var b=document.getElementById('bot');
-  if(b) b.scrollIntoView({{behavior:'instant'}});
-  var d=document.getElementById('msgsDiv');
-  if(d) d.scrollTop=d.scrollHeight;
-  var i=document.getElementById('inp');
-  if(i) setTimeout(function(){{i.focus();}},120);
-}})();
+<!-- Overlay -->
+<div id="overlay" onclick="closeSb()"></div>
 
-// Rotating placeholder
-var hints=['Ask AskMNIT anything...','Attendance kitni hai?','Next class kaunsi hai?',
-  'Exam tips chahiye...','PYQs dhundne hain...','Fee status?','Subjects list karo...'];
-var pi=0;
+<!-- LEFT SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-head">AskMNIT Menu</div>
+
+  <div class="sb-item active" onclick="goAction('new_chat')">
+    <span class="sb-item-icon">✦</span> New Chat
+  </div>
+
+  <div class="sb-item" onclick="toggleHistory()">
+    <span class="sb-item-icon">🕐</span> Chat History
+  </div>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section-label">Navigation</div>
+
+  <div class="sb-item" onclick="goAction('dashboard')">
+    <span class="sb-item-icon">⊞</span> Back to Dashboard
+  </div>
+
+  <div class="sb-item" onclick="openERP()">
+    <span class="sb-item-icon">🔗</span> ERP Login
+  </div>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section-label">Chat History</div>
+  <div id="hist-list">{hist_html}</div>
+</div>
+
+<!-- MAIN SHELL -->
+<div id="shell">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <button class="tb-menu-btn" id="menu-btn" onclick="toggleSb()">
+      <span class="tb-hbar"></span>
+      <span class="tb-hbar"></span>
+      <span class="tb-hbar"></span>
+    </button>
+    <div class="tb-logo">
+      <div class="tb-logo-icon">✦</div>
+      AskMNIT
+    </div>
+    <div class="tb-badge">AI</div>
+    <div class="tb-spacer"></div>
+    <div class="tb-badge" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.28);color:rgba(100,220,160,0.80);">● LIVE</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+
+    <!-- HERO (shown when no messages) -->
+    <div id="hero" style="display:{'none' if has_messages else 'flex'};">
+      <div class="hero-orb">✦</div>
+      <div class="hero-title">AskMNIT AI</div>
+      <div class="hero-sub">
+        Hey {nm}! Your smart MNIT senior — always here 🎓<br>
+        Attendance · PYQs · Schedule · Exam prep
+      </div>
+      <div class="pills-wrap" id="pills">
+        {pills_html}
+      </div>
+    </div>
+
+    <!-- MESSAGES (shown when has messages) -->
+    <div id="messages" style="display:{'flex' if has_messages else 'none'};flex-direction:column;">
+      {msgs_html}
+      <div id="msg-bottom"></div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- INPUT ZONE (always at bottom) -->
+  <div id="input-zone">
+    <div id="voice-bar">
+      <div class="v-dot"></div>
+      <span>Listening... click mic to stop</span>
+    </div>
+    {chip_html}
+    <div class="bar-card" id="bar-card">
+      <div class="bar-inner">
+        <textarea id="chat-input" rows="1"
+          placeholder="Ask AskMNIT anything..."
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"></textarea>
+      </div>
+      <div class="bar-bottom">
+        <div class="bar-bottom-left">
+          <button class="icon-btn" title="Attach file" onclick="triggerFile()">📎</button>
+          <button class="icon-btn" id="mic-btn" title="Voice input" onclick="toggleMic()">🎤</button>
+          <span class="bar-tag">MNIT AI</span>
+        </div>
+        <button class="send-btn" onclick="sendMsg()" title="Send">↑</button>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:6px;">
+      <span style="font-size:0.52rem;color:rgba(140,100,200,0.28);letter-spacing:0.8px;">AskMNIT AI may make mistakes · Verify with official ERP</span>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- hidden file input -->
+<input type="file" id="file-input"
+  accept=".pdf,.txt,.png,.jpg,.jpeg,.docx,.csv"
+  style="position:absolute;width:1px;height:1px;opacity:0;"
+  onchange="handleFile(this)">
+
+<!-- hidden voice recorder -->
+<div id="recorder-holder" style="display:none;"></div>
+
+<script>
+// ── Sidebar ──────────────────────────────────────────────────────
+var sbOpen = false;
+function toggleSb(){{ sbOpen ? closeSb() : openSb(); }}
+function openSb(){{
+  sbOpen=true;
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('menu-btn').classList.add('open');
+}}
+function closeSb(){{
+  sbOpen=false;
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('menu-btn').classList.remove('open');
+}}
+function toggleHistory(){{
+  document.getElementById('hist-list').style.display =
+    document.getElementById('hist-list').style.display === 'none' ? 'block' : 'none';
+}}
+document.addEventListener('keydown',function(e){{ if(e.key==='Escape') closeSb(); }});
+
+// ── Streamlit component value sender (ONLY working method in iframe) ──
+function sendToStreamlit(payload) {{
+  // Streamlit's official component communication API
+  window.parent.postMessage({{
+    isStreamlitMessage: true,
+    type: "streamlit:setComponentValue",
+    value: payload
+  }}, "*");
+}}
+
+// ── Actions (sidebar) ────────────────────────────────────────────
+function goAction(action){{
+  closeSb();
+  sendToStreamlit(JSON.stringify({{type:'action', value:action}}));
+}}
+function openERP(){{
+  window.open('https://erp.mnit.ac.in','_blank');
+}}
+function loadSession(idx){{
+  closeSb();
+  sendToStreamlit(JSON.stringify({{type:'load_session', value:idx}}));
+}}
+
+// ── File attach ───────────────────────────────────────────────────
+function triggerFile(){{
+  document.getElementById('file-input').click();
+}}
+function handleFile(input){{
+  if(!input.files||!input.files[0]) return;
+  var fname = input.files[0].name;
+  sendToStreamlit(JSON.stringify({{type:'file', value:fname}}));
+}}
+function clearFile(){{
+  sendToStreamlit(JSON.stringify({{type:'clear_file', value:''}}));
+}}
+
+// ── Textarea auto-resize ──────────────────────────────────────────
+function autoResize(el){{
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,120)+'px';
+}}
+
+// ── Send message ─────────────────────────────────────────────────
+function sendMsg(){{
+  var inp = document.getElementById('chat-input');
+  var txt = inp.value.trim();
+  if(!txt) return;
+  inp.value=''; inp.style.height='auto';
+  sendToStreamlit(JSON.stringify({{type:'send', value:txt}}));
+}}
+function sendPill(txt){{
+  sendToStreamlit(JSON.stringify({{type:'send', value:txt}}));
+}}
+function handleKey(e){{
+  if(e.key==='Enter' && !e.shiftKey){{ e.preventDefault(); sendMsg(); }}
+}}
+
+// ── Voice ─────────────────────────────────────────────────────────
+var mediaRecorder=null, audioChunks=[], isRecording=false;
+function toggleMic(){{
+  isRecording ? stopMic() : startMic();
+}}
+function startMic(){{
+  navigator.mediaDevices.getUserMedia({{audio:true}}).then(function(stream){{
+    audioChunks=[];
+    try{{mediaRecorder=new MediaRecorder(stream,{{mimeType:'audio/webm'}});}}
+    catch(e){{mediaRecorder=new MediaRecorder(stream);}}
+    mediaRecorder.ondataavailable=function(e){{if(e.data&&e.data.size>0) audioChunks.push(e.data);}};
+    mediaRecorder.onstop=function(){{
+      isRecording=false;
+      document.getElementById('mic-btn').classList.remove('active');
+      document.getElementById('voice-bar').classList.remove('show');
+      stream.getTracks().forEach(function(t){{t.stop();}});
+      sendToStreamlit(JSON.stringify({{type:'voice_done', value:'[Voice message recorded]'}}));
+    }};
+    mediaRecorder.start(200); isRecording=true;
+    document.getElementById('mic-btn').classList.add('active');
+    document.getElementById('voice-bar').classList.add('show');
+  }}).catch(function(){{
+    alert('Microphone permission denied!');
+  }});
+}}
+function stopMic(){{
+  if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
+}}
+
+// ── Rotating placeholder ──────────────────────────────────────────
+var _ph = [
+  "Ask AskMNIT anything...",
+  "What's my attendance today?",
+  "When is my next class?",
+  "Give me PYQs for {br}...",
+  "How many classes can I miss?",
+  "Exam preparation tips...",
+  "Check my fee status...",
+];
+var _phi=0;
 setInterval(function(){{
-  var i=document.getElementById('inp');
-  if(i&&document.activeElement!==i){{i.placeholder=hints[pi++%hints.length];}}
+  var el=document.getElementById('chat-input');
+  if(!el||document.activeElement===el) return;
+  _phi=(_phi+1)%_ph.length;
+  el.style.opacity='0';
+  setTimeout(function(){{el.placeholder=_ph[_phi];el.style.opacity='1';}},200);
 }},3000);
 
-// ── Send to Streamlit via component value API ──
-function sendToStreamlit(data) {{
-  // Method 1: Streamlit component API
-  try {{
-    window.parent.postMessage({{
-      type: "streamlit:setComponentValue",
-      value: data
-    }}, "*");
-  }} catch(e) {{}}
-  // Method 2: Direct Streamlit component value setter
-  try {{
-    if (window.Streamlit) {{
-      window.Streamlit.setComponentValue(data);
-    }}
-  }} catch(e) {{}}
-}}
+// ── Scroll to bottom ──────────────────────────────────────────────
+var mb = document.getElementById('msg-bottom');
+if(mb) setTimeout(function(){{mb.scrollIntoView({{behavior:'smooth'}});}},100);
 
-// Load Streamlit component API
-(function() {{
-  var script = document.createElement('script');
-  script.src = 'https://unpkg.com/streamlit-component-lib/dist/StreamlitLib.bundle.js';
-  document.head.appendChild(script);
-}})();
-
-function sbAct(a) {{
-  sendToStreamlit({{type:'sb', action:a, ts:Date.now()}});
-}}
-function doSend() {{
-  var i=document.getElementById('inp'), txt=i?i.value.trim():'';
-  if (!txt) return;
-  i.value='';
-  // Show message optimistically in UI
-  var mi=document.getElementById('mi');
-  if(mi) {{
-    var row=document.createElement('div');
-    row.className='msg-row msg-user';
-    row.innerHTML='<div class="msg-bubble user-bubble">'+txt.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div><div class="av av-user">{inits}</div>';
-    mi.insertBefore(row, document.getElementById('bot'));
-    var bot=document.getElementById('bot');
-    if(bot) bot.scrollIntoView({{behavior:'smooth'}});
-  }}
-  sendToStreamlit({{type:'msg', text:txt, ts:Date.now()}});
-}}
-function onKey(e) {{ if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();doSend();}} }}
-function sendMsg(t) {{
-  sendToStreamlit({{type:'msg', text:t, ts:Date.now()}});
-}}
-function doAttach() {{
-  var f=document.createElement('input');f.type='file';
-  f.accept='.pdf,.txt,.png,.jpg,.jpeg,.docx,.csv';
-  f.onchange=function(){{
-    if(f.files&&f.files[0]) sendToStreamlit({{type:'attach', name:f.files[0].name, ts:Date.now()}});
-  }};
-  f.click();
-}}
-function doMic() {{
-  sendToStreamlit({{type:'mic', ts:Date.now()}});
-}}
-function clearChip() {{
-  sendToStreamlit({{type:'clearchip', ts:Date.now()}});
-}}
+// ── Streamlit component ready signal ─────────────────────────────
+window.parent.postMessage({{isStreamlitMessage:true, type:"streamlit:componentReady", apiVersion:1}}, "*");
 </script>
 </body>
-</html>"""
+</html>
+""", height=700 if has_messages else 680, scrolling=False, key="chat_component")
 
-    # ─────────────────────────────────────────────────────────────────────
-    # RENDER: beautiful HTML visual (sidebar, messages, orbs etc.)
-    # Input is handled by st.chat_input BELOW — most reliable method
-    # ─────────────────────────────────────────────────────────────────────
+    # ── Handle component value from iframe ───────────────────────────────
+    import json as _json
+    _cv = st.session_state.get("chat_component")
+    if _cv and isinstance(_cv, str):
+        # Clear it immediately so it doesn't re-trigger
+        st.session_state["chat_component"] = None
+        try:
+            _data = _json.loads(_cv)
+            _type = _data.get("type","")
+            _val  = _data.get("value","")
 
-    # Hide Streamlit chat input default styling & position it over the iframe bar
-    st.markdown("""<style>
-    /* Make chat_input sit perfectly over the iframe input zone */
-    [data-testid="stChatInput"]{
-      position:fixed !important;
-      bottom:16px !important;
-      left:calc(252px + max(20px, calc((100vw - 252px - 700px)/2))) !important;
-      width:min(700px, calc(100vw - 252px - 40px)) !important;
-      z-index:99999 !important;
-      background:rgba(12,16,36,0.97) !important;
-      border:1.5px solid rgba(99,102,241,0.55) !important;
-      border-radius:18px !important;
-      box-shadow:0 0 0 3px rgba(99,102,241,0.14), 0 8px 34px rgba(67,56,202,0.22) !important;
-      padding: 2px 6px 2px 16px !important;
-    }
-    [data-testid="stChatInput"] textarea {
-      background:transparent !important;
-      border:none !important;
-      color:#E2E8F0 !important;
-      font-family:'Space Grotesk',sans-serif !important;
-      font-size:0.92rem !important;
-      caret-color:#818CF8 !important;
-    }
-    [data-testid="stChatInput"] textarea::placeholder{color:rgba(148,163,184,0.35)!important;}
-    [data-testid="stChatInputSubmitButton"] button{
-      background:linear-gradient(135deg,#4338CA,#6366F1) !important;
-      border-radius:50% !important;
-      border:none !important;
-      color:#fff !important;
-      box-shadow:0 3px 12px rgba(67,56,202,.38) !important;
-    }
-    /* Sidebar action buttons — overlay on top of iframe sidebar */
-    .stChatMessage{display:none!important;}
-    </style>""", unsafe_allow_html=True)
+            if _type == "send" and _val.strip():
+                dispatch_message(_val.strip())
+                st.session_state.attached_file_name = ""
+                st.rerun()
 
-    # Render the full visual HTML
-    components.html(CHAT_HTML, height=720, scrolling=False)
+            elif _type == "action":
+                if _val == "new_chat":
+                    if st.session_state.chat_messages:
+                        fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                        st.session_state.chat_sessions.append({"label": fu, "messages": list(st.session_state.chat_messages)})
+                    st.session_state.chat_messages = []
+                    st.session_state.attached_file_name = ""
+                    st.rerun()
+                elif _val == "dashboard":
+                    st.session_state.view = "dashboard"; st.rerun()
+                elif _val == "history":
+                    st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False); st.rerun()
 
-    # ── REAL input via st.chat_input (works 100% in all Streamlit envs) ──
-    user_input = st.chat_input("Ask AskMNIT anything...", key="_chat_input_main")
-    if user_input and user_input.strip():
-        full_msg = user_input.strip()
-        if st.session_state.attached_file_name:
-            full_msg += f" [File: {st.session_state.attached_file_name}]"
-            st.session_state.attached_file_name = ""
-        dispatch_message(full_msg)
-        st.rerun()
+            elif _type == "file" and _val:
+                st.session_state.attached_file_name = _val
+                st.toast(f"📎 {_val} attached!", icon="✅"); st.rerun()
 
-    # ── Sidebar navigation buttons (hidden overlay, always functional) ────
-    st.markdown("""<style>
-    .sb-overlay{
-      position:fixed; top:0; left:0; width:252px; height:100vh;
-      z-index:99998; pointer-events:none;
-    }
-    .sb-overlay-btns{
-      position:fixed; top:118px; left:8px; width:236px;
-      z-index:99999; pointer-events:all;
-      display:flex; flex-direction:column; gap:3px;
-    }
-    .sb-overlay-btns .stButton>button{
-      background:transparent!important;
-      border:1px solid transparent!important;
-      color:transparent!important;
-      width:100%!important; height:42px!important;
-      cursor:pointer!important;
-      box-shadow:none!important;
-      padding:0!important;
-    }
-    </style>
-    <div class="sb-overlay-btns">""", unsafe_allow_html=True)
+            elif _type == "clear_file":
+                st.session_state.attached_file_name = ""; st.rerun()
 
-    c1, c2, c3 = st.columns([1,1,1])
-    with c1:
-        if st.button("New", key="_ov_new"):
-            if st.session_state.chat_messages:
-                fu = next((m["content"][:38] for m in st.session_state.chat_messages if m["role"]=="user"),"Chat")
-                st.session_state.chat_sessions.append({"label":fu+"...","messages":list(st.session_state.chat_messages)})
-            st.session_state.chat_messages = []
-            st.session_state.attached_file_name = ""
-            st.rerun()
-    with c2:
-        if st.button("Dash", key="_ov_dash"):
-            st.session_state.view = "dashboard"; st.rerun()
-    with c3:
-        if st.button("Clr", key="_ov_clr"):
-            st.session_state.chat_messages = []
-            st.session_state.attached_file_name = ""
-            st.rerun()
+            elif _type == "voice_done":
+                dispatch_message("🎤 " + str(_val))
+                st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        except Exception:
+            pass
+
     st.stop()
 
 
 ###############################################################################
-# DASHBOARD VIEW  (completely unchanged from original)
+# DASHBOARD VIEW  (100% UNCHANGED)
 ###############################################################################
-st.markdown(DASH_CSS, unsafe_allow_html=True)
-
 NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]
 with st.sidebar:
     st.markdown(
@@ -833,23 +1166,23 @@ with st.sidebar:
 dash_page = st.session_state.nav_page
 if dash_page != "My Dashboard":
     PMETA = {
-        "My Schedule":("My Schedule","Weekly timetable renders here."),
-        "Academics":("Academics","Grades and CGPA records render here."),
-        "Study Material":("Study Material","Uploaded notes render here."),
-        "PYQs":("PYQs","Previous year papers render here."),
-        "Fee Portal":("Fee Portal","Fee dues and receipts render here."),
-        "Mess Menu":("Mess Menu","Weekly hostel menu renders here."),
+        "My Schedule":    ("My Schedule",   "Weekly timetable renders here."),
+        "Academics":      ("Academics",      "Grades and CGPA records render here."),
+        "Study Material": ("Study Material", "Uploaded notes render here."),
+        "PYQs":           ("PYQs",           "Previous year papers render here."),
+        "Fee Portal":     ("Fee Portal",     "Fee dues and receipts render here."),
+        "Mess Menu":      ("Mess Menu",      "Weekly hostel menu renders here."),
     }
-    title,desc = PMETA.get(dash_page,(dash_page,"Coming soon."))
+    title, desc = PMETA.get(dash_page, (dash_page, "Coming soon."))
     st.markdown(f'<div style="padding:24px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.95rem;color:#E2E8F0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;margin-bottom:24px;">{title.upper()}</div><div style="background:linear-gradient(160deg,#0B1120,#060A12);border:1px dashed rgba(59,130,246,0.18);border-radius:16px;padding:60px 40px;text-align:center;"><div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;margin-bottom:8px;">{title.upper()}</div><div style="font-size:0.76rem;color:rgba(148,163,184,.44);max-width:280px;margin:0 auto;line-height:1.65;">{desc}</div></div></div>', unsafe_allow_html=True)
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MY DASHBOARD
+# MY DASHBOARD  (100% UNCHANGED)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("<div style='padding:0 22px 80px;'>", unsafe_allow_html=True)
 
-h_logo,h_mid,h_right = st.columns([2,4,3])
+h_logo, h_mid, h_right = st.columns([2,4,3])
 with h_logo:
     st.markdown('<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:white;">M</div><div><div style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div><div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div></div></div>', unsafe_allow_html=True)
 with h_mid:
@@ -857,9 +1190,9 @@ with h_mid:
     st.markdown(f'<div style="padding:13px 0 9px;text-align:center;"><span style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#60A5FA;letter-spacing:0.8px;">MY DASHBOARD</span><br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">{now_str}</span></div>', unsafe_allow_html=True)
 with h_right:
     nm,br,sem = st.session_state.student_name,st.session_state.branch,st.session_state.semester
-    bh=branch_hex(br); pp=st.session_state.profile_pic_b64
-    av_html=(f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh}55;">' if pp
-             else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh}55;">{initials(nm)}</div>')
+    bh = branch_hex(br); pp = st.session_state.profile_pic_b64
+    av_html = (f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh}55;">' if pp
+               else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh}55;">{initials(nm)}</div>')
     st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm}</div><div style="font-size:0.58rem;color:{bh};font-weight:600;">{br} · {sem}</div></div></div>', unsafe_allow_html=True)
 
 st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
@@ -867,61 +1200,65 @@ st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent
 srow1,srow2,srow3,_,srow5 = st.columns([1,1,1,1,1])
 with srow1:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Settings & Profile",key="open_settings"):
-        st.session_state.settings_mode=None if st.session_state.settings_mode=="profile" else "profile"; st.rerun()
+    if st.button("Settings & Profile", key="open_settings"):
+        st.session_state.settings_mode = None if st.session_state.settings_mode=="profile" else "profile"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 with srow2:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Upload Schedule",key="open_schedule"):
-        st.session_state.settings_mode=None if st.session_state.settings_mode=="schedule" else "schedule"; st.rerun()
+    if st.button("Upload Schedule", key="open_schedule"):
+        st.session_state.settings_mode = None if st.session_state.settings_mode=="schedule" else "schedule"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 with srow3:
     st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Notifications",key="open_notif"):
+    if st.button("Notifications", key="open_notif"):
         st.toast("No new notifications.", icon="🔔")
     st.markdown('</div>', unsafe_allow_html=True)
 with srow5:
     st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
-    if st.button("Open AskMNIT AI",key="btn_open_chat_dash"):
-        st.session_state.view="chat"; st.rerun()
+    if st.button("Open AskMNIT AI", key="btn_open_chat_dash"):
+        st.session_state.view = "chat"; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
 mode = st.session_state.settings_mode
-if mode=="profile":
-    with st.expander("Settings & Profile",expanded=True):
-        pc1,pc2=st.columns([1,2])
+if mode == "profile":
+    with st.expander("Settings & Profile", expanded=True):
+        pc1,pc2 = st.columns([1,2])
         with pc1:
-            pp=st.session_state.profile_pic_b64; bh=branch_hex(st.session_state.branch)
-            if pp: st.markdown(f'<img src="{pp}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid {bh}66;display:block;margin:0 auto 8px;">', unsafe_allow_html=True)
-            else:  st.markdown(f'<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;margin:0 auto 8px;">{initials(st.session_state.student_name)}</div>', unsafe_allow_html=True)
-            pic_file=st.file_uploader("Upload photo",type=["png","jpg","jpeg"],key="profile_pic_up",label_visibility="collapsed")
-            if pic_file: st.session_state.profile_pic_b64=img_to_b64(pic_file); st.rerun()
+            pp = st.session_state.profile_pic_b64; bh = branch_hex(st.session_state.branch)
+            if pp:
+                st.markdown(f'<img src="{pp}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid {bh}66;display:block;margin:0 auto 8px;">', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,{bh},{bh}88);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;margin:0 auto 8px;">{initials(st.session_state.student_name)}</div>', unsafe_allow_html=True)
+            pic_file = st.file_uploader("Upload photo", type=["png","jpg","jpeg"], key="profile_pic_up", label_visibility="collapsed")
+            if pic_file: st.session_state.profile_pic_b64 = img_to_b64(pic_file); st.rerun()
         with pc2:
-            new_name=st.text_input("Full Name",value=st.session_state.student_name,key="inp_name")
-            new_id=st.text_input("College ID",value=st.session_state.college_id,key="inp_id")
-            new_sem=st.selectbox("Semester",SEMESTERS,index=SEMESTERS.index(st.session_state.semester),key="sel_sem")
-            new_br=st.selectbox("Branch",BRANCHES,index=BRANCHES.index(st.session_state.branch),key="sel_br")
-            if st.button("Save Profile",key="save_profile"):
-                old_br=st.session_state.branch
+            new_name = st.text_input("Full Name",  value=st.session_state.student_name, key="inp_name")
+            new_id   = st.text_input("College ID", value=st.session_state.college_id,   key="inp_id")
+            new_sem  = st.selectbox("Semester", SEMESTERS, index=SEMESTERS.index(st.session_state.semester), key="sel_sem")
+            new_br   = st.selectbox("Branch",   BRANCHES,  index=BRANCHES.index(st.session_state.branch),   key="sel_br")
+            if st.button("Save Profile", key="save_profile"):
+                old_br = st.session_state.branch
                 st.session_state.student_name=new_name; st.session_state.college_id=new_id
                 st.session_state.semester=new_sem; st.session_state.branch=new_br
                 if old_br!=new_br: st.session_state.attendance=blank_att(subjects_for_branch(new_br))
-                st.toast("Profile saved!",icon="✅"); st.session_state.settings_mode=None; st.rerun()
+                st.toast("Profile saved!", icon="✅"); st.session_state.settings_mode=None; st.rerun()
 
-elif mode=="schedule":
-    with st.expander("Upload Weekly Schedule PDF",expanded=True):
-        pdf_file=st.file_uploader("Drop schedule PDF here",type=["pdf"],key="sched_upload")
+elif mode == "schedule":
+    with st.expander("Upload Weekly Schedule PDF", expanded=True):
+        pdf_file = st.file_uploader("Drop schedule PDF here", type=["pdf"], key="sched_upload")
         if pdf_file:
             st.session_state.full_schedule=process_schedule_pdf(pdf_file,st.session_state.branch)
             st.session_state.schedule_loaded=True; st.session_state.pdf_filename=pdf_file.name
-            st.toast(f"Schedule loaded: {pdf_file.name}",icon="✅"); st.session_state.settings_mode=None; st.rerun()
+            st.toast(f"Schedule loaded: {pdf_file.name}", icon="✅"); st.session_state.settings_mode=None; st.rerun()
         if st.session_state.schedule_loaded:
             st.markdown(f'<div style="font-size:0.75rem;color:#10B981;margin-top:6px;">Active: {st.session_state.pdf_filename}</div>', unsafe_allow_html=True)
 
-ov=overall_pct(st.session_state.attendance); stat_badge_txt,stat_col,_=status_badge(ov)
-kpi1,kpi2,kpi3,kpi4=st.columns(4)
+# KPI Row
+ov = overall_pct(st.session_state.attendance)
+stat_badge_txt,stat_col,_ = status_badge(ov)
+kpi1,kpi2,kpi3,kpi4 = st.columns(4)
 for col,ico,val,lbl,c in [
     (kpi1,"📊",f"{ov}%","Overall Attendance",stat_col),
     (kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#60A5FA"),
@@ -931,43 +1268,53 @@ for col,ico,val,lbl,c in [
     with col:
         st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px 14px;margin-bottom:14px;"><div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div><div style="font-size:1.7rem;font-weight:800;color:{c};font-family:\'DM Mono\',monospace;line-height:1.1;">{val}</div><div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div></div>', unsafe_allow_html=True)
 
+# Attendance Tracker
 st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>', unsafe_allow_html=True)
 
-def render_subj_rows(subj_list,section):
-    att=st.session_state.attendance
-    for idx,subj in enumerate(subj_list):
+def render_subj_rows(subj_list, section):
+    att = st.session_state.attendance
+    for idx, subj in enumerate(subj_list):
         if subj not in att: att[subj]={"present":0,"total":0}
-        r=att[subj]; pct=att_pct(r); c=att_color(pct); kb=f"{section}_{idx}_{_safe_key(subj)}"
-        sc1,sc2,sc3,sc4,sc5,sc6=st.columns([3.5,1.2,0.9,0.9,0.9,0.9])
-        with sc1: st.markdown(f'<div style="font-size:0.80rem;color:#E2E8F0;font-weight:600;padding:8px 0 4px;">{subj}</div><div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;overflow:hidden;width:90%;"><div style="width:{pct}%;height:100%;background:linear-gradient(90deg,{c},{c}88);border-radius:99px;"></div></div>', unsafe_allow_html=True)
-        with sc2: st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
+        r=att[subj]; pct=att_pct(r); c=att_color(pct)
+        kb = f"{section}_{idx}_{_safe_key(subj)}"
+        sc1,sc2,sc3,sc4,sc5,sc6 = st.columns([3.5,1.2,0.9,0.9,0.9,0.9])
+        with sc1:
+            st.markdown(f'<div style="font-size:0.80rem;color:#E2E8F0;font-weight:600;padding:8px 0 4px;">{subj}</div><div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;overflow:hidden;width:90%;"><div style="width:{pct}%;height:100%;background:linear-gradient(90deg,{c},{c}88);border-radius:99px;"></div></div>', unsafe_allow_html=True)
+        with sc2:
+            st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
         with sc3:
             st.markdown('<div class="present-btn">', unsafe_allow_html=True)
-            if st.button("P",key=f"pp_{kb}",use_container_width=True): att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
+            if st.button("P", key=f"pp_{kb}", use_container_width=True):
+                att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc4:
             st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
-            if st.button("A",key=f"pa_{kb}",use_container_width=True): att[subj]["total"]+=1; st.rerun()
+            if st.button("A", key=f"pa_{kb}", use_container_width=True):
+                att[subj]["total"]+=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc5:
             st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-P",key=f"rp_{kb}",use_container_width=True):
+            if st.button("-P", key=f"rp_{kb}", use_container_width=True):
                 if r["present"]>0 and r["total"]>0: att[subj]["present"]-=1; att[subj]["total"]-=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with sc6:
             st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-A",key=f"ra_{kb}",use_container_width=True):
+            if st.button("-A", key=f"ra_{kb}", use_container_width=True):
                 if r["total"]>0: att[subj]["total"]-=1; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-branch_only=BRANCH_SUBJECTS.get(st.session_state.branch,[])
-with st.expander("Common Subjects ("+str(len(COMMON_SUBJECTS))+")",expanded=True): render_subj_rows(COMMON_SUBJECTS,"cmn")
+branch_only = BRANCH_SUBJECTS.get(st.session_state.branch,[])
+with st.expander("Common Subjects ("+str(len(COMMON_SUBJECTS))+")", expanded=True):
+    render_subj_rows(COMMON_SUBJECTS,"cmn")
 if branch_only:
-    with st.expander(st.session_state.branch+" Subjects ("+str(len(branch_only))+")",expanded=True): render_subj_rows(branch_only,"brnch")
+    with st.expander(st.session_state.branch+" Subjects ("+str(len(branch_only))+")", expanded=True):
+        render_subj_rows(branch_only,"brnch")
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
-today_name=datetime.datetime.now().strftime("%A"); now_hm=datetime.datetime.now().hour*60+datetime.datetime.now().minute
+# Schedule Section
+today_name = datetime.datetime.now().strftime("%A")
+now_hm = datetime.datetime.now().hour*60+datetime.datetime.now().minute
 st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S CLASS SCHEDULE</span><span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;color:rgba(96,165,250,.65);">{today_name.upper()}</span></div>', unsafe_allow_html=True)
 if st.session_state.schedule_loaded:
     today_slots=get_today_slots(st.session_state.full_schedule); nxt=get_next_class(today_slots)
@@ -1008,6 +1355,7 @@ else:
 st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
+# Notes & Quick Links
 ql_col,notes_col=st.columns([1,1.5],gap="large")
 with ql_col:
     st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
@@ -1038,13 +1386,15 @@ with notes_col:
             with nr1: st.markdown(f'<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">{note["text"]}</div>', unsafe_allow_html=True)
             with nr2:
                 st.markdown('<div class="pin-btn">', unsafe_allow_html=True)
-                if st.button("Pin",key=f"pin_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True): st.session_state.notes_list[i]["pinned"]=True; st.rerun()
+                if st.button("Pin",key=f"pin_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True):
+                    st.session_state.notes_list[i]["pinned"]=True; st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
             with nr3:
                 st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-                if st.button("Del",key=f"del_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True): st.session_state.notes_list.pop(i); st.rerun()
+                if st.button("Del",key=f"del_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True):
+                    st.session_state.notes_list.pop(i); st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; v8.0 FIXED PREMIUM</span></div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT &nbsp;·&nbsp; MNIT JAIPUR &nbsp;·&nbsp; v2.0 PREMIUM</span></div>', unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)

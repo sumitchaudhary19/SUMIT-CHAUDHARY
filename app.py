@@ -192,22 +192,28 @@ if st.session_state.get("view") == "chat":
     }
     .cs-panel.open{transform:translateX(0);}
 
+    /* Toggle tab — always sticking out from right edge of sidebar */
+    .cs-tab{
+      position:absolute;top:12px;right:-30px;
+      width:30px;height:34px;
+      background:#1a1a2e;border:1px solid #555;border-left:none;
+      border-radius:0 6px 6px 0;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-size:0.9rem;color:#ccc;
+      user-select:none;z-index:10001;
+    }
+    .cs-tab:hover{background:#2a2a3e;color:#fff;}
+
     /* Overlay */
     .cs-overlay{position:fixed;inset:0;z-index:8999;background:rgba(0,0,0,0.4);display:none;}
     .cs-overlay.open{display:block;}
 
-    /* Hamburger button — pinned to right edge of sidebar, always visible */
+    /* Hamburger st.button — hidden, triggered by JS click on cs-tab */
     .cs-hbtn .stButton>button{
-      position:fixed!important;top:12px!important;left:208px!important;
-      z-index:10001!important;
-      width:28px!important;height:28px!important;
-      min-width:28px!important;min-height:28px!important;
-      background:#1a1a2e!important;border:1px solid #555!important;
-      color:#ccc!important;font-size:0.85rem!important;font-weight:400!important;
-      padding:0!important;line-height:1!important;
-      border-radius:0 6px 6px 0!important;box-shadow:none!important;
+      position:fixed!important;top:-200px!important;left:-200px!important;
+      opacity:0!important;pointer-events:none!important;
+      width:1px!important;height:1px!important;
     }
-    .cs-hbtn .stButton>button:hover{background:#2a2a3e!important;transform:none!important;}
 
     /* Chat area */
     .chat-area{padding:20px 16px 40px;max-width:800px;margin:0 auto;}
@@ -219,20 +225,34 @@ if st.session_state.get("view") == "chat":
       padding:9px 14px;border-radius:14px 14px 14px 2px;font-size:0.85rem;max-width:70%;text-align:left;}
     </style>""", unsafe_allow_html=True)
 
-    # ── Hamburger button ──────────────────────────────────────────────────
+    # ── Hidden st.button (triggered by JS) ───────────────────────────────
     st.markdown('<div class="cs-hbtn">', unsafe_allow_html=True)
-    if st.button("✕" if st.session_state.chat_sb_open else "☰", key="_cs_hbtn"):
+    if st.button("toggle", key="_cs_hbtn"):
         st.session_state.chat_sb_open = not st.session_state.chat_sb_open
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Overlay ───────────────────────────────────────────────────────────
     _oc = "open" if st.session_state.chat_sb_open else ""
-    st.markdown(f'<div class="cs-overlay {_oc}"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="cs-overlay {_oc}" onclick="triggerToggle()"></div>', unsafe_allow_html=True)
 
-    # ── Sidebar panel (empty — tabs will be added later) ──────────────────
-    st.markdown(f'<div class="cs-panel {_oc}">', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # ── Sidebar with visible tab on its right edge ────────────────────────
+    _icon = "✕" if st.session_state.chat_sb_open else "☰"
+    st.markdown(f"""
+    <div class="cs-panel {_oc}" id="cs-panel">
+      <div class="cs-tab" onclick="triggerToggle()">{_icon}</div>
+    </div>
+    <script>
+    function triggerToggle() {{
+      var btns = window.parent.document.querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {{
+        if (btns[i].innerText.trim() === 'toggle') {{
+          btns[i].click(); break;
+        }}
+      }}
+    }}
+    </script>
+    """, unsafe_allow_html=True)
 
     # ── Messages ──────────────────────────────────────────────────────────
     st.markdown('<div class="chat-area">', unsafe_allow_html=True)

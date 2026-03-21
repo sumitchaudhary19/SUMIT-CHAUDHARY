@@ -971,32 +971,19 @@ function toggleHistory(){{
 }}
 document.addEventListener('keydown',function(e){{ if(e.key==='Escape') closeSb(); }});
 
-// ── Bridge: write to hidden Streamlit text input → triggers rerun ─
+// ── SEND TO STREAMLIT — query param method (proven working) ──────
 function sendToStreamlit(payload) {{
-  // Find the hidden text input in parent document and set its value
-  // then dispatch input+change events so Streamlit detects the change
   try {{
-    var doc = window.parent.document;
-    var inputs = doc.querySelectorAll('input[type="text"]');
-    var bridge = null;
-    for(var i=0; i<inputs.length; i++) {{
-      if(inputs[i].id === '_askmnitbridge' ||
-         inputs[i].getAttribute('aria-label') === '_bridge' ||
-         (inputs[i].value === '' && inputs[i].placeholder === '')) {{
-        bridge = inputs[i];
-        break;
-      }}
-    }}
-    // Fallback: try last text input
-    if(!bridge && inputs.length > 0) bridge = inputs[inputs.length-1];
-    if(bridge) {{
-      var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
-      nativeInputValueSetter.call(bridge, payload);
-      bridge.dispatchEvent(new Event('input', {{ bubbles: true }}));
-      bridge.dispatchEvent(new Event('change', {{ bubbles: true }}));
-    }}
-  }} catch(err) {{
-    console.warn('Bridge write failed:', err);
+    var data = JSON.parse(payload);
+    var url = new URL(window.parent.location.href);
+    url.searchParams.set('_am_type', data.type || '');
+    url.searchParams.set('_am_val', encodeURIComponent(data.value || ''));
+    window.parent.location.href = url.toString();
+  }} catch(e) {{
+    // fallback: try setting just the hash
+    try {{
+      window.parent.location.hash = encodeURIComponent(payload);
+    }} catch(e2) {{}}
   }}
 }}
 
@@ -1106,60 +1093,43 @@ window.parent.postMessage({{isStreamlitMessage:true, type:"streamlit:componentRe
 </html>
 """, height=700 if has_messages else 680, scrolling=False)
 
-    # ── Hidden bridge input — JS writes here, Python reads it ────────────
-    # Invisible text input that JS fills via DOM, Streamlit picks up on rerun
-    st.markdown("""
-    <style>
-    div[data-testid="stTextInput"]:has(input#_askmnitbridge){
-      position:fixed!important;bottom:-200px!important;
-      opacity:0!important;pointer-events:none!important;
-      width:1px!important;height:1px!important;overflow:hidden!important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    _bridge_val = st.text_input("_bridge", key="_askmnitbridge_input", label_visibility="collapsed")
+    # ── Handle query params from iframe JS ───────────────────────────────
+    import urllib.parse as _up
+    _am_type = st.query_params.get("_am_type", "")
+    _am_val  = _up.unquote(st.query_params.get("_am_val", ""))
 
-    # ── Handle value from bridge ──────────────────────────────────────────
-    import json as _json
-    _cv = _bridge_val or st.session_state.get("_pending_msg", "")
-    if _cv and isinstance(_cv, str) and _cv.strip():
-        st.session_state["_pending_msg"] = ""
+    if _am_type:
+        # Clear params immediately
         try:
-            _data = _json.loads(_cv)
-            _type = _data.get("type","")
-            _val  = _data.get("value","")
+            del st.query_params["_am_type"]
+            del st.query_params["_am_val"]
+        except: pass
 
-            if _type == "send" and _val.strip():
-                dispatch_message(_val.strip())
+        if _am_type == "send" and _am_val.strip():
+            dispatch_message(_am_val.strip())
+            st.session_state.attached_file_name = ""
+            st.rerun()
+
+        elif _am_type == "action":
+            if _am_val == "new_chat":
+                if st.session_state.chat_messages:
+                    fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
+                    st.session_state.chat_sessions.append({"label": fu, "messages": list(st.session_state.chat_messages)})
+                st.session_state.chat_messages = []
                 st.session_state.attached_file_name = ""
                 st.rerun()
+            elif _am_val == "dashboard":
+                st.session_state.view = "dashboard"; st.rerun()
 
-            elif _type == "action":
-                if _val == "new_chat":
-                    if st.session_state.chat_messages:
-                        fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-                        st.session_state.chat_sessions.append({"label": fu, "messages": list(st.session_state.chat_messages)})
-                    st.session_state.chat_messages = []
-                    st.session_state.attached_file_name = ""
-                    st.rerun()
-                elif _val == "dashboard":
-                    st.session_state.view = "dashboard"; st.rerun()
-                elif _val == "history":
-                    st.session_state.show_history_panel = not st.session_state.get("show_history_panel", False); st.rerun()
+        elif _am_type == "file" and _am_val:
+            st.session_state.attached_file_name = _am_val
+            st.toast(f"📎 {_am_val} attached!", icon="✅"); st.rerun()
 
-            elif _type == "file" and _val:
-                st.session_state.attached_file_name = _val
-                st.toast(f"📎 {_val} attached!", icon="✅"); st.rerun()
+        elif _am_type == "clear_file":
+            st.session_state.attached_file_name = ""; st.rerun()
 
-            elif _type == "clear_file":
-                st.session_state.attached_file_name = ""; st.rerun()
-
-            elif _type == "voice_done":
-                dispatch_message("🎤 " + str(_val))
-                st.rerun()
-
-        except Exception:
-            pass
+        elif _am_type == "voice_done":
+            dispatch_message("🎤 " + _am_val); st.rerun()
 
     st.stop()
 

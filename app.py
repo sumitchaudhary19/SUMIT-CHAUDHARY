@@ -1,481 +1,1848 @@
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  AskMNIT — v6.0 PREMIUM  (Pure Streamlit, no iframe hacks)                  ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
+"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          AskMNIT — Premium Student Dashboard & AI Assistant                 ║
+║          Single-file Streamlit Application · MNIT Jaipur                   ║
+║          Stack: Python + Streamlit + Anthropic Claude API                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+SETUP:
+    pip install streamlit anthropic pdfplumber pandas
+    export ANTHROPIC_API_KEY="your-key-here"
+    streamlit run app.py
+"""
 
 import streamlit as st
-import datetime, random, base64
+import anthropic
+import json
+import datetime
+import re
+import math
+import pandas as pd
+from io import BytesIO
 
-st.set_page_config(page_title="AskMNIT", page_icon="🎓",
-                   layout="wide", initial_sidebar_state="collapsed")
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SUBJECT DATABASE
-# ─────────────────────────────────────────────────────────────────────────────
-COMMON_SUBJECTS = ["Mathematics I/II","Physics","Chemistry","Computer Programming",
-    "Basic Electrical","Basic Electronics","Basic Mechanical","Engineering Drawing",
-    "Environmental Science","Technical Communication","Basic Economics"]
-BRANCH_SUBJECTS = {
-    "CSE":["Discrete Mathematics","Problem Solving using C"],
-    "AI & ML":["Mathematics for AI","Data Structures and Algorithms"],
-    "ECE":["Signals and Systems","Electronic Devices and Circuits"],
-    "Civil":["Mechanics of Solid","Engineering Geology"],
-    "Metallurgy":["Engineering Materials","Mineral Processing"],
-}
-BRANCHES  = ["CSE","AI & ML","ECE","Civil","Metallurgy"]
-SEMESTERS = [f"Semester {i}" for i in range(1,9)]
-DAYS      = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-TYPE_COLORS = {"Lecture":"#22D3EE","Lab":"#F59E0B","Tutorial":"#A78BFA"}
-
-def process_schedule_pdf(file, branch):
-    pool = COMMON_SUBJECTS[:4]+BRANCH_SUBJECTS.get(branch,[])
-    random.seed(42)
-    TP = [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),
-          ("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]
-    sched={}
-    for day in DAYS[:6]:
-        chosen=sorted(random.sample(range(len(TP)),k=random.randint(2,4)))
-        sched[day]=[{"time_start":TP[ci][0],"time_end":TP[ci][1],
-            "subject":random.choice(pool),"room":random.choice(["LT-1","LT-2","Lab-A","Lab-B","CR-3","CR-5"]),
-            "type":random.choice(["Lecture","Lecture","Lab","Tutorial"])} for ci in chosen]
-    return sched
-
-def get_today_slots(fs): return fs.get(datetime.datetime.now().strftime("%A"),[])
-def get_next_class(slots):
-    now=datetime.datetime.now()
-    for slot in slots:
-        h,m=map(int,slot["time_start"].split(":"))
-        dt=now.replace(hour=h,minute=m,second=0,microsecond=0)
-        if dt>now: return {**slot,"minutes_away":int((dt-now).total_seconds()//60)}
-    return None
-
-def subjects_for_branch(b): return COMMON_SUBJECTS+BRANCH_SUBJECTS.get(b,[])
-def blank_att(s): return {x:{"present":0,"total":0} for x in s}
-def att_pct(r): return round(r["present"]/r["total"]*100,1) if r["total"] else 0.0
-def overall_pct(a):
-    tp=sum(r["present"] for r in a.values()); tt=sum(r["total"] for r in a.values())
-    return round(tp/tt*100,1) if tt else 0.0
-def status_badge(p):
-    if p>=75: return "Safe","#10B981","rgba(16,185,129,0.12)"
-    if p>=65: return "Low","#F59E0B","rgba(245,158,11,0.12)"
-    return "Critical","#EF4444","rgba(239,68,68,0.12)"
-def att_color(p): return "#10B981" if p>=75 else "#F59E0B" if p>=65 else "#EF4444"
-def initials(n): return "".join(w[0].upper() for w in n.split()[:2]) if n else "??"
-def branch_hex(b): return {"CSE":"#3B82F6","AI & ML":"#8B5CF6","ECE":"#06B6D4","Civil":"#F59E0B","Metallurgy":"#10B981"}.get(b,"#6366F1")
-def img_to_b64(f): d=f.read();m=f.type or "image/png"; return f"data:{m};base64,{base64.b64encode(d).decode()}"
-def fmt_time(t):
-    try: h,m=map(int,t.split(":")); return f"{h%12 or 12:02d}:{m:02d} {'AM' if h<12 else 'PM'}"
-    except: return t
-def _safe_key(s): return "".join(c if c.isalnum() else "_" for c in s)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SESSION STATE
-# ─────────────────────────────────────────────────────────────────────────────
-_def_branch = "CSE"
-_DEFAULTS = {
-    "view":"dashboard",
-    "nav_page":"My Dashboard",
-    "student_name":"Sumit Chaudhary","college_id":"2022UMT1234",
-    "semester":"Semester 6","branch":_def_branch,"profile_pic_b64":"",
-    "settings_mode":None,
-    "attendance":blank_att(subjects_for_branch(_def_branch)),
-    "schedule_loaded":False,"full_schedule":{},"pdf_filename":"",
-    "notes_list":[{"text":"Mid-sem revision starts Monday","pinned":False},
-                  {"text":"Submit fee by 17 Mar","pinned":False},
-                  {"text":"Collect hall ticket from ERP","pinned":False}],
-    "ql_feedback":"",
-    # Chat
-    "chat_messages":[],"chat_sessions":[],"chat_sb_open":False,
-    "show_chat_history":False,"_pending_pill":"",
-}
-for k,v in _DEFAULTS.items():
-    if k not in st.session_state: st.session_state[k]=v
-
-# ─────────────────────────────────────────────────────────────────────────────
-# GLOBAL CSS  (dashboard + chat both)
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-*,html,body{box-sizing:border-box;margin:0;padding:0;}
-html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{
-  font-family:'Inter',sans-serif!important;
-  background:#09070f!important;color:#e8e8f0!important;}
-header[data-testid="stHeader"],footer,#MainMenu,
-[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none!important;}
-[data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important;}
-/* Dashboard sidebar */
-[data-testid="stSidebar"]{background:#0B1120!important;border-right:1px solid rgba(59,130,246,0.16)!important;min-width:260px!important;max-width:260px!important;}
-[data-testid="stSidebar"]>div{padding:0!important;}
-/* Global buttons */
-.stButton>button{background:linear-gradient(135deg,#2563EB,#4F46E5)!important;color:#fff!important;border:none!important;border-radius:9px!important;font-family:'Inter',sans-serif!important;font-weight:600!important;font-size:0.82rem!important;padding:9px 16px!important;box-shadow:0 3px 14px rgba(37,99,235,0.20)!important;transition:all 0.16s ease!important;}
-.stButton>button:hover{opacity:.88!important;transform:translateY(-1px)!important;}
-.ghost-btn .stButton>button{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(226,232,240,.55)!important;box-shadow:none!important;}
-.present-btn .stButton>button{background:linear-gradient(135deg,#065F46,#10B981)!important;padding:6px 11px!important;font-size:0.75rem!important;border-radius:7px!important;}
-.absent-btn .stButton>button{background:linear-gradient(135deg,#7F1D1D,#EF4444)!important;padding:6px 11px!important;font-size:0.75rem!important;border-radius:7px!important;}
-.save-btn .stButton>button{background:linear-gradient(135deg,#92400E,#F59E0B)!important;padding:7px 13px!important;font-size:0.77rem!important;}
-.pin-btn .stButton>button{background:rgba(245,158,11,0.10)!important;border:1px solid rgba(245,158,11,0.28)!important;color:#FCD34D!important;box-shadow:none!important;font-size:0.70rem!important;padding:4px 10px!important;border-radius:7px!important;}
-.del-btn .stButton>button{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.18)!important;color:rgba(252,165,165,0.70)!important;box-shadow:none!important;font-size:0.68rem!important;padding:3px 8px!important;border-radius:6px!important;}
-.ql-btn .stButton>button{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,0.14)!important;color:rgba(186,230,253,.65)!important;box-shadow:none!important;font-size:0.80rem!important;padding:9px 14px!important;border-radius:9px!important;}
-.logout-btn .stButton>button{background:rgba(239,68,68,.09)!important;border:1px solid rgba(239,68,68,.20)!important;color:#FCA5A5!important;box-shadow:none!important;}
-.open-chat-btn .stButton>button{background:linear-gradient(135deg,#059669,#10B981)!important;border-radius:12px!important;font-weight:700!important;font-size:0.88rem!important;padding:11px 22px!important;box-shadow:0 5px 24px rgba(16,185,129,.36)!important;}
-.settings-menu-btn .stButton>button{background:rgba(255,255,255,0.06)!important;border:1px solid rgba(255,255,255,0.12)!important;color:rgba(226,232,240,0.75)!important;box-shadow:none!important;font-size:0.82rem!important;padding:8px 16px!important;border-radius:10px!important;}
-.nav-btn .stButton>button{background:transparent!important;color:rgba(148,163,184,.65)!important;border:none!important;box-shadow:none!important;text-align:left!important;justify-content:flex-start!important;padding:10px 14px!important;font-size:0.83rem!important;border-radius:8px!important;}
-.nav-btn .stButton>button:hover{background:rgba(59,130,246,.10)!important;color:#BAE6FD!important;transform:none!important;}
-.nav-btn-active .stButton>button{background:rgba(59,130,246,.14)!important;color:#60A5FA!important;border-left:2px solid #3B82F6!important;font-weight:700!important;box-shadow:none!important;}
-/* Inputs */
-[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;font-family:'Inter',sans-serif!important;font-size:0.87rem!important;}
-[data-testid="stTextInput"] input:focus,[data-testid="stTextArea"] textarea:focus{border-color:rgba(59,130,246,0.55)!important;box-shadow:0 0 0 2.5px rgba(59,130,246,0.13)!important;}
-[data-testid="stSelectbox"]>div>div{background:rgba(255,255,255,0.04)!important;border:1px solid rgba(255,255,255,0.14)!important;border-radius:10px!important;color:#E2E8F0!important;}
-[data-testid="stFileUploader"]{background:rgba(59,130,246,0.04)!important;border:1px dashed rgba(59,130,246,0.26)!important;border-radius:12px!important;}
-[data-testid="stExpander"]{background:rgba(255,255,255,.018)!important;border:1px solid rgba(255,255,255,0.08)!important;border-radius:12px!important;}
-[data-testid="stProgress"]>div>div{border-radius:99px!important;background:linear-gradient(90deg,#2563EB,#22D3EE)!important;}
-[data-testid="stProgress"]>div{background:rgba(255,255,255,.07)!important;border-radius:99px!important;height:5px!important;}
-h1,h2,h3,h4{font-family:'DM Mono',monospace!important;font-weight:500!important;}
-hr{border-color:rgba(255,255,255,0.08)!important;}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-thumb{background:rgba(100,60,200,.30);border-radius:4px;}
-[data-testid="column"]{padding:0 4px!important;}
-</style>""", unsafe_allow_html=True)
-
-###############################################################################
-# AI RESPONSE
-###############################################################################
-def generate_ai_response(last):
-    import requests
-    nm = st.session_state.student_name.split()[0]
-    br = st.session_state.branch; sem = st.session_state.semester
-    sys_p = f"""You are AskMNIT — {nm}'s brilliant chill senior at MNIT Jaipur.
-Mix Hinglish naturally. Short punchy sentences. Warm like a best friend.
-Student: {nm} | Branch: {br} | Semester: {sem}
-RULES: Call them "{nm}" or "yaar/bhai". Never say "I'm an AI"."""
-    msgs = [{"role":m["role"],"content":m["content"]} for m in st.session_state.chat_messages[-14:-1]]
-    msgs.append({"role":"user","content":last})
-    KEY = st.secrets.get("GROQ_API_KEY","") or st.session_state.get("groq_api_key","")
-    if not KEY:
-        return "Yaar GROQ_API_KEY set nahi hai 😅 `.streamlit/secrets.toml` mein add kar: `GROQ_API_KEY='gsk_...'`"
+# ─── PDF Parsing Libraries ────────────────────────────────────────────────────
+# Priority: pdfplumber > PyPDF2. Install via: pip install pdfplumber
+try:
+    import pdfplumber
+    PDF_LIB = "pdfplumber"
+except ImportError:
     try:
-        r = requests.post("https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization":f"Bearer {KEY}","Content-Type":"application/json"},
-            json={"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":sys_p},*msgs],
-                  "max_tokens":900,"temperature":0.82},timeout=30)
-        d = r.json()
-        if r.status_code==200: return d["choices"][0]["message"]["content"].strip()
-        return f"Groq error: {d.get('error',{}).get('message','Unknown')}"
-    except requests.Timeout: return "Connection timeout yaar ⏳"
-    except Exception as e: return f"Kuch gadbad hai 😅 ({str(e)[:60]})"
+        import PyPDF2
+        PDF_LIB = "pypdf2"
+    except ImportError:
+        PDF_LIB = None
 
-def dispatch_message(text):
-    text = text.strip()
-    if not text: return
-    st.session_state.chat_messages.append({"role":"user","content":text})
-    with st.spinner("AskMNIT soch raha hai... 🤔"):
-        reply = generate_ai_response(text)
-    st.session_state.chat_messages.append({"role":"assistant","content":reply})
 
-# ─────────────────────────────────────────────────────────────────────────────
-# VIEW ROUTER — CHAT
-# ─────────────────────────────────────────────────────────────────────────────
-if st.session_state.get("view") == "chat":
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIGURATION  (must be first Streamlit call)
+# ══════════════════════════════════════════════════════════════════════════════
+st.set_page_config(
+    page_title="AskMNIT — Smart Campus Portal",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        "Get Help":     "https://mnit.ac.in",
+        "Report a bug": None,
+        "About":        "AskMNIT v1.0 — Premium Student Portal for MNIT Jaipur",
+    },
+)
 
-    st.markdown("""<style>
-    [data-testid="stSidebar"],[data-testid="stSidebarCollapseButton"],
-    [data-testid="collapsedControl"]{display:none!important;}
-    section[data-testid="stMain"]{margin-left:200px!important;padding-left:0!important;}
 
-    /* Permanent sidebar */
-    .cs-sidebar{
-      position:fixed;top:0;left:0;width:200px;height:100vh;
-      background:#1a1a2e;border-right:1px solid #333;
-      z-index:100;display:flex;flex-direction:column;
-      padding:20px 0 0 0;
+# ══════════════════════════════════════════════════════════════════════════════
+# CUSTOM CSS — GLASSMORPHIC DARK THEME
+# Font: Syne (display) + DM Sans (body) for a modern, premium engineering feel
+# ══════════════════════════════════════════════════════════════════════════════
+CUSTOM_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── App Background ──────────────────────────────────────────────────────── */
+.stApp {
+    background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(139,92,246,0.10) 0%, transparent 55%),
+        #080812 !important;
+    min-height: 100vh;
+}
+
+/* ── Hide Streamlit Defaults ─────────────────────────────────────────────── */
+#MainMenu, footer, header { visibility: hidden !important; }
+.stDeployButton { display: none !important; }
+.viewerBadge_container__1QSob { display: none !important; }
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: rgba(6, 6, 18, 0.97) !important;
+    border-right: 1px solid rgba(79, 158, 255, 0.12) !important;
+    backdrop-filter: blur(24px) !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding: 0 !important;
+}
+[data-testid="stSidebar"] .block-container {
+    padding: 0 !important;
+}
+
+/* ── Main content ────────────────────────────────────────────────────────── */
+.main .block-container {
+    padding: 1.5rem 2.5rem 3rem 2.5rem !important;
+    max-width: 1440px !important;
+}
+
+/* ── Glass Card ──────────────────────────────────────────────────────────── */
+.glass-card {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    border-radius: 20px;
+    padding: 1.4rem 1.6rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    margin-bottom: 1rem;
+    transition: border-color 0.25s, box-shadow 0.25s;
+}
+.glass-card:hover {
+    border-color: rgba(79, 158, 255, 0.22);
+    box-shadow: 0 8px 40px rgba(79, 158, 255, 0.06);
+}
+
+/* ── Neon Title ──────────────────────────────────────────────────────────── */
+.neon-title {
+    font-family: 'Syne', sans-serif !important;
+    font-size: 2.1rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 55%, #38BDF8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+}
+.neon-subtitle {
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 0.875rem;
+    font-weight: 400;
+    margin-top: 0.2rem;
+}
+
+/* ── Section Heading ─────────────────────────────────────────────────────── */
+.section-heading {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+/* ── Metric Card ─────────────────────────────────────────────────────────── */
+.metric-card {
+    background: rgba(79, 158, 255, 0.05);
+    border: 1px solid rgba(79, 158, 255, 0.18);
+    border-radius: 18px;
+    padding: 1.3rem 1.2rem;
+    text-align: center;
+    transition: all 0.28s ease;
+    position: relative;
+    overflow: hidden;
+}
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #4F9EFF, #A78BFA);
+    opacity: 0.6;
+}
+.metric-card:hover {
+    background: rgba(79, 158, 255, 0.09);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(79, 158, 255, 0.12);
+}
+.metric-icon  { font-size: 1.3rem; margin-bottom: 0.5rem; }
+.metric-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #60A5FA;
+    line-height: 1.1;
+}
+.metric-label {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.42);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 0.3rem;
+}
+
+/* ── Timeline ────────────────────────────────────────────────────────────── */
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.055);
+    margin-bottom: 0.6rem;
+    transition: all 0.25s;
+}
+.timeline-item.live {
+    background: rgba(79, 158, 255, 0.08);
+    border-color: rgba(79, 158, 255, 0.28);
+    box-shadow: 0 0 20px rgba(79, 158, 255, 0.07);
+}
+.timeline-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+.timeline-item.live .timeline-dot { background: #34D399; box-shadow: 0 0 8px #34D399; }
+.timeline-time { font-size: 0.78rem; font-weight: 600; color: #60A5FA; min-width: 95px; padding-top: 1px; }
+.timeline-content { flex: 1; }
+.timeline-subject { font-weight: 600; color: #fff; font-size: 0.9rem; }
+.timeline-venue   { color: rgba(255,255,255,0.4); font-size: 0.77rem; margin-top: 2px; }
+
+/* ── Event Cards ─────────────────────────────────────────────────────────── */
+.event-card {
+    background: rgba(139,92,246,0.05);
+    border: 1px solid rgba(139,92,246,0.18);
+    border-radius: 14px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.65rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    transition: all 0.25s;
+}
+.event-card:hover { border-color: rgba(139,92,246,0.35); transform: translateX(2px); }
+.event-date {
+    background: rgba(139,92,246,0.18);
+    border-radius: 10px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #A78BFA;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.event-title { font-weight: 600; color: #fff; font-size: 0.87rem; }
+.event-desc  { color: rgba(255,255,255,0.42); font-size: 0.75rem; margin-top: 2px; }
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 0.18rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+.badge-blue   { background: rgba(96,165,250,0.14); color: #60A5FA; border: 1px solid rgba(96,165,250,0.28); }
+.badge-green  { background: rgba(52,211,153,0.14); color: #34D399; border: 1px solid rgba(52,211,153,0.28); }
+.badge-purple { background: rgba(167,139,250,0.14); color: #A78BFA; border: 1px solid rgba(167,139,250,0.28); }
+.badge-orange { background: rgba(251,146,60,0.14); color: #FB923C; border: 1px solid rgba(251,146,60,0.28); }
+.badge-red    { background: rgba(248,113,113,0.14); color: #F87171; border: 1px solid rgba(248,113,113,0.28); }
+
+/* ── Chat Header ─────────────────────────────────────────────────────────── */
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    background: rgba(79, 158, 255, 0.05);
+    border: 1px solid rgba(79, 158, 255, 0.15);
+    border-radius: 20px;
+    margin-bottom: 0.8rem;
+}
+.chat-avatar {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4F9EFF 0%, #A78BFA 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(79,158,255,0.3);
+}
+.ai-name   { font-family: 'Syne', sans-serif; font-weight: 700; color: #fff; font-size: 0.95rem; }
+.ai-status { color: #34D399; font-size: 0.72rem; display: flex; align-items: center; gap: 4px; }
+.status-dot { width:7px; height:7px; border-radius:50%; background:#34D399; box-shadow:0 0 6px #34D399; }
+
+/* ── Sidebar Nav Button ──────────────────────────────────────────────────── */
+div[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 12px !important;
+    color: rgba(255,255,255,0.5) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    padding: 0.65rem 1rem !important;
+    transition: all 0.2s !important;
+    box-shadow: none !important;
+    width: 100%;
+}
+div[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(79,158,255,0.09) !important;
+    border-color: rgba(79,158,255,0.2) !important;
+    color: #60A5FA !important;
+    transform: none !important;
+}
+
+/* Active sidebar button override — applied via container class */
+.sidebar-active .stButton > button {
+    background: rgba(79,158,255,0.13) !important;
+    border-color: rgba(79,158,255,0.3) !important;
+    color: #60A5FA !important;
+}
+
+/* ── Main CTA Buttons ────────────────────────────────────────────────────── */
+.main .stButton > button {
+    background: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 0.48rem 1.4rem !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.87rem !important;
+    transition: all 0.28s ease !important;
+    box-shadow: 0 4px 18px rgba(59,130,246,0.28) !important;
+}
+.main .stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 28px rgba(59,130,246,0.42) !important;
+}
+.main .stButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stTextArea > div > div > textarea {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+    color: white !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.88rem !important;
+}
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: rgba(79,158,255,0.45) !important;
+    box-shadow: 0 0 0 3px rgba(79,158,255,0.08) !important;
+}
+.stSelectbox > div > div {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 12px !important;
+    color: white !important;
+}
+
+/* ── Labels ──────────────────────────────────────────────────────────────── */
+label, .stSelectbox label, .stTextInput label,
+.stNumberInput label, [data-testid="stMarkdownContainer"] p {
+    color: rgba(255,255,255,0.6) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.84rem !important;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(255,255,255,0.03) !important;
+    border-radius: 14px !important;
+    padding: 4px !important;
+    gap: 2px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 10px !important;
+    color: rgba(255,255,255,0.45) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.85rem !important;
+    padding: 0.4rem 1rem !important;
+}
+.stTabs [aria-selected="true"] {
+    background: rgba(79,158,255,0.14) !important;
+    color: #60A5FA !important;
+}
+
+/* ── DataFrames ──────────────────────────────────────────────────────────── */
+.stDataFrame { border-radius: 16px !important; overflow: hidden; }
+[data-testid="stDataFrameResizable"] { border-radius: 16px !important; }
+
+/* ── File Uploader ───────────────────────────────────────────────────────── */
+[data-testid="stFileUploader"] > div {
+    background: rgba(255,255,255,0.02) !important;
+    border: 1px dashed rgba(79,158,255,0.28) !important;
+    border-radius: 16px !important;
+    transition: all 0.25s;
+}
+[data-testid="stFileUploader"] > div:hover {
+    border-color: rgba(79,158,255,0.5) !important;
+    background: rgba(79,158,255,0.04) !important;
+}
+
+/* ── Alerts ──────────────────────────────────────────────────────────────── */
+.stSuccess > div { background: rgba(52,211,153,0.07) !important; border-radius: 12px !important; border: 1px solid rgba(52,211,153,0.2) !important; }
+.stInfo    > div { background: rgba(96,165,250,0.07) !important; border-radius: 12px !important; border: 1px solid rgba(96,165,250,0.2) !important; }
+.stWarning > div { background: rgba(251,146,60,0.07) !important; border-radius: 12px !important; border: 1px solid rgba(251,146,60,0.2) !important; }
+.stError   > div { background: rgba(248,113,113,0.07) !important; border-radius: 12px !important; border: 1px solid rgba(248,113,113,0.2) !important; }
+
+/* ── Chat Messages ───────────────────────────────────────────────────────── */
+[data-testid="stChatMessage"] {
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 16px !important;
+}
+
+/* ── Headings ────────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+    color: white !important;
+    font-family: 'Syne', sans-serif !important;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+hr { border-color: rgba(255,255,255,0.07) !important; margin: 1rem 0 !important; }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+::-webkit-scrollbar-thumb { background: rgba(79,158,255,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(79,158,255,0.45); }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.stProgress > div > div { background: linear-gradient(90deg, #3B82F6, #A78BFA) !important; border-radius: 4px !important; }
+
+/* ── GPA course row ──────────────────────────────────────────────────────── */
+.gpa-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+/* ── Attendance bar ──────────────────────────────────────────────────────── */
+.att-bar-bg {
+    height: 5px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 3px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+.att-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+/* ── code inline ─────────────────────────────────────────────────────────── */
+code {
+    background: rgba(79,158,255,0.12) !important;
+    color: #60A5FA !important;
+    border-radius: 5px !important;
+    padding: 1px 5px !important;
+    font-size: 0.82em !important;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+.stSpinner > div { border-top-color: #4F9EFF !important; }
+</style>
+"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STATIC DATA
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Default demo schedule — displayed if no PDF is uploaded
+DEFAULT_SCHEDULE = [
+    {"day": "Monday",    "time": "08:00–08:55", "subject": "Data Structures & Algorithms",  "venue": "LT-3",  "code": "CS301"},
+    {"day": "Monday",    "time": "09:00–09:55", "subject": "Computer Networks",             "venue": "LT-3",  "code": "CS302"},
+    {"day": "Monday",    "time": "11:00–11:55", "subject": "Operating Systems",             "venue": "LT-1",  "code": "CS303"},
+    {"day": "Monday",    "time": "14:00–15:55", "subject": "DBMS Lab",                      "venue": "CL-2",  "code": "CS304L"},
+    {"day": "Tuesday",   "time": "08:00–08:55", "subject": "Theory of Computation",         "venue": "LT-5",  "code": "CS305"},
+    {"day": "Tuesday",   "time": "09:00–09:55", "subject": "Data Structures & Algorithms",  "venue": "LT-3",  "code": "CS301"},
+    {"day": "Tuesday",   "time": "11:00–11:55", "subject": "Software Engineering",          "venue": "LT-2",  "code": "CS306"},
+    {"day": "Wednesday", "time": "08:00–08:55", "subject": "Computer Networks",             "venue": "LT-4",  "code": "CS302"},
+    {"day": "Wednesday", "time": "10:00–11:55", "subject": "Algorithms Lab",                "venue": "CL-1",  "code": "CS301L"},
+    {"day": "Wednesday", "time": "14:00–14:55", "subject": "Operating Systems",             "venue": "LT-1",  "code": "CS303"},
+    {"day": "Thursday",  "time": "08:00–08:55", "subject": "Theory of Computation",         "venue": "LT-5",  "code": "CS305"},
+    {"day": "Thursday",  "time": "09:00–09:55", "subject": "DBMS",                          "venue": "LT-2",  "code": "CS307"},
+    {"day": "Thursday",  "time": "11:00–12:55", "subject": "Networks Lab",                  "venue": "NL-1",  "code": "CS302L"},
+    {"day": "Friday",    "time": "08:00–08:55", "subject": "Software Engineering",          "venue": "LT-2",  "code": "CS306"},
+    {"day": "Friday",    "time": "09:00–09:55", "subject": "DBMS",                          "venue": "LT-2",  "code": "CS307"},
+    {"day": "Friday",    "time": "11:00–11:55", "subject": "Data Structures & Algorithms",  "venue": "LT-3",  "code": "CS301"},
+]
+
+CAMPUS_EVENTS = [
+    {"date": "Mar 28",  "title": "Hackathon 2025 — TechVenture",     "desc": "24-hr national hackathon · Prizes worth ₹2L",         "tag": "Tech"},
+    {"date": "Apr 02",  "title": "Annual Cultural Fest — Vividha",    "desc": "3-day music, dance & drama extravaganza",              "tag": "Cultural"},
+    {"date": "Apr 07",  "title": "Guest Lecture: AI & Future of CS",  "desc": "Auditorium · Open for all students",                  "tag": "Academic"},
+    {"date": "Apr 12",  "title": "Sports Week 2025 Begins",           "desc": "Inter-branch cricket, football, badminton",            "tag": "Sports"},
+    {"date": "Apr 18",  "title": "Placement Orientation — TNP Cell",  "desc": "Resume building & mock interview sessions",           "tag": "Placement"},
+    {"date": "Apr 24",  "title": "Open Source Day — IEEE MNIT",       "desc": "Contribute to open-source projects, mentored sessions","tag": "Tech"},
+]
+
+ERP_LINKS = [
+    {"name": "Student ERP Portal",   "url": "https://erp.mnit.ac.in",          "desc": "Fees, Exam Forms, Academic Records", "icon": "🏛️"},
+    {"name": "Course Registration",  "url": "https://erp.mnit.ac.in/student",  "desc": "Add/Drop courses for this semester", "icon": "📋"},
+    {"name": "Fee Payment Portal",   "url": "https://erp.mnit.ac.in/fees",     "desc": "Tuition, hostel, and misc fees",     "icon": "💳"},
+    {"name": "Result & Transcript",  "url": "https://erp.mnit.ac.in/result",   "desc": "Semester results and grade cards",   "icon": "📊"},
+    {"name": "Library OPAC",         "url": "https://opac.mnit.ac.in",         "desc": "Search and reserve library books",   "icon": "📚"},
+    {"name": "Placement Cell (TNP)", "url": "https://placement.mnit.ac.in",    "desc": "Job listings, internship postings",  "icon": "💼"},
+]
+
+PYQ_DATA = {
+    "CSE": {
+        "Data Structures & Algorithms": ["2024 ETE", "2024 MTE", "2023 ETE", "2023 MTE", "2022 ETE"],
+        "Computer Networks":            ["2024 ETE", "2024 MTE", "2023 ETE", "2023 MTE"],
+        "Operating Systems":            ["2024 ETE", "2023 MTE", "2023 ETE", "2022 ETE"],
+        "Theory of Computation":        ["2024 ETE", "2024 MTE", "2023 ETE"],
+        "DBMS":                         ["2024 ETE", "2023 MTE", "2023 ETE"],
+        "Software Engineering":         ["2024 ETE", "2024 MTE"],
+    },
+    "ECE": {
+        "Signals & Systems":     ["2024 ETE", "2024 MTE", "2023 ETE"],
+        "Digital Electronics":   ["2024 ETE", "2023 MTE", "2023 ETE"],
+        "Microprocessors":       ["2024 ETE", "2024 MTE", "2023 ETE"],
+        "VLSI Design":           ["2024 ETE", "2023 ETE"],
+    },
+    "ME":  {
+        "Thermodynamics":        ["2024 ETE", "2023 MTE", "2023 ETE"],
+        "Fluid Mechanics":       ["2024 ETE", "2023 ETE"],
+        "Machine Design":        ["2024 ETE", "2024 MTE"],
+    },
+    "EE":  {
+        "Power Systems":         ["2024 ETE", "2024 MTE", "2023 ETE"],
+        "Electrical Machines":   ["2024 ETE", "2023 ETE"],
+        "Control Systems":       ["2024 ETE", "2024 MTE"],
+    },
+    "CE":  {
+        "Structural Analysis":   ["2024 ETE", "2023 ETE"],
+        "Soil Mechanics":        ["2024 ETE", "2024 MTE"],
+    },
+}
+
+IMPORTANT_DATES = [
+    ("Jan 06, 2025",   "Even Semester Begins",              "badge-blue"),
+    ("Feb 24–Mar 01",  "Mid-Term Examinations (MTE)",        "badge-orange"),
+    ("Mar 10",         "Last day to withdraw courses",       "badge-purple"),
+    ("Apr 28–May 10",  "End-Term Examinations (ETE)",        "badge-orange"),
+    ("May 15",         "Result Declaration",                 "badge-green"),
+    ("May 20",         "Summer Vacation Begins",             "badge-blue"),
+]
+
+GRADE_POINTS = {"O": 10, "A+": 10, "A": 9, "B+": 8, "B": 7, "C+": 6, "C": 5, "D": 4, "F": 0}
+
+TAG_COLORS = {
+    "Tech": "badge-blue", "Cultural": "badge-purple", "Academic": "badge-green",
+    "Sports": "badge-orange", "Placement": "badge-blue",
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SESSION STATE
+# ══════════════════════════════════════════════════════════════════════════════
+def init_session_state():
+    defaults = {
+        "active_tab":       "Dashboard",
+        "student_name":     "Student",
+        "student_branch":   "Computer Science & Engineering",
+        "student_id":       "2021KUEC2XXX",
+        "student_semester": "6th Semester",
+        "schedule":         [],
+        "pdf_parsed":       False,
+        "attendance":       {},   # {subject: {"present": int, "total": int}}
+        "messages":         [],   # chat history
+        "gpa_courses":      [
+            {"name": "Data Structures", "credits": 4, "grade": "A"},
+            {"name": "Computer Networks","credits": 4, "grade": "B+"},
+            {"name": "Operating Systems","credits": 4, "grade": "A"},
+            {"name": "Software Engg.",   "credits": 3, "grade": "O"},
+            {"name": "DBMS",             "credits": 4, "grade": "A+"},
+        ],
     }
-    .cs-logo{
-      font-size:0.78rem;font-weight:700;color:#aaa;
-      letter-spacing:1px;text-transform:uppercase;
-      padding:0 16px 16px;border-bottom:1px solid #2a2a3e;
-      margin-bottom:8px;
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PDF SCHEDULE PARSER
+# ══════════════════════════════════════════════════════════════════════════════
+def parse_pdf_schedule(uploaded_file):
+    """
+    Parse a timetable PDF and return a list of schedule entries.
+
+    Each entry is a dict:
+        {"day": str, "time": str, "subject": str, "venue": str, "code": str}
+
+    ╔═══════════════════════════════════════════════════════════════════╗
+    ║  CUSTOMIZATION GUIDE                                              ║
+    ║                                                                   ║
+    ║  1. TABLE-BASED PDF (most MNIT/NIT ERP exports):                 ║
+    ║     Edit  _parse_table_rows()  — adjust col indices              ║
+    ║     to match your table's column order.                           ║
+    ║                                                                   ║
+    ║  2. TEXT-BASED PDF (plain-text timetable):                        ║
+    ║     Edit  _parse_text_schedule() — adjust the regex              ║
+    ║     to match your PDF's time format.                              ║
+    ║                                                                   ║
+    ║  3. GRID-STYLE (Days as columns, slots as rows):                  ║
+    ║     See _parse_grid_table() below.                                ║
+    ╚═══════════════════════════════════════════════════════════════════╝
+    """
+    schedule = []
+    raw_text = ""
+
+    # ── Step 1 : Extract content ──────────────────────────────────────────────
+    if PDF_LIB == "pdfplumber":
+        try:
+            with pdfplumber.open(uploaded_file) as pdf:
+                for page in pdf.pages:
+                    # ── Try table extraction first ──────────────────────────
+                    # CUSTOMIZE: change table_settings to match your PDF grid
+                    tables = page.extract_tables(table_settings={
+                        "vertical_strategy":   "lines",   # try "text" for borderless tables
+                        "horizontal_strategy": "lines",   # try "text" for borderless tables
+                        "snap_tolerance":      3,
+                    })
+                    for tbl in tables:
+                        parsed = _parse_table_rows(tbl)
+                        schedule.extend(parsed)
+                        if not parsed:
+                            # Fallback: check if it looks like a grid (days as columns)
+                            schedule.extend(_parse_grid_table(tbl))
+
+                    # ── Always collect text as fallback ─────────────────────
+                    raw_text += (page.extract_text() or "") + "\n"
+
+        except Exception as e:
+            st.warning(f"pdfplumber error: {e}")
+
+    elif PDF_LIB == "pypdf2":
+        try:
+            import PyPDF2
+            reader = PyPDF2.PdfReader(uploaded_file)
+            for page in reader.pages:
+                raw_text += (page.extract_text() or "") + "\n"
+        except Exception as e:
+            st.warning(f"PyPDF2 error: {e}")
+
+    # ── Step 2 : Regex fallback on raw text ───────────────────────────────────
+    if not schedule and raw_text.strip():
+        schedule = _parse_text_schedule(raw_text)
+
+    # ── Step 3 : Return result ────────────────────────────────────────────────
+    if not schedule:
+        st.info(
+            "⚠️ Could not auto-parse your PDF. "
+            "Using the demo schedule. Customize `parse_pdf_schedule()` in app.py."
+        )
+        return DEFAULT_SCHEDULE
+
+    return schedule
+
+
+def _parse_table_rows(table):
+    """
+    Helper A — Row-per-class tables (one class per row).
+
+    Expected columns: Day | Time | Subject | Venue | Code (optional)
+    CUSTOMIZE: change col_* index values to match your column order.
+    """
+    entries = []
+    if not table or len(table) < 2:
+        return entries
+
+    # Auto-detect column positions from header row
+    header = [str(c).strip().lower() if c else "" for c in (table[0] or [])]
+
+    # CUSTOMIZE these fallback indices if auto-detection fails
+    col_day  = next((i for i, h in enumerate(header) if "day"  in h), 0)
+    col_time = next((i for i, h in enumerate(header) if "time" in h or "slot" in h), 1)
+    col_subj = next((i for i, h in enumerate(header) if "sub"  in h or "course" in h or "name" in h), 2)
+    col_ven  = next((i for i, h in enumerate(header) if "ven"  in h or "room"   in h or "loc"  in h), 3)
+    col_code = next((i for i, h in enumerate(header) if "code" in h), -1)
+
+    for row in table[1:]:
+        if not row or all(c is None or str(c).strip() == "" for c in row):
+            continue
+        try:
+            safe = lambda idx: str(row[idx] or "").strip() if row and idx < len(row) else ""
+            day     = safe(col_day)
+            time_   = safe(col_time)
+            subject = safe(col_subj)
+            venue   = safe(col_ven) or "TBA"
+            code    = safe(col_code) if col_code >= 0 else ""
+
+            if subject and time_:
+                entries.append({"day": day or "Unknown", "time": time_,
+                                 "subject": subject, "venue": venue, "code": code})
+        except (IndexError, ValueError):
+            continue
+    return entries
+
+
+def _parse_grid_table(table):
+    """
+    Helper B — Grid-style tables (time slots as rows, days as columns).
+
+    Row 0: ["", "Monday", "Tuesday", ...]
+    Col 0: time strings like "08:00-08:55"
+    CUSTOMIZE: ensure days in header match weekday names.
+    """
+    entries = []
+    if not table or len(table) < 2:
+        return entries
+
+    header = [str(c).strip() if c else "" for c in (table[0] or [])]
+    days   = header[1:]   # skip the first "time" column
+
+    for row in table[1:]:
+        if not row:
+            continue
+        time_ = str(row[0] or "").strip()
+        if not time_:
+            continue
+        for col_idx, day in enumerate(days, start=1):
+            if col_idx >= len(row):
+                continue
+            cell = str(row[col_idx] or "").strip()
+            if cell:
+                # CUSTOMIZE: split on newline if cell contains "Subject\nVenue"
+                parts   = cell.split("\n", 1)
+                subject = parts[0].strip()
+                venue   = parts[1].strip() if len(parts) > 1 else "TBA"
+                if subject:
+                    entries.append({"day": day, "time": time_,
+                                     "subject": subject, "venue": venue, "code": ""})
+    return entries
+
+
+def _parse_text_schedule(text):
+    """
+    Helper C — Plain-text fallback using regex.
+
+    CUSTOMIZE the time_pattern to match your PDF's time format.
+    Supported formats:
+        08:00-08:55  Data Structures  LT-3
+        8:00AM - 8:55AM  Networks  Room 205
+    """
+    entries = []
+    lines   = text.split("\n")
+
+    # CUSTOMIZE: adjust regex to your time format
+    time_pattern = re.compile(
+        r"(\d{1,2}[:.]\d{2}\s*(?:AM|PM)?)\s*[-–to]+\s*(\d{1,2}[:.]\d{2}\s*(?:AM|PM)?)"
+        r"\s+(.+?)(?:\s{2,}|\t)(.+)",
+        re.IGNORECASE,
+    )
+    day_pattern = re.compile(
+        r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|"
+        r"Mon|Tue|Wed|Thu|Fri|Sat)\b",
+        re.IGNORECASE,
+    )
+    day_map = {
+        "mon": "Monday",  "monday": "Monday",  "tue": "Tuesday",  "tuesday": "Tuesday",
+        "wed": "Wednesday","wednesday":"Wednesday","thu":"Thursday","thursday":"Thursday",
+        "fri": "Friday",  "friday":  "Friday",  "sat": "Saturday", "saturday":"Saturday",
     }
-    /* Tab buttons inside sidebar */
-    .cs-tab-btn .stButton>button{
-      background:#1a1a2e!important;border:none!important;
-      border-bottom:1px solid #2a2a3e!important;
-      color:#bbb!important;font-size:0.85rem!important;font-weight:500!important;
-      text-align:left!important;justify-content:flex-start!important;
-      padding:14px 20px!important;border-radius:0!important;
-      width:100%!important;box-shadow:none!important;
-      height:56px!important;min-height:56px!important;
-    }
-    .cs-tab-btn .stButton>button:hover{
-      background:#252540!important;color:#fff!important;transform:none!important;
-    }
 
-    /* Chat area — offset for sidebar */
-    .chat-area{padding:20px 24px 40px;max-width:860px;}
-    .msg-u{text-align:right;margin:8px 0;}
-    .msg-a{text-align:left;margin:8px 0;}
-    .bub-u{display:inline-block;background:#2563eb;color:#fff;
-      padding:9px 14px;border-radius:14px 14px 2px 14px;
-      font-size:0.85rem;max-width:65%;text-align:left;}
-    .bub-a{display:inline-block;background:#252540;color:#e0e0e0;
-      padding:9px 14px;border-radius:14px 14px 14px 2px;
-      font-size:0.85rem;max-width:65%;text-align:left;}
-    </style>""", unsafe_allow_html=True)
+    current_day = "Monday"
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        dm = day_pattern.match(line)
+        if dm:
+            current_day = day_map.get(dm.group(1).lower(), current_day)
+        tm = time_pattern.search(line)
+        if tm:
+            s, e, subj, venue = tm.group(1), tm.group(2), tm.group(3), tm.group(4)
+            entries.append({
+                "day": current_day,
+                "time": f"{s.strip()}–{e.strip()}",
+                "subject": subj.strip(),
+                "venue":   venue.strip(),
+                "code":    "",
+            })
+    return entries
 
-    # ── PERMANENT SIDEBAR ─────────────────────────────────────────────────
-    st.markdown('<div class="cs-sidebar">', unsafe_allow_html=True)
-    st.markdown('<div class="cs-logo">AskMNIT</div>', unsafe_allow_html=True)
 
-    # Tab 1 — New Chat
-    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
-    if st.button("✦  New Chat", key="_cs_new", use_container_width=True):
-        if st.session_state.chat_messages:
-            fu = next((m["content"][:40] for m in st.session_state.chat_messages if m["role"]=="user"), "Session")
-            st.session_state.chat_sessions.append({"label":fu,"messages":list(st.session_state.chat_messages)})
-        st.session_state.chat_messages = []; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPER UTILITIES
+# ══════════════════════════════════════════════════════════════════════════════
+def get_active_schedule():
+    return st.session_state.schedule or DEFAULT_SCHEDULE
 
-    # Tab 2 — ERP Login
-    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
-    if st.button("🔗  ERP Login", key="_cs_erp", use_container_width=True):
-        import streamlit.components.v1 as _c
-        _c.html('<script>window.open("https://erp.mnit.ac.in","_blank");</script>', height=0)
-    st.markdown('</div>', unsafe_allow_html=True)
+def get_today_schedule():
+    today = datetime.datetime.now().strftime("%A")
+    return [s for s in get_active_schedule() if s.get("day","").lower() == today.lower()]
 
-    # Tab 3 — Chat History
-    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
-    if st.button("🕐  Chat History", key="_cs_hist", use_container_width=True):
-        st.session_state.show_chat_history = not st.session_state.get("show_chat_history", False); st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+def is_class_now(time_str):
+    """Return True if current time falls within the given HH:MM–HH:MM slot."""
+    now = datetime.datetime.now().time()
+    try:
+        parts = re.split(r"[-–—]", time_str)
+        if len(parts) < 2:
+            return False
+        def parse_t(s):
+            s = s.strip().replace(".", ":").replace(" ", "")
+            for fmt in ("%H:%M", "%I:%M%p", "%I:%M %p"):
+                try:
+                    return datetime.datetime.strptime(s, fmt).time()
+                except ValueError:
+                    pass
+            return None
+        start, end = parse_t(parts[0]), parse_t(parts[1])
+        return (start and end) and (start <= now <= end)
+    except Exception:
+        return False
 
-    # Tab 4 — Dashboard
-    st.markdown('<div class="cs-tab-btn">', unsafe_allow_html=True)
-    if st.button("⊞  Dashboard", key="_cs_dash", use_container_width=True):
-        st.session_state.view = "dashboard"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+def get_unique_subjects():
+    """Return {subject: code} dict deduplicated from schedule."""
+    seen = {}
+    for item in get_active_schedule():
+        subj = item.get("subject", "")
+        if subj and subj not in seen:
+            seen[subj] = item.get("code", "")
+    return seen
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close sidebar
+def compute_overall_attendance():
+    att = st.session_state.attendance
+    if not att:
+        return 0.0, 0, 0
+    total_p = sum(v["present"] for v in att.values())
+    total_t = sum(v["total"]   for v in att.values())
+    pct     = round(total_p / total_t * 100, 1) if total_t else 0.0
+    return pct, total_p, total_t
 
-    # ── Chat History panel ────────────────────────────────────────────────
-    if st.session_state.get("show_chat_history"):
-        with st.expander("🕐 Chat History", expanded=True):
-            sessions = st.session_state.chat_sessions
-            if not sessions:
-                st.write("No saved chats yet.")
-            else:
-                for i, sess in enumerate(reversed(sessions[-8:])):
-                    c1, c2 = st.columns([5,1])
-                    with c1: st.write(sess.get("label","Chat")[:40])
-                    with c2:
-                        if st.button("↩", key=f"_cs_ld_{i}"):
-                            st.session_state.chat_messages = list(sess["messages"])
-                            st.session_state.show_chat_history = False; st.rerun()
+def circular_svg(pct, size=160):
+    """Generate a premium SVG circular progress ring."""
+    r  = 60
+    c  = 2 * math.pi * r
+    d  = max(0, min(pct, 100)) / 100 * c
+    g  = c - d
+    color = "#34D399" if pct >= 75 else ("#FBBF24" if pct >= 60 else "#F87171")
+    return f"""
+    <svg width="{size}" height="{size}" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="{color}"/>
+          <stop offset="100%" stop-color="#A78BFA"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <circle cx="80" cy="80" r="{r}" fill="none"
+              stroke="rgba(255,255,255,0.055)" stroke-width="11"/>
+      <circle cx="80" cy="80" r="{r}" fill="none"
+              stroke="url(#pg)" stroke-width="11"
+              stroke-linecap="round"
+              stroke-dasharray="{d:.2f} {g:.2f}"
+              transform="rotate(-90 80 80)"
+              filter="url(#glow)"/>
+      <text x="80" y="74" text-anchor="middle"
+            font-family="Syne,sans-serif" font-size="21" font-weight="700"
+            fill="white">{pct}%</text>
+      <text x="80" y="92" text-anchor="middle"
+            font-family="DM Sans,sans-serif" font-size="10" fill="rgba(255,255,255,0.42)">
+        Attendance
+      </text>
+    </svg>"""
 
-    # ── Messages ──────────────────────────────────────────────────────────
-    st.markdown('<div class="chat-area">', unsafe_allow_html=True)
-    if not st.session_state.chat_messages:
-        st.markdown('<p style="color:#555;text-align:center;margin-top:40px;">AskMNIT AI — No messages yet</p>', unsafe_allow_html=True)
-    else:
-        for msg in st.session_state.chat_messages:
-            c = msg["content"].replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
-            if msg["role"] == "user":
-                st.markdown(f'<div class="msg-u"><div class="bub-u">{c}</div></div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="msg-a"><div class="bub-a">{c}</div></div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+def calculate_sgpa(courses):
+    tw, tc = 0, 0
+    for c in courses:
+        gp = GRADE_POINTS.get(c.get("grade","F"), 0)
+        cr = int(c.get("credits", 0))
+        tw += gp * cr
+        tc += cr
+    return (round(tw / tc, 2) if tc else 0.0), tc
 
-    st.stop()
-# DASHBOARD VIEW  (100% UNCHANGED)
-###############################################################################
-NAV_LABELS = ["My Dashboard","My Schedule","Academics","Study Material","PYQs","Fee Portal","Mess Menu"]
-with st.sidebar:
-    st.markdown('<div style="padding:18px 14px 14px;border-bottom:1px solid rgba(59,130,246,0.14);"><div style="display:flex;align-items:center;gap:9px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;color:white;box-shadow:0 3px 12px rgba(37,99,235,0.28);">A</div><div><div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;color:#E2E8F0;">AskMNIT</div><div style="font-size:0.56rem;color:rgba(148,163,184,.40);margin-top:1px;">Student Portal</div></div></div></div>', unsafe_allow_html=True)
-    bh=branch_hex(st.session_state.branch)
-    st.markdown(f'<div style="padding:8px 12px 4px;"><span style="font-size:0.60rem;font-weight:700;padding:2px 9px;background:rgba(255,255,255,0.05);border:1px solid {bh}44;border-radius:5px;color:{bh};letter-spacing:0.4px;">{st.session_state.branch}</span></div>', unsafe_allow_html=True)
-    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-    for label in NAV_LABELS:
-        css="nav-btn-active" if st.session_state.nav_page==label else "nav-btn"
-        st.markdown(f'<div class="{css}">', unsafe_allow_html=True)
-        if st.button(label,key="nav_"+label,use_container_width=True):
-            st.session_state.nav_page=label; st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AI ASSISTANT
+# ══════════════════════════════════════════════════════════════════════════════
+SYSTEM_PROMPT = """You are AskMNIT, the official AI assistant for students at MNIT Jaipur
+(Malaviya National Institute of Technology Jaipur) — one of India's premier NITs.
+
+Your persona: A knowledgeable, warm senior student-mentor who also knows all admin details.
+
+You have deep expertise in:
+• MNIT's 10-point grading system: O/A+=10, A=9, B+=8, B=7, C+=6, C=5, D=4, F=0
+• Semester structure: MTE (Mid-Term Exam), ETE (End-Term Exam); min 75% attendance or debarred
+• Departments: CSE, ECE, ME, EE, CE, Chemical, Metallurgy, Architecture, MBA, MCA
+• Hostels: Alaknanda, Banas, Chambal (boys), Mahi, Luni (girls), New Hostel Complex
+• Student activities: SAC, NSS, NCC, IEEE MNIT, ACM, GDSC, Vividha (cultural), TechVenture (tech fest)
+• ERP portal at erp.mnit.ac.in, OPAC library system, TNP (placement) cell
+• Campus facilities: CL (computer labs), NL (network lab), LT (lecture theatres), Main Building, Auditorium, Sports Complex
+• PhD, M.Tech, B.Tech, MBA, MCA programmes
+• GATE-based M.Tech admissions, JEE-based B.Tech admissions, DASA
+
+You help with:
+1. Academic doubts (subject concepts, study tips, exam prep, project ideas, code debugging)
+2. Campus information (hostels, messes, clubs, fests, scholarships)
+3. Administrative queries (ERP, forms, attendance, leaves, certificates)
+4. Career guidance (placements, internships, GATE, higher studies abroad)
+5. General study planning and productivity
+
+Rules:
+- Always respond in Markdown with clear structure
+- Be concise but thorough; use bullet points for lists
+- When unsure about current details, direct to mnit.ac.in or relevant offices
+- Add an MNIT-specific tip or resource whenever relevant
+"""
+
+def get_ai_response(user_message: str) -> str:
+    """Stream a response from Claude and return the full text."""
+    try:
+        client = anthropic.Anthropic()
+
+        # Build system prompt with student context
+        system = SYSTEM_PROMPT
+        if st.session_state.student_name != "Student":
+            system += (
+                f"\n\nCurrent student context:\n"
+                f"- Name: {st.session_state.student_name}\n"
+                f"- Branch: {st.session_state.student_branch}\n"
+                f"- Semester: {st.session_state.student_semester}\n"
+                f"- ID: {st.session_state.student_id}"
+            )
+
+        # Keep last 20 messages for context window
+        api_msgs = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages[-20:]
+        ]
+        api_msgs.append({"role": "user", "content": user_message})
+
+        full = ""
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system,
+            messages=api_msgs,
+        ) as stream:
+            for text in stream.text_stream:
+                full += text
+        return full
+
+    except anthropic.AuthenticationError:
+        return (
+            "⚠️ **Authentication Error**\n\n"
+            "Set your API key:\n```bash\nexport ANTHROPIC_API_KEY='sk-ant-...'\n```"
+        )
+    except anthropic.RateLimitError:
+        return "⚠️ **Rate limit reached.** Please wait a moment and try again."
+    except Exception as e:
+        return f"⚠️ **Error:** `{e}`"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR
+# ══════════════════════════════════════════════════════════════════════════════
+NAV_ITEMS = [
+    ("🏠", "Dashboard",  "Dashboard Home"),
+    ("🤖", "AI Chat",    "AskMNIT Assistant"),
+    ("🎓", "ERP Portal", "ERP & Services"),
+    ("📚", "Academics",  "Notes & Timetable"),
+    ("📝", "PYQs",       "Previous Year Qs"),
+    ("📅", "Attendance", "Attendance Tracker"),
+    ("🧮", "GPA Calc",   "GPA / CGPA Tool"),
+    ("⚙️", "Profile",    "Student Profile"),
+]
+
+def render_sidebar():
+    with st.sidebar:
+        # ── Brand ─────────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="padding:1.6rem 1.4rem 1rem 1.4rem;">
+            <div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.3rem;">
+                <div style="width:36px;height:36px;border-radius:50%;
+                            background:linear-gradient(135deg,#3B82F6,#8B5CF6);
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:1.1rem;box-shadow:0 0 16px rgba(59,130,246,0.4);">🎓</div>
+                <div>
+                    <div style="font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;
+                                background:linear-gradient(135deg,#60A5FA,#A78BFA);
+                                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                                background-clip:text;line-height:1.1;">AskMNIT</div>
+                    <div style="font-size:0.62rem;color:rgba(255,255,255,0.3);
+                                letter-spacing:2px;text-transform:uppercase;">
+                        Smart Campus Portal
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Student mini card ──────────────────────────────────────────────────
+        att_pct, _, _ = compute_overall_attendance()
+        att_color = "#34D399" if att_pct >= 75 else ("#FBBF24" if att_pct > 0 else "rgba(255,255,255,0.3)")
+        st.markdown(f"""
+        <div style="margin:0 1rem 1.2rem;padding:0.85rem 1rem;
+                    background:rgba(79,158,255,0.06);
+                    border:1px solid rgba(79,158,255,0.18);border-radius:14px;">
+            <div style="font-weight:600;color:white;font-size:0.87rem;">
+                👤 {st.session_state.student_name}
+            </div>
+            <div style="color:rgba(255,255,255,0.4);font-size:0.74rem;margin-top:2px;">
+                {st.session_state.student_branch[:28]}{'…' if len(st.session_state.student_branch)>28 else ''}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                <span style="color:rgba(255,255,255,0.3);font-size:0.7rem;">
+                    {st.session_state.student_id}
+                </span>
+                <span style="color:{att_color};font-size:0.72rem;font-weight:600;">
+                    {att_pct}% att.
+                </span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ── Navigation ─────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="padding:0 0.8rem 0.4rem;font-size:0.65rem;
+                    color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:1.5px;">
+            Navigation
+        </div>
+        """, unsafe_allow_html=True)
+
+        for icon, key, label in NAV_ITEMS:
+            active = st.session_state.active_tab == key
+            prefix = "▸ " if active else "  "
+            with st.container():
+                if active:
+                    st.markdown('<div class="sidebar-active">', unsafe_allow_html=True)
+                if st.button(f"{icon}  {prefix}{label}", key=f"nav_{key}", use_container_width=True):
+                    st.session_state.active_tab = key
+                    st.rerun()
+                if active:
+                    st.markdown("</div>", unsafe_allow_html=True)
+
+        # ── Footer ─────────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="margin-top:auto;padding:1.5rem 1.2rem 1rem;
+                    border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:0.68rem;color:rgba(255,255,255,0.22);text-align:center;">
+                AskMNIT v1.0 · MNIT Jaipur<br>
+                <span style="color:rgba(96,165,250,0.45);">Powered by Claude Sonnet AI</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: DASHBOARD HOME
+# ══════════════════════════════════════════════════════════════════════════════
+def render_dashboard():
+    now  = datetime.datetime.now()
+    hour = now.hour
+    greet = "Good Morning" if hour < 12 else "Good Afternoon" if hour < 17 else "Good Evening"
+    fname = st.session_state.student_name.split()[0]
+
+    st.markdown(f"""
+    <div style="margin-bottom:1.8rem;">
+        <div class="neon-title">{greet}, {fname}! 👋</div>
+        <div class="neon-subtitle">
+            {now.strftime('%A, %B %d, %Y')} &nbsp;·&nbsp; MNIT Jaipur
+            &nbsp;·&nbsp; {st.session_state.student_semester}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Metric row ────────────────────────────────────────────────────────────
+    att_pct, att_p, att_t = compute_overall_attendance()
+    today_cls  = get_today_schedule()
+    n_subjects = len(get_unique_subjects())
+
+    c1, c2, c3, c4 = st.columns(4)
+    for col, val, label, icon in [
+        (c1, str(len(today_cls)),            "Today's Classes",    "📅"),
+        (c2, f"{att_pct}%",                  "Overall Attendance", "✅"),
+        (c3, str(n_subjects),                "Active Subjects",    "📚"),
+        (c4, now.strftime("%I:%M %p"),        "Current Time",      "🕐"),
+    ]:
+        with col:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon">{icon}</div>
+                <div class="metric-value">{val}</div>
+                <div class="metric-label">{label}</div>
+            </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    left, right = st.columns([3, 2], gap="large")
+
+    # ── Today's schedule ──────────────────────────────────────────────────────
+    with left:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div class="section-heading" style="margin:0;">📅 Today's Schedule</div>
+            <span class="badge badge-blue">{now.strftime('%A')}</span>
+        </div>""", unsafe_allow_html=True)
+
+        if today_cls:
+            for cls in today_cls:
+                live     = is_class_now(cls["time"])
+                lv_class = "live" if live else ""
+                lv_badge = ('<span class="badge badge-green" style="margin-left:6px;'
+                            'font-size:0.62rem;vertical-align:middle;">● LIVE</span>'
+                            if live else "")
+                code_tag = (f'<span style="color:rgba(96,165,250,0.6);font-size:0.73rem;">'
+                            f'{cls.get("code","")}</span>' if cls.get("code") else "")
+                st.markdown(f"""
+                <div class="timeline-item {lv_class}">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-time">{cls['time']}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-subject">{cls['subject']} {lv_badge}</div>
+                        <div class="timeline-venue">
+                            📍 {cls.get('venue','TBA')} &nbsp; {code_tag}
+                        </div>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="text-align:center;padding:2.5rem 1rem;color:rgba(255,255,255,0.3);">
+                <div style="font-size:2.5rem;margin-bottom:0.6rem;">🎉</div>
+                <div style="font-size:0.95rem;font-weight:600;color:rgba(255,255,255,0.5);">
+                    No classes today!
+                </div>
+                <div style="font-size:0.8rem;margin-top:0.3rem;">Enjoy your free day.</div>
+            </div>""", unsafe_allow_html=True)
+
         st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown('<div style="position:fixed;bottom:18px;width:182px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">', unsafe_allow_html=True)
-    st.markdown('<div class="logout-btn">', unsafe_allow_html=True)
-    if st.button("Logout",key="sidebar_logout",use_container_width=True):
-        for k in list(st.session_state.keys()): del st.session_state[k]
-        st.rerun()
-    st.markdown('</div></div>', unsafe_allow_html=True)
 
-dash_page=st.session_state.nav_page
-if dash_page!="My Dashboard":
-    PMETA={"My Schedule":("My Schedule","Weekly timetable renders here."),"Academics":("Academics","Grades and CGPA records render here."),"Study Material":("Study Material","Uploaded notes render here."),"PYQs":("PYQs","Previous year papers render here."),"Fee Portal":("Fee Portal","Fee dues and receipts render here."),"Mess Menu":("Mess Menu","Weekly hostel menu renders here.")}
-    title,desc=PMETA.get(dash_page,(dash_page,"Coming soon."))
-    st.markdown(f'<div style="padding:24px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.95rem;color:#E2E8F0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;margin-bottom:24px;">{title.upper()}</div><div style="background:linear-gradient(160deg,#0B1120,#060A12);border:1px dashed rgba(59,130,246,0.18);border-radius:16px;padding:60px 40px;text-align:center;"><div style="font-family:\'DM Mono\',monospace;font-size:0.88rem;color:#E2E8F0;margin-bottom:8px;">{title.upper()}</div><div style="font-size:0.76rem;color:rgba(148,163,184,.44);max-width:280px;margin:0 auto;line-height:1.65;">{desc}</div></div></div>', unsafe_allow_html=True)
-    st.stop()
+    with right:
+        # ── Campus Bulletin ───────────────────────────────────────────────────
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">🎪 Campus Bulletin</div>', unsafe_allow_html=True)
+        for evt in CAMPUS_EVENTS[:4]:
+            tc = TAG_COLORS.get(evt["tag"], "badge-blue")
+            st.markdown(f"""
+            <div class="event-card">
+                <div>
+                    <div class="event-date">{evt['date']}</div>
+                    <span class="badge {tc}" style="margin-top:5px;display:inline-block;">
+                        {evt['tag']}
+                    </span>
+                </div>
+                <div>
+                    <div class="event-title">{evt['title']}</div>
+                    <div class="event-desc">{evt['desc']}</div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MY DASHBOARD (100% UNCHANGED)
-# ─────────────────────────────────────────────────────────────────────────────
-st.markdown("<div style='padding:0 22px 80px;'>", unsafe_allow_html=True)
-h_logo,h_mid,h_right=st.columns([2,4,3])
-with h_logo:
-    st.markdown('<div style="display:flex;align-items:center;gap:8px;padding:13px 0 9px;"><div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#2563EB,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:white;">M</div><div><div style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#E2E8F0;">MNIT Jaipur</div><div style="font-size:0.52rem;color:rgba(148,163,184,.36);">[ MNIT LOGO ]</div></div></div>', unsafe_allow_html=True)
-with h_mid:
-    now_str=datetime.datetime.now().strftime("%a, %d %b %Y  ·  %H:%M")
-    st.markdown(f'<div style="padding:13px 0 9px;text-align:center;"><span style="font-family:\'DM Mono\',monospace;font-size:0.76rem;color:#60A5FA;letter-spacing:0.8px;">MY DASHBOARD</span><br><span style="font-size:0.57rem;color:rgba(148,163,184,.38);">{now_str}</span></div>', unsafe_allow_html=True)
-with h_right:
-    nm2,br2,sem2=st.session_state.student_name,st.session_state.branch,st.session_state.semester
-    bh2=branch_hex(br2); pp=st.session_state.profile_pic_b64
-    av_html=(f'<img src="{pp}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid {bh2}55;">' if pp else f'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,{bh2},{bh2}88);display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;color:#fff;border:2px solid {bh2}55;">{initials(nm2)}</div>')
-    st.markdown(f'<div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:10px 0 6px;">{av_html}<div><div style="font-weight:700;font-size:0.83rem;color:#E2E8F0;line-height:1.2;">{nm2}</div><div style="font-size:0.58rem;color:{bh2};font-weight:600;">{br2} · {sem2}</div></div></div>', unsafe_allow_html=True)
-st.markdown('<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.22),rgba(34,211,238,0.10),transparent);margin-bottom:20px;"></div>', unsafe_allow_html=True)
-srow1,srow2,srow3,srow4,_=st.columns([1,1,1,1,1])
-with srow1:
-    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Settings & Profile",key="open_settings"): st.session_state.settings_mode=None if st.session_state.settings_mode=="profile" else "profile"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-with srow2:
-    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Upload Schedule",key="open_schedule"): st.session_state.settings_mode=None if st.session_state.settings_mode=="schedule" else "schedule"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-with srow3:
-    st.markdown('<div class="settings-menu-btn">', unsafe_allow_html=True)
-    if st.button("Notifications",key="open_notif"): st.toast("No new notifications.",icon="🔔")
-    st.markdown('</div>', unsafe_allow_html=True)
-with srow4:
-    st.markdown('<div class="open-chat-btn">', unsafe_allow_html=True)
-    if st.button("✦  AskMNIT AI", key="open_chatbot"):
-        st.session_state.view = "chat"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-mode=st.session_state.settings_mode
-if mode=="profile":
-    with st.expander("Settings & Profile",expanded=True):
-        pc1,pc2=st.columns([1,2])
-        with pc1:
-            pp=st.session_state.profile_pic_b64; bh3=branch_hex(st.session_state.branch)
-            if pp: st.markdown(f'<img src="{pp}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid {bh3}66;display:block;margin:0 auto 8px;">', unsafe_allow_html=True)
-            else: st.markdown(f'<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,{bh3},{bh3}88);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;margin:0 auto 8px;">{initials(st.session_state.student_name)}</div>', unsafe_allow_html=True)
-            pf=st.file_uploader("Upload photo",type=["png","jpg","jpeg"],key="profile_pic_up",label_visibility="collapsed")
-            if pf: st.session_state.profile_pic_b64=img_to_b64(pf); st.rerun()
-        with pc2:
-            nn=st.text_input("Full Name",value=st.session_state.student_name,key="inp_name")
-            ni=st.text_input("College ID",value=st.session_state.college_id,key="inp_id")
-            ns=st.selectbox("Semester",SEMESTERS,index=SEMESTERS.index(st.session_state.semester),key="sel_sem")
-            nb=st.selectbox("Branch",BRANCHES,index=BRANCHES.index(st.session_state.branch),key="sel_br")
-            if st.button("Save Profile",key="save_profile"):
-                ob=st.session_state.branch; st.session_state.student_name=nn; st.session_state.college_id=ni; st.session_state.semester=ns; st.session_state.branch=nb
-                if ob!=nb: st.session_state.attendance=blank_att(subjects_for_branch(nb))
-                st.toast("Profile saved!",icon="✅"); st.session_state.settings_mode=None; st.rerun()
-elif mode=="schedule":
-    with st.expander("Upload Weekly Schedule PDF",expanded=True):
-        pf2=st.file_uploader("Drop schedule PDF here",type=["pdf"],key="sched_upload")
-        if pf2:
-            st.session_state.full_schedule=process_schedule_pdf(pf2,st.session_state.branch); st.session_state.schedule_loaded=True; st.session_state.pdf_filename=pf2.name
-            st.toast(f"Schedule loaded: {pf2.name}",icon="✅"); st.session_state.settings_mode=None; st.rerun()
-        if st.session_state.schedule_loaded: st.markdown(f'<div style="font-size:0.75rem;color:#10B981;margin-top:6px;">Active: {st.session_state.pdf_filename}</div>', unsafe_allow_html=True)
-ov=overall_pct(st.session_state.attendance); stat_badge_txt,stat_col,_=status_badge(ov)
-kpi1,kpi2,kpi3,kpi4=st.columns(4)
-for col,ico,val,lbl,c in [(kpi1,"📊",f"{ov}%","Overall Attendance",stat_col),(kpi2,"📚",str(len(subjects_for_branch(st.session_state.branch))),"Enrolled Subjects","#60A5FA"),(kpi3,"📅",str(len(get_today_slots(st.session_state.full_schedule)) if st.session_state.schedule_loaded else 0),"Classes Today","#22D3EE"),(kpi4,"📝",str(len(st.session_state.notes_list)),"Active Notes","#A78BFA")]:
-    with col: st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px 14px;margin-bottom:14px;"><div style="font-size:1.4rem;margin-bottom:6px;">{ico}</div><div style="font-size:1.7rem;font-weight:800;color:{c};font-family:\'DM Mono\',monospace;line-height:1.1;">{val}</div><div style="font-size:0.68rem;color:rgba(148,163,184,.46);margin-top:4px;">{lbl}</div></div>', unsafe_allow_html=True)
-st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:14px;">// ATTENDANCE TRACKER</div>', unsafe_allow_html=True)
-def render_subj_rows(subj_list,section):
-    att=st.session_state.attendance
-    for idx,subj in enumerate(subj_list):
-        if subj not in att: att[subj]={"present":0,"total":0}
-        r=att[subj]; pct=att_pct(r); c=att_color(pct); kb=f"{section}_{idx}_{_safe_key(subj)}"
-        sc1,sc2,sc3,sc4,sc5,sc6=st.columns([3.5,1.2,0.9,0.9,0.9,0.9])
-        with sc1: st.markdown(f'<div style="font-size:0.80rem;color:#E2E8F0;font-weight:600;padding:8px 0 4px;">{subj}</div><div style="background:rgba(255,255,255,.06);border-radius:99px;height:4px;overflow:hidden;width:90%;"><div style="width:{pct}%;height:100%;background:linear-gradient(90deg,{c},{c}88);border-radius:99px;"></div></div>', unsafe_allow_html=True)
-        with sc2: st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.85rem;font-weight:700;color:{c};padding-top:8px;">{pct}%</div><div style="font-size:0.60rem;color:rgba(148,163,184,.40);">{r["present"]}/{r["total"]}</div>', unsafe_allow_html=True)
-        with sc3:
-            st.markdown('<div class="present-btn">', unsafe_allow_html=True)
-            if st.button("P",key=f"pp_{kb}",use_container_width=True): att[subj]["present"]+=1; att[subj]["total"]+=1; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc4:
-            st.markdown('<div class="absent-btn">', unsafe_allow_html=True)
-            if st.button("A",key=f"pa_{kb}",use_container_width=True): att[subj]["total"]+=1; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc5:
-            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-P",key=f"rp_{kb}",use_container_width=True):
-                if r["present"]>0 and r["total"]>0: att[subj]["present"]-=1; att[subj]["total"]-=1; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc6:
-            st.markdown('<div class="ghost-btn">', unsafe_allow_html=True)
-            if st.button("-A",key=f"ra_{kb}",use_container_width=True):
-                if r["total"]>0: att[subj]["total"]-=1; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-branch_only=BRANCH_SUBJECTS.get(st.session_state.branch,[])
-with st.expander("Common Subjects ("+str(len(COMMON_SUBJECTS))+")",expanded=True): render_subj_rows(COMMON_SUBJECTS,"cmn")
-if branch_only:
-    with st.expander(st.session_state.branch+" Subjects ("+str(len(branch_only))+")",expanded=True): render_subj_rows(branch_only,"brnch")
-st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-today_name=datetime.datetime.now().strftime("%A"); now_hm=datetime.datetime.now().hour*60+datetime.datetime.now().minute
-st.markdown(f'<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;margin-bottom:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;">// TODAY\'S CLASS SCHEDULE</span><span style="font-family:\'DM Mono\',monospace;font-size:0.62rem;color:rgba(96,165,250,.65);">{today_name.upper()}</span></div>', unsafe_allow_html=True)
-if st.session_state.schedule_loaded:
-    today_slots=get_today_slots(st.session_state.full_schedule); nxt=get_next_class(today_slots)
-    if nxt:
-        mins=nxt["minutes_away"]; hrs=mins//60; rem=mins%60; cd_str=(f"{hrs}h {rem}m" if hrs else f"{rem} min")+" away"; urg_c="#EF4444" if mins<15 else "#F59E0B" if mins<45 else "#22D3EE"
-        st.markdown(f'<div style="background:linear-gradient(90deg,rgba(34,211,238,.06),rgba(37,99,235,.04));border:1px solid rgba(34,211,238,.18);border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:0.57rem;color:rgba(148,163,184,.46);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Next Class</div><div style="font-weight:700;font-size:0.86rem;color:#E2E8F0;">{nxt["subject"]} <span style="font-size:0.67rem;color:rgba(148,163,184,.46);">{nxt["room"]}</span></div></div><div style="font-family:\'DM Mono\',monospace;font-size:0.96rem;font-weight:600;color:{urg_c};text-align:right;">{cd_str}<div style="font-size:0.57rem;color:rgba(148,163,184,.42);font-weight:400;margin-top:1px;">{fmt_time(nxt["time_start"])} – {fmt_time(nxt["time_end"])}</div></div></div>', unsafe_allow_html=True)
-    if today_slots:
-        rows=[today_slots[i:i+3] for i in range(0,len(today_slots),3)]
-        for row in rows:
-            cols=st.columns(len(row))
-            for ci,(col,slot) in enumerate(zip(cols,row)):
-                sh,sm=map(int,slot["time_start"].split(":")); is_past=(sh*60+sm)<now_hm; tc=TYPE_COLORS.get(slot["type"],"#60A5FA")
-                is_next=(nxt is not None and slot["time_start"]==nxt["time_start"] and slot["subject"]==nxt["subject"]); bc=tc if not is_past else "rgba(255,255,255,0.06)"; cbg="linear-gradient(160deg,rgba(34,211,238,0.06),rgba(37,99,235,0.03))" if is_next else "rgba(255,255,255,0.02)" if not is_past else "rgba(255,255,255,0.01)"
-                with col: st.markdown(f'<div style="background:{cbg};border:1px solid {bc};border-left:3px solid {bc};border-radius:12px;padding:13px 14px;margin-bottom:8px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.78rem;font-weight:700;color:{"#E2E8F0" if not is_past else "rgba(148,163,184,0.32)"};margin-bottom:6px;">{fmt_time(slot["time_start"])}<br><span style="font-size:0.62rem;font-weight:400;color:rgba(148,163,184,0.45);">– {fmt_time(slot["time_end"])}</span></div><div style="font-size:0.82rem;font-weight:700;color:{"#F1F5F9" if not is_past else "rgba(148,163,184,0.28)"};margin-bottom:5px;">{slot["subject"]}</div><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:0.62rem;color:rgba(148,163,184,.48);">{slot["room"]}</span><span style="font-size:0.58rem;padding:1px 7px;border-radius:4px;background:{tc}1A;color:{tc};font-weight:600;">{slot["type"]}</span>{"<span style=\"font-size:0.58rem;color:#22D3EE;font-weight:700;\"> NEXT</span>" if is_next else ""}</div>{"<div style=\"font-size:0.58rem;color:rgba(148,163,184,.28);margin-top:4px;text-decoration:line-through;\">Done</div>" if is_past else ""}</div>', unsafe_allow_html=True)
-    else: st.markdown(f'<div style="text-align:center;padding:24px;color:rgba(148,163,184,.40);font-size:0.80rem;">No classes for {today_name}.</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div style="background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.20);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:0.73rem;color:rgba(148,163,184,.48);">Use <b>Upload Schedule</b> to activate the planner.</div>', unsafe_allow_html=True)
-    if "planner_overrides" not in st.session_state: st.session_state.planner_overrides={}
-    for st_start,st_end in [("08:00","09:00"),("09:30","10:30"),("11:00","12:00"),("12:00","13:00"),("14:00","15:00"),("15:30","16:30")]:
-        override=st.session_state.planner_overrides.get(st_start,""); mp1,mp2,mp3,mp4=st.columns([1.6,4,0.8,2.2])
-        with mp1: st.markdown(f'<div style="font-family:\'DM Mono\',monospace;font-size:0.68rem;color:#60A5FA;padding-top:10px;white-space:nowrap;font-weight:700;">{fmt_time(st_start)}<br><span style="font-size:0.56rem;font-weight:400;color:rgba(148,163,184,.38);">– {fmt_time(st_end)}</span></div>', unsafe_allow_html=True)
-        with mp2: note_v=st.text_input("",value=override,placeholder="Task...",key="mp_"+st_start,label_visibility="collapsed")
-        with mp3:
-            st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-            if st.button("Save",key="sv_mp_"+st_start,use_container_width=True): st.session_state.planner_overrides[st_start]=note_v; st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        with mp4:
-            saved=st.session_state.planner_overrides.get(st_start,"")
-            if saved: st.markdown(f'<div style="font-size:0.67rem;color:#34D399;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.14);border-radius:7px;padding:4px 9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{saved}</div>', unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-ql_col,notes_col=st.columns([1,1.5],gap="large")
-with ql_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;height:100%;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// QUICK LINKS</div>', unsafe_allow_html=True)
-    QL=[("Upload Syllabus","Syllabus uploader will be enabled here."),("Add PYQ Link","PYQ link manager will open here."),("Library Search","Library search will open here.")]
-    st.markdown('<div class="ql-btn">', unsafe_allow_html=True)
-    for lbl,fb in QL:
-        if st.button(lbl,key="ql_"+lbl,use_container_width=True): st.session_state.ql_feedback=fb; st.rerun()
-        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    if st.session_state.ql_feedback: st.markdown(f'<div style="background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.18);border-radius:8px;padding:7px 11px;margin-top:7px;font-size:0.70rem;color:rgba(186,230,253,.58);line-height:1.5;">{st.session_state.ql_feedback}</div>', unsafe_allow_html=True)
+        # ── Attendance ring ───────────────────────────────────────────────────
+        st.markdown(f"""
+        <div class="glass-card" style="text-align:center;padding:1.2rem;">
+            <div class="section-heading" style="margin-bottom:0.8rem;">📊 Attendance</div>
+            {circular_svg(att_pct)}
+            <div style="color:rgba(255,255,255,0.38);font-size:0.75rem;margin-top:0.4rem;">
+                {att_p} present / {att_t} total
+            </div>
+            {'<div style="color:#34D399;font-size:0.77rem;margin-top:4px;font-weight:600;">✓ Eligible for exams</div>' if att_pct >= 75 and att_t > 0 else '<div style="color:#F87171;font-size:0.77rem;margin-top:4px;font-weight:600;">⚠ Below 75% threshold</div>' if att_t > 0 else ""}
+        </div>""", unsafe_allow_html=True)
+
+    # ── Quick action bar ──────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">⚡ Quick Actions</div>', unsafe_allow_html=True)
+    qa1, qa2, qa3, qa4, qa5 = st.columns(5)
+    quick = [
+        (qa1, "AI Assistant",  "AI Chat"),
+        (qa2, "Attendance",    "Attendance"),
+        (qa3, "GPA Calc",      "GPA Calc"),
+        (qa4, "ERP Portal",    "ERP Portal"),
+        (qa5, "Upload Schedule","Profile"),
+    ]
+    for col, label, tab in quick:
+        with col:
+            if st.button(label, key=f"qa_{tab}", use_container_width=True):
+                st.session_state.active_tab = tab
+                st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
-with notes_col:
-    st.markdown('<div style="background:linear-gradient(160deg,#0B1120,#070D1C);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 18px 14px;"><div style="font-family:\'DM Mono\',monospace;font-size:0.56rem;color:rgba(148,163,184,.40);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:12px;">// PERSONAL NOTES</div>', unsafe_allow_html=True)
-    new_note_input=st.text_input("",placeholder="Type a new note...",key="new_note_input_field",label_visibility="collapsed")
-    ac,_=st.columns([1,3])
-    with ac:
-        if st.button("Add Note",key="add_note_btn",use_container_width=True):
-            txt=new_note_input.strip()
-            if txt: st.session_state.notes_list.append({"text":txt,"pinned":False}); st.rerun()
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    unpinned=[(i,n) for i,n in enumerate(st.session_state.notes_list) if not n["pinned"]]
-    if not unpinned: st.markdown('<div style="font-size:0.76rem;color:rgba(148,163,184,.38);text-align:center;padding:16px;font-style:italic;">No notes yet.</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: AI ASSISTANT CHAT
+# ══════════════════════════════════════════════════════════════════════════════
+QUICK_PROMPTS = [
+    ("📋", "What's the minimum attendance rule at MNIT?"),
+    ("🏆", "Tell me about upcoming campus fests"),
+    ("💼", "Top tips for placement preparation at MNIT"),
+    ("📚", "Make me a 2-week study plan for DSA exam"),
+    ("🏠", "How to apply for hostel room change?"),
+    ("🔑", "How do I reset my ERP portal password?"),
+]
+
+def render_chat():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">🤖 AskMNIT Assistant</div>
+        <div class="neon-subtitle">Your AI-powered campus companion — powered by Claude</div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Header card ───────────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="chat-header">
+        <div class="chat-avatar">🎓</div>
+        <div>
+            <div class="ai-name">AskMNIT AI</div>
+            <div class="ai-status">
+                <span class="status-dot"></span> Online &nbsp;·&nbsp; Ready to help
+            </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
+            <span class="badge badge-blue">Claude Sonnet</span>
+            <span class="badge badge-purple">MNIT Context</span>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Quick prompts ─────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="margin:0.4rem 0 0.6rem;color:rgba(255,255,255,0.3);
+                font-size:0.68rem;text-transform:uppercase;letter-spacing:1.2px;">
+        Quick Questions
+    </div>""", unsafe_allow_html=True)
+
+    cols = st.columns(3)
+    for i, (icon, prompt) in enumerate(QUICK_PROMPTS):
+        short = prompt[:38] + "…" if len(prompt) > 38 else prompt
+        with cols[i % 3]:
+            if st.button(f"{icon} {short}", key=f"qp_{i}", use_container_width=True):
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.spinner("AskMNIT is thinking…"):
+                    resp = get_ai_response(prompt)
+                st.session_state.messages.append({"role": "assistant", "content": resp})
+                st.rerun()
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # ── Chat history ──────────────────────────────────────────────────────────
+    if not st.session_state.messages:
+        st.markdown("""
+        <div style="text-align:center;padding:3.5rem 1rem;color:rgba(255,255,255,0.25);">
+            <div style="font-size:3rem;margin-bottom:0.8rem;">💬</div>
+            <div style="font-size:1rem;font-weight:600;color:rgba(255,255,255,0.45);">
+                Ask me anything about MNIT!
+            </div>
+            <div style="font-size:0.82rem;margin-top:0.4rem;">
+                Academics · Campus Life · Admin Help · Study Tips · Career Guidance
+            </div>
+        </div>""", unsafe_allow_html=True)
     else:
-        for list_idx,(i,note) in enumerate(unpinned):
-            nr1,nr2,nr3=st.columns([5,1.2,1])
-            with nr1: st.markdown(f'<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:9px;padding:9px 12px;margin-bottom:4px;font-size:0.80rem;color:rgba(226,232,240,0.75);line-height:1.5;">{note["text"]}</div>', unsafe_allow_html=True)
-            with nr2:
-                st.markdown('<div class="pin-btn">', unsafe_allow_html=True)
-                if st.button("Pin",key=f"pin_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True): st.session_state.notes_list[i]["pinned"]=True; st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            with nr3:
-                st.markdown('<div class="del-btn">', unsafe_allow_html=True)
-                if st.button("Del",key=f"del_{list_idx}_{i}_{_safe_key(note['text'][:10])}",use_container_width=True): st.session_state.notes_list.pop(i); st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+        for msg in st.session_state.messages:
+            avatar = "🎓" if msg["role"] == "assistant" else "👤"
+            with st.chat_message(msg["role"], avatar=avatar):
+                st.markdown(msg["content"])
+
+    # ── Input ─────────────────────────────────────────────────────────────────
+    if prompt := st.chat_input("Ask AskMNIT anything… (e.g. 'How to apply for leave?')"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user", avatar="👤"):
+            st.markdown(prompt)
+        with st.chat_message("assistant", avatar="🎓"):
+            with st.spinner(""):
+                response = get_ai_response(prompt)
+            st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
+
+    # ── Clear ─────────────────────────────────────────────────────────────────
+    if st.session_state.messages:
+        if st.button("🗑️ Clear Chat", key="clear_chat"):
+            st.session_state.messages = []
+            st.rerun()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: ERP PORTAL
+# ══════════════════════════════════════════════════════════════════════════════
+def render_erp():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">🎓 ERP Portal</div>
+        <div class="neon-subtitle">Quick access to all MNIT digital services & important dates</div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Links grid ────────────────────────────────────────────────────────────
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">🔗 Official MNIT Links</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    for i, lnk in enumerate(ERP_LINKS):
+        with (c1 if i % 2 == 0 else c2):
+            st.markdown(f"""
+            <a href="{lnk['url']}" target="_blank" style="text-decoration:none;">
+            <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);
+                        border-radius:16px;padding:1.1rem 1.2rem;margin-bottom:0.85rem;
+                        cursor:pointer;transition:all 0.25s;"
+                 onmouseover="this.style.borderColor='rgba(96,165,250,0.35)';
+                              this.style.background='rgba(96,165,250,0.06)';
+                              this.style.transform='translateY(-1px)'"
+                 onmouseout="this.style.borderColor='rgba(255,255,255,0.07)';
+                             this.style.background='rgba(255,255,255,0.025)';
+                             this.style.transform='translateY(0)'">
+                <div style="font-size:1.4rem;margin-bottom:0.5rem;">{lnk['icon']}</div>
+                <div style="font-weight:600;color:white;font-size:0.88rem;">{lnk['name']}</div>
+                <div style="color:rgba(255,255,255,0.42);font-size:0.76rem;margin-top:3px;">
+                    {lnk['desc']}
+                </div>
+                <div style="color:#60A5FA;font-size:0.7rem;margin-top:7px;">
+                    {lnk['url']} ↗
+                </div>
+            </div></a>""", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center;margin-top:28px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);"><span style="font-family:\'DM Mono\',monospace;font-size:0.52rem;color:rgba(148,163,184,0.24);letter-spacing:1.2px;">ASKMNT · MNIT JAIPUR · v6.0 PREMIUM</span></div>', unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Important dates ───────────────────────────────────────────────────────
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown('<div class="section-heading">📅 Academic Calendar 2024–25 (Even Semester)</div>', unsafe_allow_html=True)
+    for date, event, badge in IMPORTANT_DATES:
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;gap:1rem;padding:0.65rem 0;
+                    border-bottom:1px solid rgba(255,255,255,0.04);">
+            <div style="min-width:130px;font-size:0.79rem;font-weight:600;
+                        color:rgba(255,255,255,0.55);">{date}</div>
+            <div style="color:white;font-size:0.84rem;flex:1;">{event}</div>
+            <span class="badge {badge}">{badge.replace('badge-','').title()}</span>
+        </div>""", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: ACADEMICS & NOTES
+# ══════════════════════════════════════════════════════════════════════════════
+def render_academics():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">📚 Academics & Notes</div>
+        <div class="neon-subtitle">Resources, timetable, and subject-wise study tools</div>
+    </div>""", unsafe_allow_html=True)
+
+    t1, t2, t3 = st.tabs(["📖 Subject Resources", "📋 Full Timetable", "📆 Weekly View"])
+
+    with t1:
+        subjects = list(get_unique_subjects().keys())
+        if not subjects:
+            subjects = ["Data Structures", "Computer Networks", "Operating Systems",
+                        "Theory of Computation", "DBMS", "Software Engineering"]
+        icons = ["📘","📗","📙","📕","📓","📔","📒","📃"]
+        c1, c2, c3 = st.columns(3)
+        for i, subj in enumerate(subjects[:9]):
+            with [c1, c2, c3][i % 3]:
+                st.markdown(f"""
+                <div class="glass-card" style="text-align:center;cursor:pointer;min-height:140px;">
+                    <div style="font-size:1.9rem;margin-bottom:0.5rem;">{icons[i%len(icons)]}</div>
+                    <div style="font-weight:600;color:white;font-size:0.85rem;margin-bottom:0.7rem;">
+                        {subj}
+                    </div>
+                    <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                        <span class="badge badge-blue">Notes</span>
+                        <span class="badge badge-purple">Slides</span>
+                        <span class="badge badge-green">PYQs</span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+
+    with t2:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">Complete Weekly Timetable</div>', unsafe_allow_html=True)
+        sched = get_active_schedule()
+        df = pd.DataFrame(sched)[["day","time","subject","venue","code"]].copy()
+        df.columns = ["Day","Time","Subject","Venue","Code"]
+        day_order = {"Monday":0,"Tuesday":1,"Wednesday":2,"Thursday":3,"Friday":4,"Saturday":5}
+        df["_ord"] = df["Day"].map(lambda d: day_order.get(d, 9))
+        df = df.sort_values(["_ord","Time"]).drop(columns="_ord")
+        st.dataframe(df, use_container_width=True, hide_index=True, height=420)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with t3:
+        sched = get_active_schedule()
+        days  = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+        for day in days:
+            day_cls = [s for s in sched if s.get("day","").lower() == day.lower()]
+            if not day_cls:
+                continue
+            st.markdown(f"""
+            <div style="font-weight:700;color:#60A5FA;font-size:0.78rem;
+                        text-transform:uppercase;letter-spacing:1.2px;
+                        margin:1.1rem 0 0.5rem;">
+                {day}
+            </div>""", unsafe_allow_html=True)
+            for cls in day_cls:
+                live     = is_class_now(cls["time"]) and day == datetime.datetime.now().strftime("%A")
+                lv_class = "live" if live else ""
+                st.markdown(f"""
+                <div class="timeline-item {lv_class}">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-time" style="min-width:110px;">{cls['time']}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-subject">{cls['subject']}</div>
+                        <div class="timeline-venue">📍 {cls.get('venue','TBA')}</div>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: PYQs
+# ══════════════════════════════════════════════════════════════════════════════
+def render_pyqs():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">📝 Previous Year Questions</div>
+        <div class="neon-subtitle">Browse and download PYQs sorted by branch, subject, and exam type</div>
+    </div>""", unsafe_allow_html=True)
+
+    branch   = st.selectbox("Select Branch", list(PYQ_DATA.keys()), key="pyq_br")
+    subjects = PYQ_DATA.get(branch, {})
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    for subj, files in subjects.items():
+        st.markdown(f"""
+        <div class="glass-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;
+                        margin-bottom:0.9rem;">
+                <div style="font-weight:600;color:white;font-size:0.9rem;">📘 {subj}</div>
+                <span class="badge badge-blue">{len(files)} papers</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.45rem;">""",
+        unsafe_allow_html=True)
+        for f in files:
+            year, etype = f.split()
+            bc = "badge-purple" if etype == "MTE" else "badge-orange"
+            st.markdown(f"""
+                <div class="badge {bc}" style="padding:0.38rem 0.85rem;cursor:pointer;
+                     font-size:0.73rem;">📄 {year} {etype}</div>""",
+            unsafe_allow_html=True)
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="glass-card" style="border-color:rgba(79,158,255,0.2);">
+        <div style="color:rgba(255,255,255,0.45);font-size:0.81rem;">
+            💡 <strong style="color:rgba(255,255,255,0.7);">Pro Tip:</strong>
+            Link each badge to your institution's Drive folder or SharePoint to enable
+            direct PDF downloads. Replace file name strings with actual URLs.
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: ATTENDANCE TRACKER
+# ══════════════════════════════════════════════════════════════════════════════
+def render_attendance():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">📅 Attendance Tracker</div>
+        <div class="neon-subtitle">Track per-subject attendance · Minimum 75% mandatory</div>
+    </div>""", unsafe_allow_html=True)
+
+    # Ensure all subjects are initialised
+    for subj in get_unique_subjects():
+        if subj not in st.session_state.attendance:
+            st.session_state.attendance[subj] = {"present": 0, "total": 0}
+
+    att_pct, att_p, att_t = compute_overall_attendance()
+
+    # ── Top row ───────────────────────────────────────────────────────────────
+    r1, r2 = st.columns([1, 3], gap="large")
+    with r1:
+        st.markdown(f"""
+        <div class="glass-card" style="text-align:center;padding:1.6rem 1rem;">
+            {circular_svg(att_pct, 180)}
+            <div style="margin-top:0.7rem;color:rgba(255,255,255,0.38);font-size:0.76rem;">
+                {att_p} attended · {att_t} held
+            </div>
+            {'<div style="color:#34D399;font-size:0.8rem;font-weight:600;margin-top:6px;">✓ Safe Zone</div>' if att_pct >= 75 else '<div style="color:#F87171;font-size:0.8rem;font-weight:600;margin-top:6px;">⚠ Danger Zone</div>' if att_t > 0 else '<div style="color:rgba(255,255,255,0.28);font-size:0.78rem;margin-top:6px;">No records yet</div>'}
+        </div>""", unsafe_allow_html=True)
+
+        # Classes needed to reach 75%
+        if 0 < att_pct < 75 and att_t > 0:
+            needed = math.ceil((0.75 * att_t - att_p) / 0.25)
+            st.markdown(f"""
+            <div style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);
+                        border-radius:12px;padding:0.7rem;text-align:center;
+                        font-size:0.78rem;color:#F87171;margin-top:-0.5rem;">
+                Attend next <strong>{needed}</strong> classes to reach 75%
+            </div>""", unsafe_allow_html=True)
+
+    with r2:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">Subject-wise Attendance</div>', unsafe_allow_html=True)
+
+        subjects = get_unique_subjects()
+        if subjects:
+            hdr = st.columns([3, 1, 1, 1, 1])
+            for h, c in zip(["Subject","Att%","Present/Total","Mark Present","Mark Absent"], hdr):
+                with c:
+                    st.markdown(f"<div style='font-size:0.68rem;color:rgba(255,255,255,0.3);"
+                                f"text-transform:uppercase;letter-spacing:0.8px;padding:0.2rem 0;'>"
+                                f"{h}</div>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:0.4rem 0 0.6rem;'>", unsafe_allow_html=True)
+
+            for subj in subjects:
+                a    = st.session_state.attendance.get(subj, {"present":0,"total":0})
+                pct  = round(a["present"]/a["total"]*100, 1) if a["total"] else 0.0
+                clr  = "#34D399" if pct >= 75 else ("#FBBF24" if pct >= 60 else "#F87171")
+
+                s1, s2, s3, s4, s5 = st.columns([3, 1, 1, 1, 1])
+                with s1:
+                    short_subj = subj[:26]+"…" if len(subj) > 26 else subj
+                    st.markdown(f"""
+                    <div style="padding:0.35rem 0;">
+                        <div style="color:white;font-weight:500;font-size:0.84rem;">{short_subj}</div>
+                        <div class="att-bar-bg">
+                            <div class="att-bar-fill"
+                                 style="width:{pct}%;background:{clr};"></div>
+                        </div>
+                    </div>""", unsafe_allow_html=True)
+                with s2:
+                    st.markdown(f"<div style='color:{clr};font-weight:700;font-size:0.88rem;"
+                                f"padding-top:0.4rem;text-align:center;'>{pct}%</div>",
+                                unsafe_allow_html=True)
+                with s3:
+                    st.markdown(f"<div style='color:rgba(255,255,255,0.4);font-size:0.8rem;"
+                                f"padding-top:0.45rem;text-align:center;'>"
+                                f"{a['present']}/{a['total']}</div>", unsafe_allow_html=True)
+                with s4:
+                    if st.button("✅", key=f"p_{subj}", use_container_width=True,
+                                 help="Mark Present"):
+                        st.session_state.attendance[subj]["present"] += 1
+                        st.session_state.attendance[subj]["total"]   += 1
+                        st.rerun()
+                with s5:
+                    if st.button("❌", key=f"a_{subj}", use_container_width=True,
+                                 help="Mark Absent"):
+                        st.session_state.attendance[subj]["total"] += 1
+                        st.rerun()
+        else:
+            st.markdown("""
+            <div style="text-align:center;color:rgba(255,255,255,0.3);padding:2rem;">
+                No subjects yet. Upload your timetable in the Profile section.
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if att_t > 0:
+        st.markdown("<br>", unsafe_allow_html=True)
+        rc1, rc2, _ = st.columns([1, 1, 3])
+        with rc1:
+            if st.button("🔄 Reset All Attendance", key="rst_att"):
+                st.session_state.attendance = {}
+                st.rerun()
+        with rc2:
+            if st.button("📊 Export Summary", key="exp_att"):
+                rows = []
+                for subj, a in st.session_state.attendance.items():
+                    pct = round(a["present"]/a["total"]*100,1) if a["total"] else 0.0
+                    rows.append({"Subject": subj, "Present": a["present"],
+                                 "Total":   a["total"], "Attendance%": pct})
+                if rows:
+                    df = pd.DataFrame(rows)
+                    csv = df.to_csv(index=False)
+                    st.download_button("⬇️ Download CSV", data=csv,
+                                       file_name="attendance.csv", mime="text/csv")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: GPA CALCULATOR
+# ══════════════════════════════════════════════════════════════════════════════
+def render_gpa():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">🧮 GPA Calculator</div>
+        <div class="neon-subtitle">SGPA & CGPA on MNIT's 10-point grading scale</div>
+    </div>""", unsafe_allow_html=True)
+
+    t1, t2 = st.tabs(["📊 SGPA — This Semester", "🎯 CGPA — Cumulative"])
+
+    with t1:
+        st.markdown("""
+        <div style="background:rgba(79,158,255,0.05);border:1px solid rgba(79,158,255,0.15);
+                    border-radius:14px;padding:0.7rem 1rem;margin-bottom:1rem;font-size:0.79rem;
+                    color:rgba(255,255,255,0.5);">
+            Scale: <strong style="color:#60A5FA;">O/A+</strong>=10 &nbsp;
+            <strong style="color:#60A5FA;">A</strong>=9 &nbsp;
+            <strong style="color:#60A5FA;">B+</strong>=8 &nbsp;
+            <strong style="color:#60A5FA;">B</strong>=7 &nbsp;
+            <strong style="color:#60A5FA;">C+</strong>=6 &nbsp;
+            <strong style="color:#60A5FA;">C</strong>=5 &nbsp;
+            <strong style="color:#60A5FA;">D</strong>=4 &nbsp;
+            <strong style="color:#F87171;">F</strong>=0
+        </div>""", unsafe_allow_html=True)
+
+        n = st.number_input("Number of courses", 1, 12,
+                            value=len(st.session_state.gpa_courses), key="n_crs")
+        courses = st.session_state.gpa_courses
+        while len(courses) < n:
+            courses.append({"name": f"Course {len(courses)+1}", "credits": 4, "grade": "A"})
+        while len(courses) > n:
+            courses.pop()
+        st.session_state.gpa_courses = courses
+
+        grade_opts = list(GRADE_POINTS.keys())
+        col_h = st.columns([3,1,1,1])
+        for h, c in zip(["Course Name","Credits","Grade","Grade Points"], col_h):
+            with c:
+                st.markdown(f"<div style='font-size:0.7rem;color:rgba(255,255,255,0.35);"
+                            f"text-transform:uppercase;letter-spacing:0.8px;padding:0.3rem 0;'>"
+                            f"{h}</div>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:0.2rem 0 0.5rem;'>", unsafe_allow_html=True)
+
+        for i, crs in enumerate(courses):
+            c1, c2, c3, c4 = st.columns([3,1,1,1])
+            with c1:
+                courses[i]["name"] = st.text_input(
+                    "", value=crs["name"], key=f"cn{i}", label_visibility="collapsed")
+            with c2:
+                courses[i]["credits"] = st.number_input(
+                    "", 1, 6, int(crs["credits"]), key=f"cr{i}", label_visibility="collapsed")
+            with c3:
+                idx = grade_opts.index(crs["grade"]) if crs["grade"] in grade_opts else 2
+                courses[i]["grade"] = st.selectbox(
+                    "", grade_opts, index=idx, key=f"gr{i}", label_visibility="collapsed")
+            with c4:
+                gp  = GRADE_POINTS.get(courses[i]["grade"], 0)
+                clr = "#34D399" if gp >= 8 else ("#FBBF24" if gp >= 6 else "#F87171")
+                st.markdown(f"<div style='color:{clr};font-weight:700;font-size:0.95rem;"
+                            f"padding-top:0.5rem;text-align:center;'>{gp}</div>",
+                            unsafe_allow_html=True)
+
+        st.session_state.gpa_courses = courses
+        sgpa, tot_cr = calculate_sgpa(courses)
+        clr = "#34D399" if sgpa >= 8 else ("#FBBF24" if sgpa >= 6 else "#F87171")
+
+        st.markdown(f"""
+        <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.22);
+                    border-radius:18px;padding:1.6rem;text-align:center;margin-top:1.2rem;">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);text-transform:uppercase;
+                        letter-spacing:1.2px;margin-bottom:0.4rem;">Calculated SGPA</div>
+            <div style="font-family:'Syne',sans-serif;font-size:3.8rem;font-weight:800;
+                        color:{clr};line-height:1;">{sgpa}</div>
+            <div style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin-top:0.4rem;">
+                {tot_cr} total credits · Out of 10.00
+            </div>
+            {'<div style="color:#34D399;font-size:0.8rem;font-weight:600;margin-top:6px;">🏆 Excellent — First Division with Distinction</div>' if sgpa>=9 else '<div style="color:#60A5FA;font-size:0.8rem;margin-top:6px;">✓ First Division</div>' if sgpa>=7 else '<div style="color:#FBBF24;font-size:0.8rem;margin-top:6px;">Second Division</div>' if sgpa>=6 else ''}
+        </div>""", unsafe_allow_html=True)
+
+    with t2:
+        st.markdown("""
+        <div class="glass-card">
+            <div class="section-heading">Enter SGPA for each completed semester</div>
+        """, unsafe_allow_html=True)
+        n_sem = st.number_input("Completed Semesters", 1, 8, 4, key="n_sem")
+        sgpas, credits = [], []
+
+        per_row = 4
+        for batch_start in range(0, n_sem, per_row):
+            batch = list(range(batch_start, min(batch_start + per_row, n_sem)))
+            cols  = st.columns(len(batch))
+            for j, i in enumerate(batch):
+                with cols[j]:
+                    s = st.number_input(f"Sem {i+1} SGPA",   0.0, 10.0, 8.0, 0.01, key=f"ss{i}")
+                    c = st.number_input(f"Sem {i+1} Credits", 1,   30,   22,  key=f"sc{i}")
+                    sgpas.append(s); credits.append(c)
+
+        tot  = sum(credits)
+        cgpa = round(sum(s*c for s,c in zip(sgpas,credits))/tot,2) if tot else 0.0
+        clr  = "#34D399" if cgpa >= 8 else ("#FBBF24" if cgpa >= 6 else "#F87171")
+
+        st.markdown(f"""
+        </div>
+        <div style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.22);
+                    border-radius:18px;padding:1.6rem;text-align:center;margin-top:0.5rem;">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);text-transform:uppercase;
+                        letter-spacing:1.2px;margin-bottom:0.4rem;">Cumulative CGPA</div>
+            <div style="font-family:'Syne',sans-serif;font-size:3.8rem;font-weight:800;
+                        color:{clr};line-height:1;">{cgpa}</div>
+            <div style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin-top:0.4rem;">
+                Over {tot} credits across {n_sem} semester{'s' if n_sem>1 else ''}
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: STUDENT PROFILE
+# ══════════════════════════════════════════════════════════════════════════════
+BRANCHES = [
+    "Computer Science & Engineering",
+    "Electronics & Communication Engineering",
+    "Mechanical Engineering",
+    "Electrical Engineering",
+    "Civil Engineering",
+    "Chemical Engineering",
+    "Metallurgical & Materials Engineering",
+    "Architecture",
+]
+SEMESTERS = ["1st","2nd","3rd","4th","5th","6th","7th","8th"]
+
+def render_profile():
+    st.markdown("""
+    <div style="margin-bottom:1.5rem;">
+        <div class="neon-title">⚙️ Student Profile</div>
+        <div class="neon-subtitle">Manage your details and upload your timetable PDF</div>
+    </div>""", unsafe_allow_html=True)
+
+    left, right = st.columns([1,1], gap="large")
+
+    # ── Profile form ──────────────────────────────────────────────────────────
+    with left:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">👤 Personal Information</div>', unsafe_allow_html=True)
+
+        name   = st.text_input("Full Name",       st.session_state.student_name,   key="p_name")
+        branch = st.selectbox("Branch / Department", BRANCHES,
+                              index=BRANCHES.index(st.session_state.student_branch)
+                              if st.session_state.student_branch in BRANCHES else 0,
+                              key="p_branch")
+        c1, c2 = st.columns(2)
+        with c1:
+            cid = st.text_input("College ID", st.session_state.student_id, key="p_id")
+        with c2:
+            cur_sem = st.session_state.student_semester.split()[0]
+            sem = st.selectbox("Semester", SEMESTERS,
+                               index=SEMESTERS.index(cur_sem) if cur_sem in SEMESTERS else 5,
+                               key="p_sem")
+
+        if st.button("💾 Save Profile", key="save_prof", use_container_width=True):
+            st.session_state.student_name     = name
+            st.session_state.student_branch   = branch
+            st.session_state.student_id       = cid
+            st.session_state.student_semester = f"{sem} Semester"
+            st.success("✅ Profile saved!")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ── App info card ──────────────────────────────────────────────────────
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:rgba(139,92,246,0.2);">
+            <div class="section-heading">ℹ️ App Information</div>
+            <div style="display:grid;gap:0.55rem;">
+                {_info_row("Version",      "v1.0.0",        "badge-blue")}
+                {_info_row("AI Engine",    "Claude Sonnet", "badge-purple")}
+                {_info_row("Framework",    "Streamlit",     "badge-green")}
+                {_info_row("PDF Parser",   PDF_LIB or "Not installed",
+                           "badge-green" if PDF_LIB else "badge-orange")}
+                {_info_row("Schedule",
+                           f"{len(get_active_schedule())} entries loaded",
+                           "badge-green" if st.session_state.pdf_parsed else "badge-blue")}
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── PDF upload ────────────────────────────────────────────────────────────
+    with right:
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-heading">📄 Upload Weekly Schedule</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="color:rgba(255,255,255,0.38);font-size:0.79rem;margin-bottom:1rem;">
+            Upload the timetable PDF from MNIT ERP. The app will auto-extract
+            your class schedule. See customization notes below if parsing fails.
+        </div>""", unsafe_allow_html=True)
+
+        if PDF_LIB is None:
+            st.warning("Install PDF library: `pip install pdfplumber`")
+
+        uploaded = st.file_uploader("Drop your timetable PDF here", type=["pdf"],
+                                    key="sched_pdf",
+                                    help="Download from erp.mnit.ac.in → My Timetable")
+
+        if uploaded:
+            with st.spinner("🔍 Parsing your schedule…"):
+                parsed = parse_pdf_schedule(uploaded)
+            if parsed:
+                st.session_state.schedule   = parsed
+                st.session_state.pdf_parsed = True
+                st.session_state.attendance = {}   # reset on new schedule
+                st.success(f"✅ Parsed {len(parsed)} class entries successfully!")
+                st.markdown("<div style='margin-top:0.8rem;font-size:0.78rem;"
+                            "color:rgba(255,255,255,0.4);'>Preview (first 5):</div>",
+                            unsafe_allow_html=True)
+                for e in parsed[:5]:
+                    st.markdown(f"""
+                    <div style="background:rgba(255,255,255,0.03);border-radius:10px;
+                                padding:0.45rem 0.9rem;margin-bottom:4px;font-size:0.79rem;">
+                        <span style="color:#60A5FA;font-weight:600;">{e.get('day','')}</span>
+                        <span style="color:rgba(255,255,255,0.3);margin:0 0.4rem;">|</span>
+                        <span style="color:white;">{e.get('time','')}</span>
+                        <span style="color:rgba(255,255,255,0.3);margin:0 0.4rem;">|</span>
+                        <span style="color:white;">{e.get('subject','')}</span>
+                        <span style="color:rgba(255,255,255,0.3);margin:0 0.3rem;">@</span>
+                        <span style="color:#A78BFA;">{e.get('venue','')}</span>
+                    </div>""", unsafe_allow_html=True)
+        elif st.session_state.pdf_parsed:
+            n = len(st.session_state.schedule)
+            st.markdown(f"""
+            <div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);
+                        border-radius:12px;padding:0.75rem 1rem;font-size:0.8rem;color:#34D399;">
+                ✅ Schedule active · {n} class entries loaded
+            </div>""", unsafe_allow_html=True)
+
+        # ── Customization hint ─────────────────────────────────────────────────
+        st.markdown("""
+        <div style="margin-top:1rem;padding:0.9rem 1rem;
+                    background:rgba(79,158,255,0.05);
+                    border:1px solid rgba(79,158,255,0.18);
+                    border-radius:12px;font-size:0.76rem;color:rgba(255,255,255,0.45);">
+            <strong style="color:rgba(255,255,255,0.65);">📌 Customization Guide</strong><br><br>
+            The parser lives in <code>parse_pdf_schedule()</code> in <code>app.py</code>:<br><br>
+            • <code>_parse_table_rows()</code> — adjust col indices for row-per-class tables<br>
+            • <code>_parse_grid_table()</code> — for grid PDFs (days as columns)<br>
+            • <code>_parse_text_schedule()</code> — tune the regex for plain-text PDFs<br><br>
+            Each helper is fully commented with CUSTOMIZE markers.
+        </div>""", unsafe_allow_html=True)
+
+        if st.session_state.pdf_parsed:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🗑️ Clear Schedule & Use Demo", key="clear_sched"):
+                st.session_state.schedule   = []
+                st.session_state.pdf_parsed = False
+                st.session_state.attendance = {}
+                st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+def _info_row(label, val, badge_cls):
+    return (f"<div style='display:flex;justify-content:space-between;"
+            f"align-items:center;font-size:0.81rem;padding:0.1rem 0;'>"
+            f"<span style='color:rgba(255,255,255,0.45);'>{label}</span>"
+            f"<span class='badge {badge_cls}'>{val}</span></div>")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN ROUTER
+# ══════════════════════════════════════════════════════════════════════════════
+def main():
+    init_session_state()
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    render_sidebar()
+
+    tab = st.session_state.active_tab
+    dispatch = {
+        "Dashboard":  render_dashboard,
+        "AI Chat":    render_chat,
+        "ERP Portal": render_erp,
+        "Academics":  render_academics,
+        "PYQs":       render_pyqs,
+        "Attendance": render_attendance,
+        "GPA Calc":   render_gpa,
+        "Profile":    render_profile,
+    }
+    dispatch.get(tab, render_dashboard)()
+
+
+if __name__ == "__main__":
+    main()
